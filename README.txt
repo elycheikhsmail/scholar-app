@@ -4,6 +4,11 @@
 1) npm install
 2) npm start
 
+اختبار الواجهات الأساسي:
+npm run test:e2e
+
+يستخدم الاختبار بيانات الدخول الافتراضية (yaghoub / 36485606). إذا تم تغييرها، يمكن تمريرها عبر E2E_USERNAME و E2E_PASSWORD.
+
 الخادم المحلي:
 npm run server
 

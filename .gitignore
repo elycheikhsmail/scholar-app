@@ -13,6 +13,7 @@ release/
 *.log
 *.tmp
 *.temp
+test-results/
 
 # Local environment configuration
 .env
