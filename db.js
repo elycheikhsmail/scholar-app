@@ -1,9 +1,67 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { DatabaseSync } = require('node:sqlite');
 
 let data;
 let filePath;
+let sqlite;
+const COLLECTIONS = ['departments', 'students', 'studentPayments', 'teachers',
+  'teacherPayments', 'teacherAdvances', 'expenses', 'exams'];
+
+function close() {
+  if (sqlite) sqlite.close();
+  sqlite = null;
+  data = undefined;
+}
+
+function createSchema(connection = sqlite) {
+  connection.exec(`CREATE TABLE IF NOT EXISTS metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL CHECK(json_valid(value)));`);
+  // One row per record; JSON preserves optional fields and nested exam results.
+  for (const table of COLLECTIONS) {
+    connection.exec(`CREATE TABLE IF NOT EXISTS "${table}" (
+      id INTEGER PRIMARY KEY,
+      position INTEGER NOT NULL,
+      record TEXT NOT NULL CHECK(json_valid(record))
+        CHECK(CAST(json_extract(record, '$.id') AS INTEGER) = id)
+    );`);
+  }
+  for (const [table, field] of [['students', 'className'], ['studentPayments', 'studentId'],
+    ['teacherPayments', 'teacherId'], ['teacherAdvances', 'teacherId'], ['exams', 'studentId']]) {
+    connection.exec(`CREATE INDEX IF NOT EXISTS "${table}_${field}" ON "${table}" (json_extract(record, '$.${field}'));`);
+  }
+}
+
+function readData() {
+  const result = {};
+  for (const row of sqlite.prepare('SELECT key, value FROM settings').all()) {
+    Object.defineProperty(result, row.key, { value: JSON.parse(row.value), enumerable: true, writable: true, configurable: true });
+  }
+  for (const table of COLLECTIONS) {
+    result[table] = sqlite.prepare(`SELECT record FROM "${table}" ORDER BY position`).all().map(row => JSON.parse(row.record));
+  }
+  return result;
+}
+
+function createBackup() {
+  const backupDir = path.join(path.dirname(filePath), 'backups');
+  fs.mkdirSync(backupDir, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupPath = path.join(backupDir, `school-data-${stamp}-${crypto.randomUUID()}.sqlite`);
+  // Copy the state loaded under the writer lock, so every cleared row is backed up.
+  const snapshot = new DatabaseSync(backupPath);
+  try {
+    snapshot.exec('BEGIN IMMEDIATE');
+    createSchema(snapshot);
+    save(snapshot);
+    snapshot.prepare("INSERT INTO metadata(key, value) VALUES ('schemaVersion', '1')").run();
+    snapshot.exec('COMMIT');
+  } finally {
+    snapshot.close();
+  }
+  return backupPath;
+}
 
 const DEFAULT_DATA = {
   settings: {
@@ -84,24 +142,69 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
 }
 
-function save() {
-  const tmp = `${filePath}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
-  fs.renameSync(tmp, filePath);
+function save(connection = sqlite) {
+  // The caller holds BEGIN IMMEDIATE: only changed rows are written.
+  for (const [key, value] of Object.entries(data)) {
+    if (!COLLECTIONS.includes(key)) {
+      connection.prepare(`INSERT INTO settings(key, value) VALUES (?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value != excluded.value`)
+        .run(key, JSON.stringify(value));
+    }
+  }
+  for (const table of COLLECTIONS) {
+    const previous = new Map(connection.prepare(`SELECT id, position, record FROM "${table}"`).all().map(row => [row.id, row]));
+    const seen = new Set();
+    const upsert = connection.prepare(`INSERT INTO "${table}" (id, position, record) VALUES (?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET position = excluded.position, record = excluded.record`);
+    data[table].forEach((item, position) => {
+      const id = Number(item.id);
+      if (!Number.isSafeInteger(id) || id <= 0 || seen.has(id)) {
+        throw new Error(`Identifiant invalide ou dupliqué dans ${table}: ${item.id}`);
+      }
+      seen.add(id);
+      const record = JSON.stringify(item);
+      const old = previous.get(id);
+      if (!old || old.position !== position || old.record !== record) upsert.run(id, position, record);
+      previous.delete(id);
+    });
+    const remove = connection.prepare(`DELETE FROM "${table}" WHERE id = ?`);
+    for (const id of previous.keys()) remove.run(id);
+  }
 }
 
 function init(baseDir) {
+  close();
   const dbDir = path.join(baseDir, 'database');
   fs.mkdirSync(dbDir, { recursive: true });
-  filePath = path.join(dbDir, 'school-data.json');
-
-  if (fs.existsSync(filePath)) {
-    try { data = JSON.parse(fs.readFileSync(filePath, 'utf8')); }
-    catch { data = clone(DEFAULT_DATA); }
-  } else {
-    data = clone(DEFAULT_DATA);
+  filePath = path.join(dbDir, 'school-data.sqlite');
+  const legacyPath = path.join(dbDir, 'school-data.json');
+  sqlite = new DatabaseSync(filePath);
+  try {
+    sqlite.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL; PRAGMA synchronous = FULL; BEGIN IMMEDIATE;');
+    createSchema();
+    const version = sqlite.prepare("SELECT value FROM metadata WHERE key = 'schemaVersion'").get();
+    if (version) {
+      if (version.value !== '1') throw new Error('Version de base de données SQLite non prise en charge.');
+      data = readData();
+    } else {
+      data = fs.existsSync(legacyPath) ? JSON.parse(fs.readFileSync(legacyPath, 'utf8')) : clone(DEFAULT_DATA);
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Fichier JSON de migration invalide.');
+      for (const key of COLLECTIONS) {
+        if (key in data && !Array.isArray(data[key])) throw new Error(`Collection JSON invalide: ${key}`);
+      }
+      normalizeData();
+      save();
+      sqlite.prepare("INSERT INTO metadata(key, value) VALUES ('schemaVersion', '1')").run();
+    }
+    sqlite.exec('COMMIT');
+  } catch (error) {
+    try { sqlite.exec('ROLLBACK'); } catch {}
+    close();
+    throw new Error(`Impossible d'ouvrir ou de migrer la base de données: ${error.message}`, { cause: error });
   }
+}
 
+function normalizeData() {
   data.settings = { ...DEFAULT_DATA.settings, ...(data.settings || {}) };
   for (const key of ['departments','students','studentPayments','teachers','teacherPayments','teacherAdvances','expenses','exams']) {
     if (!Array.isArray(data[key])) data[key] = [];
@@ -116,11 +219,10 @@ function init(baseDir) {
   };
   data.studentPayments.forEach(p => { if (!p.invoiceNo) p.invoiceNo = `F-${String(Number(p.id)||0).padStart(6,'0')}`; if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly'; });
   const feeMap = new Map(DEFAULT_DATA.departments.map(d => [d.name, d.monthlyFee]));
-  data.departments = data.departments.map((d, i) => ({ id: Number(d.id) || i + 1, name: clean(d.name), monthlyFee: Math.max(0, Number(d.monthlyFee) || Number(feeMap.get(clean(d.name)) || 0)) }));
+  data.departments = data.departments.map((d, i) => ({ ...d, id: Number(d.id) || i + 1, name: clean(d.name), monthlyFee: d.monthlyFee != null && Number.isFinite(Number(d.monthlyFee)) ? Math.max(0, Number(d.monthlyFee)) : Number(feeMap.get(clean(d.name)) || 0) }));
   const existingNames = new Set(data.departments.map(d => clean(d.name)));
-  for (const d of DEFAULT_DATA.departments) { if (!existingNames.has(d.name)) data.departments.push(clone(d)); }
+  for (const d of DEFAULT_DATA.departments) { if (!existingNames.has(d.name)) data.departments.push({ ...clone(d), id: nextId('departments') }); }
   if (!data.settings.passwordHash) data.settings.passwordHash = hashPassword('36485606');
-  save();
 }
 
 function nextId(collection) {
@@ -168,12 +270,7 @@ function updateSettings(input) {
 }
 
 function getDepartments() { return clone(data.departments); }
-function clearOperationalData() {
-  const backupDir=path.join(path.dirname(filePath),'backups');
-  fs.mkdirSync(backupDir,{recursive:true});
-  const stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  const backupPath=path.join(backupDir,`school-data-${stamp}.json`);
-  fs.copyFileSync(filePath,backupPath);
+function clearOperationalData(backupPath) {
   data.students = [];
   data.studentPayments = [];
   data.teachers = [];
@@ -434,3 +531,25 @@ function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Num
 
 module.exports={init,getData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
+
+// Reload within a transaction so separate server processes cannot overwrite stale state.
+const readOperations = new Set(['getData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData']);
+for (const [name, operation] of Object.entries(module.exports)) {
+  if (name === 'init') continue;
+  module.exports[name] = (...args) => {
+    if (!sqlite) throw new Error('La base de données doit être initialisée.');
+    sqlite.exec(readOperations.has(name) ? 'BEGIN' : 'BEGIN IMMEDIATE');
+    try {
+      data = readData();
+      const backupPath = name === 'clearOperationalData' ? createBackup() : null;
+      const result = operation(...(backupPath ? [backupPath] : args));
+      sqlite.exec('COMMIT');
+      return result;
+    } catch (error) {
+      sqlite.exec('ROLLBACK');
+      data = undefined;
+      throw error;
+    }
+  };
+}
+module.exports.close = close;

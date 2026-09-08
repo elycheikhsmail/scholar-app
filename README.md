@@ -19,7 +19,7 @@ L'application permet de gérer les élèves, les frais scolaires, les employés,
 
 ## Prérequis
 
-- Node.js 22 ou une version compatible.
+- Node.js 22.13 minimum (ou une version ultérieure avec `node:sqlite`).
 - npm.
 - Windows pour la génération de l'installateur Electron.
 
@@ -76,7 +76,17 @@ L'installateur est généré dans le dossier `dist/`.
 
 ## Données locales
 
-Les données de l'application sont stockées localement. Les bases de données, sauvegardes, journaux, fichiers `.env`, résultats de tests et fichiers de compilation sont exclus du dépôt Git par `.gitignore`.
+Les données sont stockées dans **SQLite**, dans `database/school-data.sqlite` : à côté de `server.js` en mode serveur, et dans le répertoire `userData` d'Electron en mode bureau.
+
+Au premier lancement, le fichier `database/school-data.json` existant est importé automatiquement dans une transaction. Le JSON original reste intact, mais les modifications suivantes sont enregistrées uniquement dans SQLite. Un JSON invalide bloque la migration avec une erreur : il n'est jamais remplacé silencieusement par une base vide. Les lancements suivants utilisent directement SQLite.
+
+Chaque collection possède sa table (élèves, paiements, employés, dépenses, examens, classes), avec une ligne par enregistrement. Les champs sont conservés en JSON dans les lignes pour préserver les champs facultatifs et les résultats d'examens imbriqués. Les identifiants sont des clés primaires ; les validations métier restent dans `db.js`. Chaque opération recharge un état cohérent sous transaction et seules les lignes modifiées sont écrites.
+
+L'effacement des données crée d'abord une copie SQLite cohérente dans `database/backups/`. Pour une sauvegarde manuelle, arrêter complètement l'application avant de copier la base (ne pas copier seulement le fichier principal pendant son utilisation en mode WAL).
+
+Tests de migration, de persistance et de transactions : `node --test tests/db.test.js`.
+
+Les bases de données, sauvegardes, journaux, fichiers `.env`, résultats de tests et fichiers de compilation sont exclus du dépôt Git par `.gitignore`.
 
 ## Structure principale
 

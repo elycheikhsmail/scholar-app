@@ -3,6 +3,9 @@ node_modules/
 
 # Local application data and generated backups
 database/*.json
+database/*.sqlite
+database/*.sqlite-*
+database/backups/
 backups/
 
 # Build output
