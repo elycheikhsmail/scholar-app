@@ -6,10 +6,10 @@ module.exports = defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:3780',
     headless: true,
+    screenshot: 'only-on-failure',
+    trace: 'retain-on-failure',
     locale: 'ar',
-    launchOptions: {
-      executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe'
-    }
+    launchOptions: process.env.E2E_BROWSER_PATH ? { executablePath: process.env.E2E_BROWSER_PATH } : {}
   },
   webServer: {
     command: 'node server.js',

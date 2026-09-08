@@ -5,6 +5,55 @@ const $=id=>document.getElementById(id);
 const API_BASE=window.location.protocol==='file:'?'http://127.0.0.1:3780/api':'/api';
 const money=n=>Number(n||0).toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
 const western=v=>String(v??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+
+// Native prompt() is unavailable in Electron and some embedded browsers.
+function showInputDialog(message, defaultValue = '', confirmation = false) {
+  if (document.querySelector('.input-dialog[open]')) return Promise.resolve(confirmation ? false : null);
+  return new Promise(resolve => {
+    const dialog = document.createElement('dialog');
+    dialog.className = 'input-dialog';
+    dialog.setAttribute('aria-labelledby', 'input-dialog-title');
+    const form = document.createElement('form');
+    form.method = 'dialog';
+    const title = document.createElement('h3');
+    title.id = 'input-dialog-title';
+    title.textContent = message;
+    form.append(title);
+    const input = document.createElement('input');
+    input.setAttribute('aria-label', message);
+    input.type = /كلمة المرور/.test(message) ? 'password' : 'text';
+    input.autocomplete = input.type === 'password' ? 'current-password' : 'off';
+    input.value = String(defaultValue ?? '');
+    if (!confirmation) form.append(input);
+    const actions = document.createElement('div');
+    actions.className = 'form-actions';
+    const submit = document.createElement('button');
+    submit.className = 'primary';
+    submit.type = 'submit';
+    submit.textContent = 'تأكيد';
+    const cancel = document.createElement('button');
+    cancel.className = 'secondary';
+    cancel.type = 'button';
+    cancel.textContent = 'إلغاء';
+    cancel.addEventListener('click', () => dialog.close('cancel'));
+    form.addEventListener('submit', event => { event.preventDefault(); dialog.close('confirm'); });
+    actions.append(submit, cancel);
+    form.append(actions);
+    dialog.append(form);
+    document.body.append(dialog);
+    dialog.addEventListener('close', () => {
+      const result = dialog.returnValue === 'confirm' ? (confirmation ? true : input.value) : (confirmation ? false : null);
+      input.value = '';
+      dialog.remove();
+      resolve(result);
+    }, { once: true });
+    dialog.showModal();
+    (confirmation ? cancel : input).focus();
+  });
+}
+const askInput = (message, value = '') => showInputDialog(message, value);
+const askConfirm = message => showInputDialog(message, '', true);
+
 const today=()=>new Date().toISOString().slice(0,10);
 const currentMonth=()=>{const m=new Date().getMonth()+1;return m>=10?months[m-10]:m<=6?months[m+2]:months[0]};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
@@ -57,7 +106,7 @@ window.payCurrentStudent=async id=>{const input=$(`sp-${id}`);const amount=Numbe
 window.payFee=async id=>{const input=$(`fp-${id}`),amount=Number(input.value)||0;if(!amount)return toast('أدخل مبلغ الدفعة.');try{const payment=await api('/student-payments',{method:'POST',body:JSON.stringify({studentId:id,month:$('feeMonth').value,amount,date:today()})});await load();renderFees();renderStudents();renderDashboard();input.value='';toast('تم تسجيل الدفعة.');printStudentReceipt(payment.id)}catch(e){toast(e.message)}};
 function renderPaymentHistory(){const rows=state.data.studentPayments.slice().sort((a,b)=>b.id-a.id);$('studentPaymentHistory').innerHTML=rows.map(p=>{const s=state.data.students.find(x=>Number(x.id)===Number(p.studentId));return `<tr><td>${esc(invoiceNo(p))}</td><td>${esc(s?.name||'محذوف')}</td><td>${esc(paymentLabel(p))}</td><td>${money(p.amount)}</td><td>${western(p.date)}</td><td class="actions"><button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td></tr>`}).join('')}
 function printStudentReceipt(paymentId){const p=state.data.studentPayments.find(x=>Number(x.id)===Number(paymentId));if(!p)return;const s=state.data.students.find(x=>Number(x.id)===Number(p.studentId));if(!s)return;const due=feeDueFor(s,p.month),paid=paidFor(s.id,p.month),remaining=Math.max(0,due-paid),totalOutstanding=totalOutstandingFor(s);const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';const date=western(p.date||today());const w=window.open('','_blank','width=420,height=700');if(!w){toast('اسمح للنوافذ المنبثقة حتى يتم فتح الفاتورة.');return;}w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(invoiceNo(p))}</title><style>@page{size:80mm auto;margin:0}*{box-sizing:border-box}body{margin:0;background:#fff;font-family:Arial,Tahoma,sans-serif;color:#111}.receipt{width:72mm;margin:0 auto;padding:4mm 3mm;font-size:12px}.center{text-align:center}.school{font-size:15px;font-weight:900}.title{font-size:14px;font-weight:900;margin:4px 0}.line{border-top:1px dashed #555;margin:5px 0}.row{display:flex;justify-content:space-between;gap:8px;margin:3px 0}.label{font-weight:700}.amount{font-size:14px;font-weight:900}.remaining{font-weight:900}.signature{margin-top:20px;text-align:left}.small{font-size:10px;color:#444}.print{margin-top:10px;width:100%;padding:8px;border:0;background:#111;color:#fff;border-radius:5px;font-weight:700}@media print{.print{display:none}} </style></head><body><div class="receipt"><div class="center school">${esc(school)}</div><div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div><div class="line"></div><div class="center title">إيصال دفع</div><div class="row"><span class="label">رقم الفاتورة</span><span>${esc(invoiceNo(p))}</span></div><div class="row"><span class="label">التاريخ</span><span>${date}</span></div><div class="line"></div><div class="row"><span class="label">الطالب</span><span>${esc(s.name)}</span></div><div class="row"><span class="label">القسم</span><span>${esc(s.className)}</span></div><div class="row"><span class="label">رقم النداء</span><span>${esc(s.callNo)}</span></div><div class="line"></div><div class="row"><span class="label">نوع الرسوم</span><span>${esc(paymentLabel(p))}</span></div><div class="row"><span class="label">إجمالي الرسوم</span><span>${money(due)} أوقية</span></div><div class="row amount"><span>المدفوع الآن</span><span>${money(p.amount)} أوقية</span></div><div class="row remaining"><span>المتبقي لهذه الرسوم</span><span>${money(remaining)} أوقية</span></div><div class="row remaining"><span>إجمالي المتبقي على الطالب</span><span>${money(totalOutstanding)} أوقية</span></div><div class="line"></div><div class="signature">توقيع المحاسب: __________________</div><div class="center small" style="margin-top:10px">شكراً لكم</div><button class="print" onclick="window.print()">طباعة الفاتورة</button></div><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`);w.document.close()}
-window.editStudentPayment=async id=>{if(!(await requirePassword()))return;const p=state.data.studentPayments.find(x=>x.id===id);if(!p)return;const amount=prompt('المبلغ الجديد',p.amount);if(amount===null)return;const date=prompt('تاريخ الدفعة بصيغة YYYY-MM-DD',p.date);if(date===null)return;try{await api(`/student-payments/${id}`,{method:'PUT',body:JSON.stringify({month:p.month,amount:western(amount),date})});await load();renderFees();renderStudents();toast('تم تعديل الدفعة.')}catch(e){toast(e.message)}};
+window.editStudentPayment=async id=>{if(!(await requirePassword()))return;const p=state.data.studentPayments.find(x=>x.id===id);if(!p)return;const amount=await askInput('المبلغ الجديد',p.amount);if(amount===null)return;const date=await askInput('تاريخ الدفعة بصيغة YYYY-MM-DD',p.date);if(date===null)return;try{await api(`/student-payments/${id}`,{method:'PUT',body:JSON.stringify({month:p.month,amount:western(amount),date})});await load();renderFees();renderStudents();toast('تم تعديل الدفعة.')}catch(e){toast(e.message)}};
 window.deleteStudentPayment=async id=>{await deleteWithPassword(`/student-payments/${id}`,'هل تريد حذف دفعة الطالب؟','تم حذف دفعة الطالب.');};
 
 function roleNeedsFixed(role){return role!=='أستاذ'}
@@ -97,17 +146,17 @@ window.editSalaryPayment=async id=>{
   if(!(await requirePassword()))return;
   const p=state.data.teacherPayments.find(x=>x.id===id);if(!p)return;
   const t=state.data.teachers.find(x=>x.id===p.teacherId);if(!t)return;
-  const amount=prompt('المبلغ المدفوع الجديد',p.amount);if(amount===null)return;
-  const date=prompt('تاريخ الدفعة بصيغة YYYY-MM-DD',p.date);if(date===null)return;
+  const amount=await askInput('المبلغ المدفوع الجديد',p.amount);if(amount===null)return;
+  const date=await askInput('تاريخ الدفعة بصيغة YYYY-MM-DD',p.date);if(date===null)return;
   let hours=Number(p.hours||0),hourlyRate=Number(p.hourlyRate||t.hourlyRate||0),salaryDue=Number(p.salaryDue||0);
-  if(t.role==='أستاذ'){const h=prompt('عدد ساعات الشهر',hours);if(h===null)return;hours=Number(h)||0;salaryDue=hours*hourlyRate}else{salaryDue=t.fixedSalary||salaryDue;hours=0;hourlyRate=0}
+  if(t.role==='أستاذ'){const h=await askInput('عدد ساعات الشهر',hours);if(h===null)return;hours=Number(h)||0;salaryDue=hours*hourlyRate}else{salaryDue=t.fixedSalary||salaryDue;hours=0;hourlyRate=0}
   try{await api(`/teacher-payments/${id}`,{method:'PUT',body:JSON.stringify({month:p.month,amount:western(amount),date,hours,hourlyRate,salaryDue})});await refreshAll();toast('تم تعديل دفعة الراتب.')}catch(e){toast(e.message)}
 };
 window.deleteSalaryPayment=async id=>{await deleteWithPassword(`/teacher-payments/${id}`,'هل تريد حذف دفعة الراتب؟','تم حذف دفعة الراتب.');};
 function resetSalaryDates(){$('salaryForm').reset();$('salaryMonth').value=currentMonth();$('salaryDate').value=today();if(state.data)populateStaffSelects()}
 
 $('advanceTeacher').onchange=()=>{};
-$('advanceForm').onsubmit=async e=>{e.preventDefault();const t=state.data.teachers.find(x=>x.id===Number($('advanceTeacher').value));if(!t)return;const m=$('advanceMonth').value,h=t.role==='أستاذ'?Number(prompt('عدد ساعات الشهر لحساب استحقاق الأستاذ (اختياري):',latestHours(t.id,m)||0)||0):0;const due=salaryDue(t,m,h),amount=Number($('advanceAmount').value)||0;const adv=teacherAdvance(t.id,m),paid=teacherPaid(t.id,m);if(amount<=0)return toast('أدخل مبلغ السلفة.');if(due>0&&amount>Math.max(0,due-adv-paid))return toast(`السلفة المتاحة لهذا الشهر ${money(Math.max(0,due-adv-paid))}.`);try{await api('/teacher-advances',{method:'POST',body:JSON.stringify({teacherId:t.id,month:m,amount,date:$('advanceDate').value||today(),notes:$('advanceNotes').value,salaryDue:due})});await load();resetAdvance();renderAdvances();renderSalary();renderDashboard();toast('تم تسجيل السلفة.')}catch(e2){toast(e2.message)}};
+$('advanceForm').onsubmit=async e=>{e.preventDefault();const t=state.data.teachers.find(x=>x.id===Number($('advanceTeacher').value));if(!t)return;const m=$('advanceMonth').value;let h=0;if(t.role==='أستاذ'){const enteredHours=await askInput('عدد ساعات الشهر لحساب استحقاق الأستاذ (اختياري):',latestHours(t.id,m)||0);if(enteredHours===null)return;h=Number(enteredHours)||0;}const due=salaryDue(t,m,h),amount=Number($('advanceAmount').value)||0;const adv=teacherAdvance(t.id,m),paid=teacherPaid(t.id,m);if(amount<=0)return toast('أدخل مبلغ السلفة.');if(due>0&&amount>Math.max(0,due-adv-paid))return toast(`السلفة المتاحة لهذا الشهر ${money(Math.max(0,due-adv-paid))}.`);try{await api('/teacher-advances',{method:'POST',body:JSON.stringify({teacherId:t.id,month:m,amount,date:$('advanceDate').value||today(),notes:$('advanceNotes').value,salaryDue:due})});await load();resetAdvance();renderAdvances();renderSalary();renderDashboard();toast('تم تسجيل السلفة.')}catch(e2){toast(e2.message)}};
 function renderAdvances(){
   $('advanceTable').innerHTML=state.data.teacherAdvances.map(a=>{
     const t=state.data.teachers.find(x=>x.id===a.teacherId);
@@ -117,9 +166,9 @@ function renderAdvances(){
 window.editAdvance=async id=>{
   if(!(await requirePassword()))return;
   const a=state.data.teacherAdvances.find(x=>x.id===id);if(!a)return;
-  const amount=prompt('مبلغ السلفة الجديد',a.amount);if(amount===null)return;
-  const date=prompt('تاريخ السلفة بصيغة YYYY-MM-DD',a.date);if(date===null)return;
-  const notes=prompt('ملاحظات',a.notes||'');if(notes===null)return;
+  const amount=await askInput('مبلغ السلفة الجديد',a.amount);if(amount===null)return;
+  const date=await askInput('تاريخ السلفة بصيغة YYYY-MM-DD',a.date);if(date===null)return;
+  const notes=await askInput('ملاحظات',a.notes||'');if(notes===null)return;
   try{await api(`/teacher-advances/${id}`,{method:'PUT',body:JSON.stringify({month:a.month,amount:western(amount),date,notes,salaryDue:a.salaryDue})});await refreshAll();toast('تم تعديل السلفة.')}catch(e){toast(e.message)}
 };
 window.deleteAdvance=async id=>{await deleteWithPassword(`/teacher-advances/${id}`,'هل تريد حذف السلفة؟','تم حذف السلفة.');};
@@ -135,14 +184,14 @@ window.removeExpense=async id=>{await deleteWithPassword(`/expenses/${id}`,'هل
 $('settingsForm').onsubmit=async e=>{e.preventDefault();if($('newPassword').value!==$('confirmPassword').value)return toast('تأكيد كلمة المرور غير مطابق.');try{const x=await api('/settings',{method:'PUT',body:JSON.stringify({schoolName:$('setSchoolName').value,schoolYear:$('setSchoolYear').value,username:$('setUsername').value,defaultMonthlyFee:western($('setDefaultMonthlyFee').value),managerName:$('setManagerName').value,managerPhone:western($('setManagerPhone').value),schoolPhone:western($('setSchoolPhone').value),republic:$('setRepublic').value,ministry:$('setMinistry').value,regional:$('setRegional').value,currentPassword:$('currentPassword').value,newPassword:western($('newPassword').value)})});state.settings=x.settings;applySettings();$('currentPassword').value='';$('newPassword').value='';$('confirmPassword').value='';renderSettings();toast('تم حفظ الإعدادات.')}catch(e2){toast(e2.message)}};
 function renderSettings(){$('setSchoolName').value=state.settings.schoolName;$('setSchoolYear').value=state.settings.schoolYear;$('setManagerName').value=state.settings.managerName||'';$('setManagerPhone').value=western(state.settings.managerPhone||'');$('setSchoolPhone').value=western(state.settings.schoolPhone||'');$('setRepublic').value=state.settings.republic||'الجمهورية الإسلامية الموريتانية';$('setMinistry').value=state.settings.ministry||'وزارة التعليم';$('setRegional').value=state.settings.regional||'الإدارة الجهوية للتعليم';$('setUsername').value=state.settings.username;$('setDefaultMonthlyFee').value=state.settings.defaultMonthlyFee}
 $('clearDataBtn').onclick=async()=>{
-  const first=confirm('تحذير: سيتم حذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات. ستبقى الإعدادات والأقسام فقط. هل تريد المتابعة؟');
+  const first=await askConfirm('تحذير: سيتم حذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات. ستبقى الإعدادات والأقسام فقط. هل تريد المتابعة؟');
   if(!first)return;
-  const second=prompt('أدخل كلمة المرور لتأكيد تفريغ البيانات:');
+  const second=await askInput('أدخل كلمة المرور لتأكيد تفريغ البيانات:');
   if(second===null)return;
   try{const resetResult=await api('/reset-data',{method:'POST',body:JSON.stringify({password:western(second)})});await load();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();renderDashboard();renderStudents();renderFees();renderTeachers();renderSalary();renderAdvances();renderExpenses();renderExamSection();toast(resetResult?.backup?'تم التفريغ بنجاح، وتم إنشاء نسخة احتياطية للبيانات القديمة.':'تم تفريغ بيانات السنة الدراسية بنجاح.')}catch(e){toast(e.message)}};
 $('departmentForm').onsubmit=async e=>{e.preventDefault();try{await api('/departments',{method:'POST',body:JSON.stringify({name:$('departmentName').value,monthlyFee:western($('departmentFee').value)})});await load();$('departmentName').value='';$('departmentFee').value='';renderDepartments();toast('تمت إضافة القسم.')}catch(e2){toast(e2.message)}};
 function renderDepartments(){$('departmentsTable').innerHTML=state.departments.map(d=>{const count=state.data.students.filter(s=>s.className===d.name).length;return `<tr><td>${esc(d.name)}</td><td>${money(d.monthlyFee)}</td><td>${money(count)}</td><td class="actions"><button class="btn-edit" onclick="editDepartment(${d.id})">تعديل</button><button class="btn-delete" onclick="deleteDepartment(${d.id})">حذف</button></td></tr>`}).join('')}
-window.editDepartment=async id=>{if(!(await requirePassword()))return;const d=state.departments.find(x=>x.id===id);if(!d)return;const name=prompt('اسم القسم الجديد',d.name);if(name===null)return;const fee=prompt('الرسوم الشهرية للقسم',d.monthlyFee);if(fee===null)return;try{await api(`/departments/${id}`,{method:'PUT',body:JSON.stringify({name,monthlyFee:western(fee)})});await load();renderDepartments();renderStudents();renderFees();toast('تم تعديل القسم ورسومه.')}catch(e){toast(e.message)}};
+window.editDepartment=async id=>{if(!(await requirePassword()))return;const d=state.departments.find(x=>x.id===id);if(!d)return;const name=await askInput('اسم القسم الجديد',d.name);if(name===null)return;const fee=await askInput('الرسوم الشهرية للقسم',d.monthlyFee);if(fee===null)return;try{await api(`/departments/${id}`,{method:'PUT',body:JSON.stringify({name,monthlyFee:western(fee)})});await load();renderDepartments();renderStudents();renderFees();toast('تم تعديل القسم ورسومه.')}catch(e){toast(e.message)}};
 window.deleteDepartment=async id=>{await deleteWithPassword(`/departments/${id}`,'هل تريد حذف هذا القسم؟','تم حذف القسم.');};
 
 
@@ -162,7 +211,7 @@ async function refreshAll(){
   }
 }
 async function deleteWithPassword(path, confirmMessage, successMessage){
-  if(!confirm(confirmMessage)) return false;
+  if(!(await askConfirm(confirmMessage))) return false;
   if(!(await requirePassword())) return false;
   try{
     await api(path,{method:'DELETE'});
@@ -175,7 +224,7 @@ async function deleteWithPassword(path, confirmMessage, successMessage){
   }
 }
 
-async function requirePassword(){const p=prompt('أدخل كلمة المرور لإتمام هذه العملية:');if(p===null)return false;try{const s=await api('/settings');const x=await api('/login',{method:'POST',body:JSON.stringify({username:s.username,password:western(p)})});return Boolean(x.token)}catch{toast('كلمة المرور غير صحيحة.');return false}}
+async function requirePassword(){const p=await askInput('أدخل كلمة المرور لإتمام هذه العملية:');if(p===null)return false;try{const s=await api('/settings');const x=await api('/login',{method:'POST',body:JSON.stringify({username:s.username,password:western(p)})});return Boolean(x.token)}catch{toast('كلمة المرور غير صحيحة.');return false}}
 function renderDashboard(){const d=state.data,male=d.students.filter(s=>s.gender==='ذكر').length,female=d.students.filter(s=>s.gender==='أنثى').length,fees=d.studentPayments.reduce((a,x)=>a+Number(x.amount||0),0),sal=d.teacherPayments.reduce((a,x)=>a+Number(x.amount||0),0),adv=d.teacherAdvances.reduce((a,x)=>a+Number(x.amount||0),0),exp=d.expenses.reduce((a,x)=>a+Number(x.amount||0),0);$('sStudents').textContent=money(d.students.length);$('studentGenderSummary').textContent=`ذكور: ${money(male)} | إناث: ${money(female)}`;$('sTeachers').textContent=money(d.teachers.length);$('sFees').textContent=money(fees);$('sSalaries').textContent=money(sal+adv);$('sExpenses').textContent=money(exp);$('sNet').textContent=money(fees-sal-adv-exp);
 const m=currentMonth();$('dMonth').textContent=m;$('dFees').textContent=money(d.studentPayments.filter(x=>x.month===m).reduce((a,x)=>a+Number(x.amount||0),0));$('dSalary').textContent=money(d.teacherPayments.filter(x=>x.month===m).reduce((a,x)=>a+Number(x.amount||0),0));$('dExpenses').textContent=money(d.expenses.filter(x=>x.date.slice(0,7)===today().slice(0,7)).reduce((a,x)=>a+Number(x.amount||0),0))}
 function renderReports(){const d=state.data,income=d.studentPayments.reduce((a,x)=>a+Number(x.amount||0),0),out=d.teacherPayments.reduce((a,x)=>a+Number(x.amount||0),0)+d.teacherAdvances.reduce((a,x)=>a+Number(x.amount||0),0)+d.expenses.reduce((a,x)=>a+Number(x.amount||0),0);$('rIncome').textContent=money(income);$('rOut').textContent=money(out);$('rNet').textContent=money(income-out)}
@@ -268,7 +317,7 @@ function renderExamRecords(){
   $('examRecordsTable').innerHTML=list.map(r=>{const c=calcExamResult(r);return `<tr><td>الامتحان ${r.examNo}</td><td>${esc(r.department)}</td><td>${esc(r.studentName)}</td><td class="exam-average">${money(c.avg)}</td><td>${esc(c.remark)}</td><td>${esc(c.decision)}</td><td>${esc(r.date)}</td><td class="actions"><button class="exam-print" onclick="printExamRecord(${r.id})">كشف وطباعة</button><button class="btn-edit" onclick="editExamRecord(${r.id})">تعديل</button><button class="btn-delete" onclick="deleteExamRecordUI(${r.id})">حذف</button></td></tr>`}).join('')||'<tr><td colspan="8">لا توجد نتائج محفوظة.</td></tr>';
 }
 function editExamRecord(id){const r=(state.examData.exams||[]).find(x=>Number(x.id)===Number(id));if(!r)return;$('examNo').value=r.examNo;$('examDepartment').value=r.department;updateExamStudents();$('examStudent').value=r.studentId;$('examDate').value=r.date||today();loadExamEntry();go('exams')}
-async function deleteExamRecordUI(id){if(!confirm('هل تريد حذف نتيجة هذا الطالب؟'))return;if(!(await requirePassword()))return;try{await api(`/exam-records/${id}`,{method:'DELETE'});state.examData=await api('/exams');renderExamRecords();toast('تم حذف النتيجة.')}catch(e){toast(e.message)}}
+async function deleteExamRecordUI(id){if(!(await askConfirm('هل تريد حذف نتيجة هذا الطالب؟')))return;if(!(await requirePassword()))return;try{await api(`/exam-records/${id}`,{method:'DELETE'});state.examData=await api('/exams');renderExamRecords();toast('تم حذف النتيجة.')}catch(e){toast(e.message)}}
 window.loadExamTemplate=i=>{const t=examTemplates()[i];if(!t)return;$('examTemplateDept').value=t.department;$('examTemplateLevel').value=t.level||'إعدادي';window._editingTemplate=i;_templateSubjects=(t.subjects||[]).map(x=>({...x}));renderPendingSubjects();};
 function renderTemplateSubjectInputs(){/* kept as in-memory list; subjects are added with add button below */}
 let _templateSubjects=[];
@@ -276,7 +325,7 @@ $('addExamSubject').onclick=()=>{const name=$('examSubjectName').value.trim();if
 function renderPendingSubjects(){let box=$('templateForm').querySelector('.pending-subjects');if(!box){box=document.createElement('div');box.className='pending-subjects hint-box';$('templateForm').appendChild(box)}box.innerHTML=_templateSubjects.map((s,i)=>`${esc(s.name)}${$('examTemplateLevel').value==='ابتدائي'?'':' × '+money(s.coefficient)} <button type="button" class="btn-delete" onclick="removePendingSubject(${i})">×</button>`).join('، ')||'لم تتم إضافة مواد بعد.'}
 window.removePendingSubject=i=>{_templateSubjects.splice(i,1);renderPendingSubjects()};
 $('templateForm').onsubmit=async e=>{e.preventDefault();const dept=$('examTemplateDept').value,level=$('examTemplateLevel').value;if(!dept)return toast('اختر القسم.');if(!_templateSubjects.length){const old=currentExamTemplate(dept);if(old)_templateSubjects=(old.subjects||[]).map(x=>({...x}));}if(!_templateSubjects.length)return toast('أضف مادة واحدة على الأقل.');const list=examTemplates().filter(x=>x.department!==dept);list.push({id:'t'+Date.now(),department:dept,level,subjects:_templateSubjects.map((s,i)=>({...s,order:i+1,coefficient:level==='ابتدائي'?0:Number(s.coefficient)||1}))});try{await api('/exam-settings',{method:'PUT',body:JSON.stringify({subjectTemplates:list})});state.examData=await api('/exams');_templateSubjects=[];window._editingTemplate=null;renderPendingSubjects();renderExamSection();toast('تم حفظ قالب المواد والضوارب.')}catch(e2){toast(e2.message)}};
-window.deleteExamTemplate=async i=>{const t=examTemplates()[i];if(!t||!confirm(`حذف قالب ${t.department}؟`))return;if(!(await requirePassword()))return;const list=examTemplates().filter((_,x)=>x!==i);await api('/exam-settings',{method:'PUT',body:JSON.stringify({subjectTemplates:list})});state.examData=await api('/exams');renderExamSection();toast('تم حذف قالب المواد.')};
+window.deleteExamTemplate=async i=>{const t=examTemplates()[i];if(!t||!(await askConfirm(`حذف قالب ${t.department}؟`)))return;if(!(await requirePassword()))return;const list=examTemplates().filter((_,x)=>x!==i);await api('/exam-settings',{method:'PUT',body:JSON.stringify({subjectTemplates:list})});state.examData=await api('/exams');renderExamSection();toast('تم حذف قالب المواد.')};
 $('examDepartment').onchange=()=>{updateExamStudents();$('examEntryArea').innerHTML='';};
 $('examTemplateDept').onchange=()=>{const old=currentExamTemplate($('examTemplateDept').value);_templateSubjects=old?(old.subjects||[]).map(x=>({...x})):[];renderPendingSubjects()};
 $('examNo').onchange=loadExamEntry;

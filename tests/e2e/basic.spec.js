@@ -8,12 +8,14 @@ test('يسجل الدخول ويتنقل إلى الطلاب ثم يسجل ال�
 
   await page.locator('#loginUsername').fill(process.env.E2E_USERNAME || 'yaghoub');
   await page.locator('#loginPassword').fill(process.env.E2E_PASSWORD || '36485606');
+  const dataResponse = page.waitForResponse(response => response.url().endsWith('/api/data') && response.ok());
   await page.getByRole('button', { name: 'دخول' }).click();
+  const data = await (await dataResponse).json();
 
   await expect(page.locator('#loginScreen')).toBeHidden();
   await expect(page.locator('#app')).toBeVisible();
   await expect(page.locator('#dashboard')).toHaveClass(/active-section/);
-  await expect(page.locator('#sStudents')).toHaveText('0');
+  await expect(page.locator('#sStudents')).toHaveText(data.students.length.toLocaleString('en-US'));
 
   await page.getByRole('button', { name: /الطلاب/ }).click();
   await expect(page.locator('#students')).toHaveClass(/active-section/);

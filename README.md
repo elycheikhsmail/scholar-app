@@ -19,7 +19,7 @@ L'application permet de gérer les élèves, les frais scolaires, les employés,
 
 ## Prérequis
 
-- Node.js 22.13 minimum (ou une version ultérieure avec `node:sqlite`).
+- Node.js 22.16 minimum (ou une version ultérieure avec `node:sqlite`).
 - npm.
 - Windows pour la génération de l'installateur Electron.
 
@@ -43,6 +43,8 @@ npm start
 npm run server
 ```
 
+Le serveur écoute uniquement sur `127.0.0.1` par défaut. Le paramètre `SCHOOL_HOST` permet de choisir explicitement une autre interface si nécessaire.
+
 Le serveur utilise le port `3780` par défaut. Si ce port est déjà utilisé, il cherche automatiquement un port disponible jusqu'à `3800`.
 
 ## Tests E2E
@@ -53,7 +55,7 @@ Le projet contient un test E2E Playwright qui vérifie le parcours de base : con
 npm run test:e2e
 ```
 
-Le test utilise Chrome installé localement. Les identifiants par défaut sont :
+Les tests utilisent Chromium installé avec `npx playwright install chromium`. Pour utiliser Chrome déjà installé, définir `E2E_BROWSER_PATH` avec le chemin de son exécutable. Pour voir le parcours : `npm run test:e2e -- --headed`. Les identifiants par défaut sont :
 
 - Nom d'utilisateur : `yaghoub`
 - Mot de passe : `36485606`
@@ -107,3 +109,17 @@ playwright.config.js    Configuration Playwright
 Le projet est publié sur GitHub :
 
 https://github.com/abeidyaghoub-coder/scholar-app
+
+## Données de démonstration
+
+```bash
+node scripts/seed-demo.js
+```
+
+Cette commande ajoute 144 élèves fictifs sur les 18 premières classes, 432 paiements scolaires, 12 employés, 36 salaires, 12 avances, 24 dépenses et 288 bulletins (deux examens, six matières). Les dates couvrent septembre à décembre 2026. Les identifiants `DEMO-…`, noms « تجريبي » et notes `[DEMO-V1]` identifient les données fictives.
+
+Une sauvegarde SQLite est créée dans `database/backups/before-demo-….sqlite` avant chaque exécution. Les données existantes et identifiants de connexion sont conservés. Relancer le générateur complète les éléments manquants sans dupliquer ceux déjà présents. Les modèles de matières existants sont conservés.
+
+Pour préparer un autre répertoire local : `node scripts/seed-demo.js /chemin/du/repertoire`. Le mode Electron utilise son répertoire `userData` ; le générateur cible par défaut le répertoire du serveur.
+
+Test du générateur et de la sauvegarde : `node tests/seed-demo.test.js`.

@@ -6,7 +6,7 @@ const crypto = require("crypto");
 const db = require("./db");
 
 const DEFAULT_PORT = Number(process.env.SCHOOL_PORT || 3780);
-const HOST = "0.0.0.0";
+const HOST = process.env.SCHOOL_HOST || "127.0.0.1";
 const publicDir = path.join(__dirname, "public");
 const sessions = new Map();
 let server = null;
@@ -236,6 +236,7 @@ function closeServer() {
 }
 
 function networkAddresses(port) {
+  if (HOST === "127.0.0.1" || HOST === "::1") return [];
   const out = [];
   for (const xs of Object.values(os.networkInterfaces())) {
     for (const info of xs || []) {
