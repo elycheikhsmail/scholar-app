@@ -359,7 +359,10 @@ function addStudent(s) {
   };
   data.students.push(student);
   const initialPaid = Math.max(0, Number(s.initialPaid) || 0);
-  if (initialPaid > 0) {
+  const paymentDate = clean(s.initialPaymentDate) || student.registrationDate;
+  const registrationPaid = Math.min(initialPaid, student.registrationFee);
+  const monthlyPaid = Math.max(0, initialPaid - registrationPaid);
+  if (registrationPaid > 0) {
     const paymentId = nextId('studentPayments');
     data.studentPayments.push({
       id: paymentId,
@@ -367,9 +370,22 @@ function addStudent(s) {
       studentId: student.id,
       month: 'رسوم التسجيل',
       paymentType: 'registration',
-      amount: initialPaid,
-      date: clean(s.initialPaymentDate) || new Date().toISOString().slice(0,10),
+      amount: registrationPaid,
+      date: paymentDate,
       notes: 'دفعة رسوم التسجيل عند تسجيل الطالب'
+    });
+  }
+  if (monthlyPaid > 0) {
+    const paymentId = nextId('studentPayments');
+    data.studentPayments.push({
+      id: paymentId,
+      invoiceNo: `F-${String(paymentId).padStart(6,'0')}`,
+      studentId: student.id,
+      month: clean(s.initialPaymentMonth) || currentPaymentMonth(),
+      paymentType: 'monthly',
+      amount: monthlyPaid,
+      date: paymentDate,
+      notes: 'دفعة الرسوم الشهرية عند تسجيل الطالب'
     });
   }
   save(); return student;

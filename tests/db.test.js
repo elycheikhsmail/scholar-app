@@ -38,6 +38,23 @@ test('creates SQLite and persists CRUD, linked payments, staff, and nested exams
   assert.equal(db.getData().teacherAdvances.length, 0);
 });
 
+test('splits the amount paid during registration between registration and monthly fees', () => {
+  const dir = temp(); db.init(dir);
+  const s = db.addStudent({
+    ...student,
+    registrationFee: 2000,
+    monthlyFee: 13000,
+    initialPaid: 9750,
+    initialPaymentMonth: 'أكتوبر',
+    initialPaymentDate: '2026-09-09'
+  });
+  const payments = db.getData().studentPayments.filter(p => p.studentId === s.id);
+  assert.deepEqual(payments.map(p => ({ month: p.month, amount: p.amount })), [
+    { month: 'رسوم التسجيل', amount: 2000 },
+    { month: 'أكتوبر', amount: 7750 }
+  ]);
+});
+
 test('imports every collection once, preserves original JSON and optional fields', () => {
   const dir = temp(); db.init(dir);
   db.addStudent(student);
