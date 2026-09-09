@@ -153,6 +153,11 @@ test('HTTP server supports login and CRUD using SQLite', async () => {
     const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
     const added = await fetch(`${server.url}/api/expenses`, { method: 'POST', headers, body: JSON.stringify({ category: 'test', amount: 15 }) });
     assert.equal(added.status, 200);
+    const studentResponse = await fetch(`${server.url}/api/students`, {method:'POST',headers,body:JSON.stringify(student)});
+    const created = await studentResponse.json();
+    const feeResponse = await fetch(`${server.url}/api/students/${created.id}/fees`, {method:'PUT',headers,body:JSON.stringify({registrationFee:250,monthlyFee:1200})});
+    assert.equal(feeResponse.status,200);
+    assert.equal((await feeResponse.json()).monthlyFee,1200);
     const response = await fetch(`${server.url}/api/data`, { headers });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).expenses[0].amount, 15);
@@ -162,4 +167,24 @@ test('HTTP server supports login and CRUD using SQLite', async () => {
     server.close();
     require(path.join(dir, 'db.js')).close();
   }
+});
+
+test('personal edits preserve fees; fee edits preserve identity and recorded payments', () => {
+  db.init(temp());
+  const s = db.addStudent({...student, registrationFee:200, monthlyFee:1000});
+  db.addStudentPayment({studentId:s.id,month:'أكتوبر',amount:400,date:'2026-10-05'});
+  db.updateStudent(s.id,{...student,name:'اسم جديد'});
+  let saved = db.getData().students[0];
+  assert.equal(saved.registrationFee,200);
+  assert.equal(saved.monthlyFee,1000);
+  const payments = db.getData().studentPayments;
+  db.updateStudentFees(s.id,{registrationFee:0,monthlyFee:900});
+  saved = db.getData().students[0];
+  assert.equal(saved.name,'اسم جديد');
+  assert.equal(saved.registrationFee,0);
+  assert.equal(saved.monthlyFee,900);
+  assert.deepEqual(db.getData().studentPayments,payments);
+  assert.throws(()=>db.updateStudentFees(s.id,{registrationFee:300,monthlyFee:-1}));
+  assert.equal(db.getData().students[0].registrationFee,0);
+  assert.throws(()=>db.updateStudentFees(s.id,{registrationFee:100,monthlyFee:Infinity}));
 });

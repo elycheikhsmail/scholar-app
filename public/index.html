@@ -58,7 +58,7 @@
 </section>
 
 <section id="students" class="section">
-  <div class="section-head"><div><h2>الطلاب</h2><p>تسجيل الطلاب ومتابعة رسومهم الشهرية</p></div></div>
+  <div class="section-head"><div><h2>الطلاب</h2><p>تسجيل بيانات الطلاب الشخصية والدراسية</p></div></div>
   <div class="panel student-form-panel">
     <form id="studentForm" class="student-grid">
       <input type="hidden" id="studentId">
@@ -73,9 +73,6 @@
       <label class="student-label">اسم ولي الأمر<input id="guardianName"></label>
       <label class="student-label">رقم هاتف ولي الأمر<input id="guardianPhone" maxlength="8" inputmode="numeric"></label>
       <label class="student-label">تاريخ التسجيل<input id="registrationDate" type="date"></label>
-      <label class="student-label">رسوم التسجيل<input id="registrationFee" type="number" min="0"></label>
-      <label class="student-label monthly-fee-field">الرسوم الشهرية<input id="monthlyFee" type="number" min="0"></label>
-      <label class="student-label monthly-paid-field">المبلغ المدفوع عند التسجيل <small>يُحتسب لرسوم التسجيل أولًا ثم رسوم الشهر</small><input id="initialPaid" type="number" min="0"></label>
       <label class="student-label notes-field">ملاحظات<textarea id="studentNotes"></textarea></label>
       <div class="form-actions"><button class="primary">حفظ الطالب</button><button type="button" class="secondary" id="cancelStudent">تفريغ النموذج</button></div>
     </form>
@@ -87,13 +84,35 @@
       <span id="studentCount"></span>
     </div>
     <h3 class="table-title" id="studentsTableTitle">سجل الطلاب</h3><div class="table-scroll students-scroll"><table aria-labelledby="studentsTableTitle"><thead><tr>
-      <th>القسم</th><th>رقم النداء</th><th>الرقم المدرسي</th><th>اسم الطالب</th><th>الجنس</th><th>NNI</th><th>الرسوم الشهرية</th><th>إجراءات</th>
+      <th>القسم</th><th>رقم النداء</th><th>الرقم المدرسي</th><th>اسم الطالب</th><th>الجنس</th><th>NNI</th><th>إجراءات</th>
     </tr></thead><tbody id="studentsTable"></tbody></table></div>
   </div>
 </section>
 
 <section id="fees" class="section">
   <div class="section-head"><div><h2>الرسوم الشهرية</h2><p>اختر الشهر والقسم ثم سجّل الدفعات</p></div></div>
+  <div id="studentFeesPanel" class="panel hidden">
+    <h3>استمارة رسوم الطالب</h3><p id="studentFeesIdentity"></p>
+    <form id="studentFeesForm" class="form-grid">
+      <label>رسوم التسجيل<input id="studentRegistrationFee" type="number" min="0" step="0.01" required></label>
+      <label>الرسوم الشهرية<input id="studentMonthlyFee" type="number" min="0" step="0.01" required></label>
+      <div class="form-actions"><button class="primary">حفظ الرسوم</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button><button type="button" class="secondary" id="closeStudentFees">إغلاق استمارة الطالب</button></div>
+    </form>
+    <p id="studentPaidSummary" class="hint-box"></p>
+    <form id="studentFeePaymentForm" class="form-grid">
+      <label>الرسوم التي تخصها الدفعة<select id="studentPaymentMonth" required></select></label>
+      <label>مبلغ دفعه الطالب ولم يُسجّل بعد<input id="studentPaymentAmount" type="number" min="0.01" step="0.01" required></label>
+      <label>تاريخ الدفع<input id="studentPaymentDate" type="date" required></label>
+      <div class="form-actions"><button class="primary">تسجيل الدفعة</button></div>
+    </form>
+    <div id="studentLedger" class="hidden">
+      <h3 class="table-title" id="studentLedgerTitle">كشف مستحقات الطالب حسب الشهر</h3>
+      <p>تُحسب المستحقات وفق الرسوم الحالية وتواريخ الاستحقاق في السنة الدراسية المحددة. تُعرض الأشهر القادمة للتوضيح.</p>
+      <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>الزيادة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
+      <h3 class="table-title" id="studentLedgerPaymentsTitle">تفاصيل دفعات الطالب</h3>
+      <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>
+    </div>
+  </div>
   <div class="panel fee-toolbar">
     <label>نوع الرسوم<select id="feeMonth"><option value="رسوم التسجيل">رسوم التسجيل</option></select></label>
     <label>القسم<select id="feeDepartment"></select></label>

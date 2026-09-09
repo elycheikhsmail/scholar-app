@@ -353,7 +353,7 @@ function addStudent(s) {
     className: clean(s.className),
     registrationDate: clean(s.registrationDate) || new Date().toISOString().slice(0,10),
     registrationFee: Math.max(0, Number(s.registrationFee) || 0),
-    monthlyFee: Math.max(0, Number(s.monthlyFee) || Number(data.settings.defaultMonthlyFee) || 0),
+    monthlyFee: Math.max(0, Number(s.monthlyFee ?? data.departments.find(d => d.name === clean(s.className))?.monthlyFee ?? data.settings.defaultMonthlyFee) || 0),
     notes: clean(s.notes),
     gender: clean(s.gender)
   };
@@ -406,9 +406,20 @@ function updateStudent(id, s) {
     callNo: oldDep === newDep ? student.callNo : nextCallNo(newDep, id),
     nni: clean(s.nni), gender: clean(s.gender), birthPlace: clean(s.birthPlace), birthDate: clean(s.birthDate),
     guardianName: clean(s.guardianName), guardianPhone: clean(s.guardianPhone), className: newDep,
-    registrationDate: clean(s.registrationDate), registrationFee: Math.max(0, Number(s.registrationFee) || 0),
-    monthlyFee: Math.max(0, Number(s.monthlyFee) || 0), notes: clean(s.notes)
+    registrationDate: clean(s.registrationDate), registrationFee: s.registrationFee === undefined ? student.registrationFee : Math.max(0, Number(s.registrationFee) || 0),
+    monthlyFee: s.monthlyFee === undefined ? student.monthlyFee : Math.max(0, Number(s.monthlyFee) || 0), notes: clean(s.notes)
   });
+  save(); return student;
+}
+
+function updateStudentFees(id, fees) {
+  const student = data.students.find(s => Number(s.id) === Number(id));
+  if (!student) throw new Error('الطالب غير موجود.');
+  for (const field of ['registrationFee','monthlyFee']) {
+    if (fees[field] === '' || fees[field] == null || !Number.isFinite(Number(fees[field])) || Number(fees[field]) < 0) throw new Error('أدخل رسومًا صحيحة لا تقل عن صفر.');
+  }
+  student.registrationFee = Number(fees.registrationFee);
+  student.monthlyFee = Number(fees.monthlyFee);
   save(); return student;
 }
 
@@ -545,7 +556,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,updateStudentFees,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

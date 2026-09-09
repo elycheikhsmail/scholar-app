@@ -27,14 +27,22 @@ test('يسجل الدخول ويتنقل إلى الطلاب ثم يسجل ال�
   await page.locator('#studentDepartmentFilter').selectOption(firstDepartment);
   const visibleDepartments = await page.locator('#studentsTable tr td:first-child').allTextContents();
   expect(visibleDepartments.every(department => department === firstDepartment)).toBe(true);
-  await expect(page.locator('#studentsTable tr').first().locator('td')).toHaveCount(8);
-  await expect(page.locator('#studentsTable .btn-pay')).toHaveCount(0);
+  await expect(page.locator('#studentsTable tr').first().locator('td')).toHaveCount(7);
+  await expect(page.locator('#studentsTable tr').first().getByRole('button', {name:'رسوم الطالب'})).toBeVisible();
 
   const firstStudentName = await page.locator('#studentsTable tr').first().locator('td').nth(3).textContent();
   await page.locator('#studentsTable tr').first().getByRole('button', { name: 'تعديل' }).click();
   await expect(page.locator('#studentName')).toHaveValue(firstStudentName);
   await expect(page.locator('#studentName')).toBeFocused();
   await expect(page.locator('#studentForm').locator('..')).toHaveClass(/editing-record/);
+
+  await page.locator('#studentsTable tr').first().getByRole('button', {name:'رسوم الطالب'}).click();
+  await expect(page.locator('#fees')).toHaveClass(/active-section/);
+  await expect(page.locator('#studentFeesIdentity')).toContainText(firstStudentName);
+  await expect(page.locator('#studentRegistrationFee')).toBeVisible();
+  await page.locator('#showStudentLedger').click();
+  await expect(page.locator('#studentLedger')).toBeVisible();
+  await expect(page.locator('#studentLedgerRows tr')).toHaveCount(10);
 
   await page.locator('#logoutBtn').click();
   await expect(page.locator('#loginScreen')).toBeVisible();
