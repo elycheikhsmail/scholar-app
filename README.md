@@ -53,6 +53,22 @@ Le serveur utilise le port `3780` par défaut. Si ce port est déjà utilisé, i
 - Après huit échecs de connexion en cinq minutes depuis la même adresse, les tentatives sont refusées jusqu'à la fin de la fenêtre.
 - Les réponses de l'API n'autorisent l'accès cross-origin que depuis l'adresse locale qui sert l'interface.
 
+## Vérifications ciblées
+
+```bash
+npm run check       # Syntaxe JavaScript, sortie courte
+npm test            # Tous les tests unitaires et d'intégration
+npm run test:fees   # Calcul des frais
+npm run test:db     # Persistance, migrations et API
+npm run test:seed   # Générateur de données de démonstration
+npm run test:ui     # Chargement des scripts et navigation, API simulée
+```
+
+Les tests unitaires et le test UI utilisent des répertoires temporaires. Le test UI
+nécessite Chromium de Playwright, ou `E2E_BROWSER_PATH`, comme les tests E2E.
+Il vérifie la connexion, toutes les sections, les frais d'un élève et la reprise
+de session, sans démarrer le serveur ni utiliser la base de travail.
+
 ## Tests E2E
 
 Le projet contient un test E2E Playwright qui vérifie le parcours de base : connexion, affichage du tableau de bord, navigation vers les élèves et déconnexion.
@@ -136,11 +152,25 @@ server.js               Serveur HTTP et API locale
 db.js                   Gestion de la base de données locale
 public/index.html       Interface principale
 public/fees.js          Moteur de calcul des frais dus (périodes, historique, affectation)
-public/app.js           Logique de l'interface
+public/core.js          État partagé, API, dialogues et navigation
+public/students.js      Élèves, formulaire des frais et relevé individuel
+public/fees-ui.js       Tableau des frais, encaissements, exports et reçus
+public/staff.js         Personnel, salaires et avances
+public/reports.js       Dépenses, tableau de bord et rapports
+public/settings.js      Paramètres, classes et mode d'application
+public/exams.js         Examens, modèles et bulletins
+public/app.js           Démarrage et reprise de session
 public/style.css        Styles de l'application
 tests/e2e/              Tests end-to-end
 playwright.config.js    Configuration Playwright
 ```
+
+Les scripts du navigateur partagent leurs fonctions et leur état global. Leur
+ordre de chargement dans `index.html` est explicite ; `app.js` démarre en dernier.
+Ce découpage permet de consulter une fonctionnalité sans lire toute l'interface.
+La carte de travail et les consignes concises pour les agents sont dans `AGENTS.md` ;
+`CLAUDE.md` réutilise ce même guide. Les anciennes revues et analyses de refactoring
+restent des références historiques, à confronter au code actuel.
 
 ## Dépôt
 

@@ -1,4 +1,4 @@
-// Student dues engine, shared by the browser (public/app.js) and the server (db.js).
+// Student dues engine, shared by the browser UI and the server (db.js).
 //
 // Three rules it exists to enforce:
 //   1. A student is only charged for the months between enrolment and departure.
