@@ -81,7 +81,11 @@
     </form>
   </div>
   <div class="panel">
-    <div class="table-tools"><input id="studentSearch" placeholder="بحث بالاسم أو الرقم المدرسي أو NNI"><span id="studentCount"></span></div>
+    <div class="table-tools student-table-tools">
+      <label>القسم/الشعبة<select id="studentDepartmentFilter"></select></label>
+      <label>بحث<input id="studentSearch" placeholder="بحث بالاسم أو الرقم المدرسي أو NNI"></label>
+      <span id="studentCount"></span>
+    </div>
     <div class="table-scroll students-scroll"><table><thead><tr>
       <th>القسم</th><th>رقم النداء</th><th>الرقم المدرسي</th><th>اسم الطالب</th><th>الجنس</th><th>NNI</th><th>الرسوم الشهرية</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>الشهور المدفوعة</th><th>دفعة الشهر الحالي</th><th>إجراءات</th>
     </tr></thead><tbody id="studentsTable"></tbody></table></div>

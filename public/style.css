@@ -42,3 +42,13 @@
 .input-dialog h3{margin:0 0 18px;line-height:1.6}
 .input-dialog input{width:100%;box-sizing:border-box;border:1px solid #aabac5;border-radius:8px;padding:12px;font:inherit}
 .input-dialog .form-actions{margin-top:18px}
+
+.table-tools label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}
+.table-tools select{max-width:430px;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
+.student-table-tools{justify-content:flex-start;flex-wrap:wrap}
+.student-table-tools label{min-width:220px}
+.student-table-tools label:nth-child(2){flex:1}
+.student-table-tools label:nth-child(2) input{width:100%}
+.student-table-tools #studentCount{margin-inline-start:auto}
+
+@media(max-width:700px){.student-table-tools{display:grid;grid-template-columns:1fr}.student-table-tools label{min-width:0}.student-table-tools #studentCount{margin-inline-start:0}}

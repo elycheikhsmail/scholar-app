@@ -21,6 +21,12 @@ test('يسجل الدخول ويتنقل إلى الطلاب ثم يسجل ال�
   await expect(page.locator('#students')).toHaveClass(/active-section/);
   await expect(page.locator('#studentForm')).toBeVisible();
   await expect(page.locator('#studentName')).toBeVisible();
+  await expect(page.locator('#studentDepartmentFilter')).toBeVisible();
+
+  const firstDepartment = await page.locator('#studentDepartmentFilter option').nth(1).getAttribute('value');
+  await page.locator('#studentDepartmentFilter').selectOption(firstDepartment);
+  const visibleDepartments = await page.locator('#studentsTable tr td:first-child').allTextContents();
+  expect(visibleDepartments.every(department => department === firstDepartment)).toBe(true);
 
   await page.locator('#logoutBtn').click();
   await expect(page.locator('#loginScreen')).toBeVisible();
