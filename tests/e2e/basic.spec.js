@@ -23,10 +23,16 @@ test('يسجل الدخول ويتنقل إلى الطلاب ثم يسجل ال�
   await expect(page.locator('#studentName')).toBeVisible();
   await expect(page.locator('#studentDepartmentFilter')).toBeVisible();
 
-  const firstDepartment = await page.locator('#studentDepartmentFilter option').nth(1).getAttribute('value');
+  const firstDepartment = await page.locator('#studentsTable tr').first().locator('td').first().textContent();
   await page.locator('#studentDepartmentFilter').selectOption(firstDepartment);
   const visibleDepartments = await page.locator('#studentsTable tr td:first-child').allTextContents();
   expect(visibleDepartments.every(department => department === firstDepartment)).toBe(true);
+
+  const firstStudentName = await page.locator('#studentsTable tr').first().locator('td').nth(3).textContent();
+  await page.locator('#studentsTable tr').first().getByRole('button', { name: 'تعديل' }).click();
+  await expect(page.locator('#studentName')).toHaveValue(firstStudentName);
+  await expect(page.locator('#studentName')).toBeFocused();
+  await expect(page.locator('#studentForm').locator('..')).toHaveClass(/editing-record/);
 
   await page.locator('#logoutBtn').click();
   await expect(page.locator('#loginScreen')).toBeVisible();
