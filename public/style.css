@@ -56,3 +56,7 @@
 .editing-record{animation:editing-record-highlight 1.8s ease-out}
 @keyframes editing-record-highlight{0%,35%{border-color:#ef7d16;box-shadow:0 0 0 4px #ef7d1633,0 3px 15px #1a28320c}100%{border-color:#e0e6eb;box-shadow:0 3px 15px #1a28320c}}
 @media(prefers-reduced-motion:reduce){.editing-record{animation:none;outline:3px solid #ef7d16}}
+
+.table-title{margin:0 0 12px;font-size:18px;font-weight:800;line-height:1.6;text-align:right;color:#25323b}
+form + .table-title,.table-scroll + .table-title{margin-top:18px}
+.results-sheet caption.table-title{caption-side:top;text-align:center;color:#111}

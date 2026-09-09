@@ -86,7 +86,7 @@
       <label>بحث<input id="studentSearch" placeholder="بحث بالاسم أو الرقم المدرسي أو NNI"></label>
       <span id="studentCount"></span>
     </div>
-    <div class="table-scroll students-scroll"><table><thead><tr>
+    <h3 class="table-title" id="studentsTableTitle">سجل الطلاب</h3><div class="table-scroll students-scroll"><table aria-labelledby="studentsTableTitle"><thead><tr>
       <th>القسم</th><th>رقم النداء</th><th>الرقم المدرسي</th><th>اسم الطالب</th><th>الجنس</th><th>NNI</th><th>الرسوم الشهرية</th><th>إجراءات</th>
     </tr></thead><tbody id="studentsTable"></tbody></table></div>
   </div>
@@ -100,11 +100,11 @@
     <label>بحث<input id="feeSearch" placeholder="اسم الطالب أو الرقم المدرسي"></label>
   </div>
   <div class="panel"><div id="feeTotals" class="totals-line"></div>
-    <div class="table-scroll"><table><thead><tr>
+    <h3 class="table-title" id="feesTableTitle">جدول مستحقات الطلاب</h3><div class="table-scroll"><table aria-labelledby="feesTableTitle"><thead><tr>
       <th>القسم</th><th>الرقم المدرسي</th><th>رقم النداء</th><th>الطالب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>تاريخ الاستحقاق</th><th>الحالة</th><th>دفعة جديدة</th><th>إجراء</th>
     </tr></thead><tbody id="feesTable"></tbody></table></div>
   </div>
-  <div class="panel"><h3>سجل دفعات الطلاب</h3><div class="table-scroll"><table><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
+  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل دفعات الطلاب والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
 </section>
 
 <section id="staff" class="section">
@@ -122,18 +122,18 @@
     <label class="notes-field">ملاحظات<textarea id="teacherNotes"></textarea></label>
     <div class="form-actions"><button class="primary">حفظ الموظف</button><button type="button" class="secondary" id="cancelTeacher">تفريغ النموذج</button></div>
   </form></div>
-  <div class="panel"><div class="table-scroll"><table><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
+  <div class="panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3><div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
   <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form">
     <select id="salaryTeacher" required></select><select id="salaryMonth" required></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date"><button class="primary">تسجيل دفعة</button>
-  </form><div id="salaryDueInfo" class="hint-box"></div><div class="table-scroll"><table><thead><tr><th>الموظف</th><th>الشهر</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="salaryTable"></tbody></table></div></div>
+  </form><div id="salaryDueInfo" class="hint-box"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3><div class="table-scroll"><table aria-labelledby="salaryTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="salaryTable"></tbody></table></div></div>
 
-  <div class="panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required></select><select id="advanceMonth" required></select><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div class="table-scroll"><table><thead><tr><th>الموظف</th><th>الشهر</th><th>السلفة</th><th>التاريخ</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="advanceTable"></tbody></table></div></div>
+  <div class="panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required></select><select id="advanceMonth" required></select><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3><div class="table-scroll"><table aria-labelledby="advanceTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>السلفة</th><th>التاريخ</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="advanceTable"></tbody></table></div></div>
 </section>
 
 <section id="expenses" class="section"><div class="section-head"><div><h2>المصروفات</h2><p>تسجيل ومتابعة مصروفات المدرسة</p></div></div>
   <div class="panel"><form id="expenseForm" class="form-grid expenses-form"><input type="hidden" id="expenseId"><label>نوع المصروف<input id="expenseCategory" required></label><label>البيان / وصف المصروف<input id="expenseDescription"></label><label>المبلغ<input id="expenseAmount" type="number" min="1" required></label><label>التاريخ<input id="expenseDate" type="date"></label><label>المستفيد<input id="expenseBeneficiary"></label><label class="wide-field">ملاحظات<textarea id="expenseNotes"></textarea></label><div class="form-actions"><button class="primary">حفظ المصروف</button><button type="button" class="secondary" id="cancelExpense">تفريغ النموذج</button></div></form></div>
-  <div class="panel"><div class="table-scroll"><table><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th><th>المستفيد</th><th>إجراءات</th></tr></thead><tbody id="expensesTable"></tbody></table></div></div>
+  <div class="panel"><h3 class="table-title" id="expensesTableTitle">سجل مصروفات المدرسة</h3><div class="table-scroll"><table aria-labelledby="expensesTableTitle"><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th><th>المستفيد</th><th>إجراءات</th></tr></thead><tbody id="expensesTable"></tbody></table></div></div>
 </section>
 
 
@@ -151,7 +151,7 @@
       <button type="submit" class="primary">حفظ قالب المواد</button>
     </form>
     <div class="hint-box">أضف المواد مرة واحدة لكل قسم/شعبة. في الابتدائي يظهر العمود «النتيجة» فقط، وفي الإعدادي والثانوي تظهر «الاختبارات، الامتحان، الضارب، المجموع». ويمكن تغيير المواد والضوارب حسب كل قسم.</div>
-    <div class="table-scroll"><table><thead><tr><th>القسم/الشعبة</th><th>النوع</th><th>المواد والضوارب</th><th>إجراءات</th></tr></thead><tbody id="examTemplatesTable"></tbody></table></div>
+    <h3 class="table-title" id="examTemplatesTableTitle">جدول مواد الأقسام وضواربها</h3><div class="table-scroll"><table aria-labelledby="examTemplatesTableTitle"><thead><tr><th>القسم/الشعبة</th><th>النوع</th><th>المواد والضوارب</th><th>إجراءات</th></tr></thead><tbody id="examTemplatesTable"></tbody></table></div>
   </div>
 
   <div class="panel">
@@ -168,8 +168,8 @@
   </div>
 
   <div class="panel">
-    <div class="section-head"><div><h3>السجلات المحفوظة</h3><p>يمكن فتح كشف أي طالب وطباعته</p></div></div>
-    <div class="table-scroll"><table><thead><tr><th>الامتحان</th><th>القسم</th><th>الطالب</th><th>المعدل</th><th>الملاحظة</th><th>القرار</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="examRecordsTable"></tbody></table></div>
+    <p>يمكن فتح كشف أي طالب وطباعته</p>
+    <h3 class="table-title" id="examRecordsTableTitle">سجل نتائج الامتحانات المحفوظة</h3><div class="table-scroll"><table aria-labelledby="examRecordsTableTitle"><thead><tr><th>الامتحان</th><th>القسم</th><th>الطالب</th><th>المعدل</th><th>الملاحظة</th><th>القرار</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="examRecordsTable"></tbody></table></div>
   </div>
 
   <div class="panel">
@@ -184,8 +184,8 @@
       <input id="decisionText" placeholder="القرار: ناجح / معيد / مطرود">
       <button class="primary" id="addDecisionRule" type="button">إضافة قرار</button>
     </div>
-    <div class="table-scroll"><table><thead><tr><th>حد المعدل</th><th>الملاحظة</th><th>حذف</th></tr></thead><tbody id="remarksRulesTable"></tbody></table></div>
-    <div class="table-scroll"><table><thead><tr><th>حد المعدل</th><th>القرار</th><th>حذف</th></tr></thead><tbody id="decisionRulesTable"></tbody></table></div>
+    <h3 class="table-title" id="remarksRulesTableTitle">جدول قواعد الملاحظات</h3><div class="table-scroll"><table aria-labelledby="remarksRulesTableTitle"><thead><tr><th>حد المعدل</th><th>الملاحظة</th><th>حذف</th></tr></thead><tbody id="remarksRulesTable"></tbody></table></div>
+    <h3 class="table-title" id="decisionRulesTableTitle">جدول قواعد القرارات</h3><div class="table-scroll"><table aria-labelledby="decisionRulesTableTitle"><thead><tr><th>حد المعدل</th><th>القرار</th><th>حذف</th></tr></thead><tbody id="decisionRulesTable"></tbody></table></div>
   </div>
 
   <div class="panel">
@@ -206,7 +206,7 @@
 <section id="settings" class="section"><div class="section-head"><div><h2>الإعدادات</h2><p>بيانات المدرسة والدخول والأقسام</p></div></div>
   <div class="panel"><form id="settingsForm" class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>الرسوم الشهرية الافتراضية<input id="setDefaultMonthlyFee" type="number" min="0"></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
   <div class="panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
-  <div class="panel"><h3>إدارة الأقسام ورسومها الشهرية</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><div class="table-scroll"><table><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
+  <div class="panel"><h3>إدارة الأقسام ورسومها الشهرية</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
 </section>
 </main></div></div>
 <div id="toast"></div>
