@@ -439,7 +439,9 @@ async function deleteWithPassword(path, confirmMessage, successMessage){
   }
 }
 
-async function requirePassword(){const p=await askInput('أدخل كلمة المرور لإتمام هذه العملية:');if(p===null)return false;try{const s=await api('/settings');const x=await api('/login',{method:'POST',body:JSON.stringify({username:s.username,password:western(p)})});return Boolean(x.token)}catch{toast('كلمة المرور غير صحيحة.');return false}}
+// One round trip, and no session created: /login used to leave an unused token
+// on the server for every confirmation.
+async function requirePassword(){const p=await askInput('أدخل كلمة المرور لإتمام هذه العملية:');if(p===null)return false;try{const x=await api('/verify-password',{method:'POST',body:JSON.stringify({password:western(p)})});return Boolean(x.ok)}catch(error){toast(error.message||'كلمة المرور غير صحيحة.');return false}}
 function renderDashboard(){const d=state.data,male=d.students.filter(s=>s.gender==='ذكر').length,female=d.students.filter(s=>s.gender==='أنثى').length,fees=d.studentPayments.reduce((a,x)=>a+Number(x.amount||0),0),sal=d.teacherPayments.reduce((a,x)=>a+Number(x.amount||0),0),adv=d.teacherAdvances.reduce((a,x)=>a+Number(x.amount||0),0),exp=d.expenses.reduce((a,x)=>a+Number(x.amount||0),0);$('sStudents').textContent=money(d.students.length);$('studentGenderSummary').textContent=`ذكور: ${money(male)} | إناث: ${money(female)}`;$('sTeachers').textContent=money(d.teachers.length);$('sFees').textContent=money(fees);$('sSalaries').textContent=money(sal+adv);$('sExpenses').textContent=money(exp);$('sNet').textContent=money(fees-sal-adv-exp);
 const m=currentMonth();$('dMonth').textContent=m;$('dFees').textContent=money(d.studentPayments.filter(x=>x.month===m).reduce((a,x)=>a+Number(x.amount||0),0));$('dSalary').textContent=money(d.teacherPayments.filter(x=>x.month===m).reduce((a,x)=>a+Number(x.amount||0),0));$('dExpenses').textContent=money(d.expenses.filter(x=>x.date.slice(0,7)===today().slice(0,7)).reduce((a,x)=>a+Number(x.amount||0),0))}
 function renderDuesReports(){

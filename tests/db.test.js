@@ -262,6 +262,36 @@ test('mode API persists selection, rejects stale sessions and delayed writes, an
   } finally {server.close();require(path.join(dir,'db.js')).close();}
 });
 
+test('confirming a sensitive action verifies the password without creating a session', async () => {
+  const dir = temp();
+  copySources(dir);
+  const previousPort = process.env.SCHOOL_PORT;
+  process.env.SCHOOL_PORT = '23884';
+  const service = require(path.join(dir, 'server.js'));
+  if (previousPort === undefined) delete process.env.SCHOOL_PORT; else process.env.SCHOOL_PORT = previousPort;
+  const server = await service.startServer();
+  const request = (endpoint, method = 'GET', token = '', payload) => fetch(server.url + '/api' + endpoint,
+    { method, headers: { 'Content-Type': 'application/json', Connection: 'close', Authorization: `Bearer ${token}` },
+      ...(payload ? { body: JSON.stringify(payload) } : {}) });
+  try {
+    const token = (await (await request('/login', 'POST', '', { username: 'yaghoub', password: '36485606' })).json()).token;
+
+    const ok = await request('/verify-password', 'POST', token, { password: '36485606' });
+    assert.equal(ok.status, 200);
+    const payload = await ok.json();
+    assert.equal(payload.ok, true);
+    // The whole point: no second session is handed out for a confirmation.
+    assert.equal('token' in payload, false, 'confirming does not mint a session');
+
+    // 403 and not 401, so the interface shows the error instead of reloading.
+    const wrong = await request('/verify-password', 'POST', token, { password: 'wrong' });
+    assert.equal(wrong.status, 403);
+
+    // It is a privileged endpoint: no valid session, no verification.
+    assert.equal((await request('/verify-password', 'POST', '', { password: '36485606' })).status, 401);
+  } finally { server.close(); require(path.join(dir, 'db.js')).close(); }
+});
+
 test('sessions expire, repeated login failures are throttled, and CORS is limited to loopback', async () => {
   const dir = temp();
   copySources(dir);

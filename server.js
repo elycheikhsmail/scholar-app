@@ -183,6 +183,22 @@ async function api(req, res) {
     return json(res, 200, { ok: true });
   }
 
+  // Confirming a sensitive action re-checks the password without minting a
+  // session: going through /login left one unused 12h token behind each time.
+  if (parts[1] === "verify-password" && method === "POST") {
+    const wait = loginBlocked(req);
+    if (wait) return json(res, 429, { error: `محاولات كثيرة. أعد المحاولة بعد ${wait} ثانية.` });
+    const b = await body(req);
+    // 403, not 401: the session is valid, only the confirmation failed. A 401
+    // makes the client treat the session as expired and reload.
+    if (!db.checkLogin(db.publicSettings().username, b.password)) {
+      noteLoginFailure(req);
+      return json(res, 403, { error: "كلمة المرور غير صحيحة." });
+    }
+    loginFailures.delete(clientKey(req));
+    return json(res, 200, { ok: true });
+  }
+
   if (parts[1] === "data" && method === "GET") {
     return json(res, 200, db.getCoreData());
   }

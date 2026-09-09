@@ -223,6 +223,8 @@ test('the data endpoint payload leaves exams to their own endpoint', () => {
   assert.equal('examSettings' in core, false);
   assert.equal(core.students.length, 1, 'everything the interface still needs is present');
   assert.equal(core.settings.schoolName, 'مدرسة مكارم الأخلاق الحرة');
+  // The scrypt hash must never leave the server: the browser only needs publicSettings().
+  assert.equal('passwordHash' in core.settings, false, 'the password hash stays on the server');
   // The records are untouched and still reachable where the interface reads them.
   assert.equal(db.getExamData().exams.length, 1);
   assert.equal(db.getData().exams.length, 1);

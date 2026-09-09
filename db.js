@@ -277,9 +277,11 @@ function publicSettings() {
 
 function getData() { return clone(data); }
 function getCoreData() {
-  const result = {};
+  // Settings go through publicSettings(): copying data.settings wholesale sent
+  // the scrypt passwordHash to the browser on every load().
+  const result = { settings: publicSettings() };
   for (const key of Object.keys(data)) {
-    if (key === 'exams' || key === 'examSettings') continue;
+    if (key === 'exams' || key === 'examSettings' || key === 'settings') continue;
     result[key] = clone(data[key]);
   }
   return result;
