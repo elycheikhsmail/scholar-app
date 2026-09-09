@@ -65,3 +65,9 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 #studentFeesPanel .form-actions{flex-wrap:wrap}
 #studentFeesPanel .table-scroll table{min-width:850px}
 #studentLedger{margin-top:20px}
+
+.nav-item.collections{color:#168a4a}.nav-item.collections.active{background:#168a4a;color:#fff}
+.collection-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px}
+.collection-filters label{display:flex;flex:1 1 180px;flex-direction:column;gap:6px;font-size:13px;font-weight:700;min-width:0}
+.collection-filters input,.collection-filters select{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
+#collections .table-scroll table{min-width:850px}

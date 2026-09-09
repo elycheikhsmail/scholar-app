@@ -33,6 +33,7 @@
   <button class="nav-item dashboard active" data-section="dashboard">🏠 <span>الرئيسية</span></button>
   <button class="nav-item students" data-section="students">👨‍🎓 <span>الطلاب</span></button>
   <button class="nav-item fees" data-section="fees">💰 <span>الرسوم الشهرية</span></button>
+  <button class="nav-item collections" data-section="collections">🧾 <span>سجل التحصيل والفواتير</span></button>
   <button class="nav-item staff" data-section="staff">👨‍🏫 <span>الموظفون والرواتب</span></button>
   <button class="nav-item expenses" data-section="expenses">💸 <span>المصروفات</span></button>
   <button class="nav-item exams" data-section="exams">📝 <span>الامتحانات</span></button>
@@ -123,7 +124,23 @@
       <th>القسم</th><th>الرقم المدرسي</th><th>رقم النداء</th><th>الطالب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>تاريخ الاستحقاق</th><th>الحالة</th><th>دفعة جديدة</th><th>إجراء</th>
     </tr></thead><tbody id="feesTable"></tbody></table></div>
   </div>
-  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل دفعات الطلاب والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
+</section>
+
+<section id="collections" class="section">
+  <div class="section-head"><div><h2>سجل التحصيل والفواتير</h2><p>مراجعة المقبوضات من جميع الطلاب وطباعة الفواتير وإدارة الدفعات</p></div></div>
+  <div class="panel">
+    <form id="collectionFilters" class="collection-filters">
+      <label>بحث<input id="collectionSearch" type="search" placeholder="اسم الطالب أو رقمه المدرسي أو رقم الفاتورة"></label>
+      <label>الطالب<select id="collectionStudent"><option value="">جميع الطلاب</option></select></label>
+      <label>نوع الرسوم / الشهر<select id="collectionMonth"><option value="">كل الرسوم والأشهر</option></select></label>
+      <label>تاريخ الدفع من<input id="collectionFrom" type="date"></label>
+      <label>تاريخ الدفع إلى<input id="collectionTo" type="date"></label>
+      <button class="secondary" type="reset">مسح التصفية</button>
+    </form>
+    <p id="collectionFilterError" role="alert" class="status-unpaid hidden">تاريخ البداية يجب ألا يتجاوز تاريخ النهاية.</p>
+    <div id="collectionTotals" class="totals-line" role="status" aria-live="polite"></div>
+  </div>
+  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل التحصيل والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
 </section>
 
 <section id="staff" class="section">
