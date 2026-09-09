@@ -123,3 +123,15 @@ Une sauvegarde SQLite est créée dans `database/backups/before-demo-….sqlite`
 Pour préparer un autre répertoire local : `node scripts/seed-demo.js /chemin/du/repertoire`. Le mode Electron utilise son répertoire `userData` ; le générateur cible par défaut le répertoire du serveur.
 
 Test du générateur et de la sauvegarde : `node tests/seed-demo.test.js`.
+
+## Modes production et test
+
+Dans **الإعدادات → وضع استخدام التطبيق**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis saisir le mot de passe du mode courant. Le changement conserve les données de chaque mode et demande une nouvelle connexion. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.
+
+- Production (mode initial) : `database/school-data.sqlite`. Les données déjà présentes restent à cet emplacement, y compris les éventuelles données de démonstration ajoutées auparavant.
+- Test : `database/testing/school-data.sqlite`, avec ses propres sauvegardes dans `database/testing/backups/`.
+- Sélection persistante : `database/application-mode.json`, exclu de Git.
+
+Le bandeau **نسخة للتجريب فقط** apparaît en mode test sur la connexion, toutes les pages, les reçus et les relevés de notes. Le mode production affiche **وضع الإنتاج**. Les sessions ouvertes sont invalidées au changement de mode et les requêtes commencées avant le changement ne peuvent pas écrire dans l'autre base. Les bases ne sont ni fusionnées ni effacées lors du changement.
+
+Le générateur CLI `scripts/seed-demo.js` conserve son fonctionnement existant : il cible la base de production du répertoire fourni, indépendamment du mode choisi dans l'interface.

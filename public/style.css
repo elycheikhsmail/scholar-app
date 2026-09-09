@@ -71,3 +71,7 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .collection-filters label{display:flex;flex:1 1 180px;flex-direction:column;gap:6px;font-size:13px;font-weight:700;min-width:0}
 .collection-filters input,.collection-filters select{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
 #collections .table-scroll table{min-width:850px}
+
+.mode-badge{display:inline-block;margin:5px 10px;padding:4px 10px;border-radius:6px;background:#e6f7ee;color:#14532d;font-size:13px;font-weight:900;line-height:1.5;border:1px solid #86cda7}
+.mode-badge.test-mode{background:#fff3cd;color:#713f12;border:2px solid #c07810}
+#applicationModeForm{flex-wrap:wrap}#applicationModeForm label{display:flex;flex-direction:column;gap:6px;font-weight:700}

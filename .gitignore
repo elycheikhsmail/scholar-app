@@ -27,3 +27,5 @@ test-results/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+# Isolated testing database and its backups
+database/testing/

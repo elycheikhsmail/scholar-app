@@ -188,3 +188,67 @@ test('personal edits preserve fees; fee edits preserve identity and recorded pay
   assert.equal(db.getData().students[0].registrationFee,0);
   assert.throws(()=>db.updateStudentFees(s.id,{registrationFee:100,monthlyFee:Infinity}));
 });
+
+test('testing database, settings and reset backups stay separate from production', () => {
+  const dir = temp(); db.init(dir);
+  const prodStudent = db.addStudent(student);
+  db.addStudentPayment({studentId:prodStudent.id,month:'أكتوبر',amount:500});
+  const production = db.getData();
+  db.init(dir,{mode:'test',initialSettings:production.settings});
+  assert.equal(db.getData().students.length,0);
+  assert.equal(db.getData().studentPayments.length,0);
+  assert.equal(db.checkLogin('yaghoub','36485606'),true);
+  db.addStudent({...student,name:'تجريب فقط'});
+  const backup = db.clearOperationalData();
+  assert.ok(backup.startsWith(path.join(dir,'database','testing','backups')));
+  db.init(dir,{mode:'production'});
+  assert.deepEqual(db.getData(),production);
+  db.init(dir,{mode:'test'});
+  assert.equal(db.getData().students.length,0);
+  assert.throws(()=>db.init(dir,{mode:'invalid'}));
+});
+
+test('mode API persists selection, rejects stale sessions and delayed writes, and preserves both databases', async () => {
+  const dir = temp();
+  for (const file of ['server.js','db.js']) fs.copyFileSync(path.resolve(__dirname,'..',file),path.join(dir,file));
+  const previousPort = process.env.SCHOOL_PORT;
+  process.env.SCHOOL_PORT = '23880';
+  const service = require(path.join(dir,'server.js'));
+  if(previousPort===undefined) delete process.env.SCHOOL_PORT; else process.env.SCHOOL_PORT=previousPort;
+  let server = await service.startServer();
+  const request = (endpoint,method='GET',token='',payload) => fetch(server.url+'/api'+endpoint,{method,headers:{'Content-Type':'application/json',Connection:'close',Authorization:`Bearer ${token}`},...(payload ? {body:JSON.stringify(payload)} : {})});
+  const login = async()=> (await (await request('/login','POST','',{username:'yaghoub',password:'36485606'})).json()).token;
+  try {
+    assert.equal((await (await request('/mode')).json()).mode,'production');
+    assert.equal((await request('/mode','PUT','',{mode:'test',password:'36485606'})).status,401);
+    let token = await login();
+    await request('/students','POST',token,student);
+    assert.equal((await request('/mode','PUT',token,{mode:'test',password:'wrong'})).status,403);
+    assert.equal((await request('/mode','PUT',token,{mode:'invalid',password:'36485606'})).status,400);
+    // Start an authenticated request in production, but finish its body after switching.
+    const http = require('node:http');
+    let delayed;
+    const delayedResult = new Promise((resolve,reject)=>{
+      delayed = http.request(server.url+'/api/expenses',{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}},res=>{res.resume();res.on('end',()=>resolve(res.statusCode));});
+      delayed.on('error',reject);delayed.write('{"category":"stale",');
+    });
+    await new Promise(resolve=>setTimeout(resolve,50));
+    assert.equal((await request('/mode','PUT',token,{mode:'test',password:'36485606'})).status,200);
+    delayed.end('"amount":50}');
+    assert.equal(await delayedResult,400);
+    assert.equal((await request('/data','GET',token)).status,401);
+    token=await login();
+    const empty=await (await request('/data','GET',token)).json();
+    assert.equal(empty.students.length,0);assert.equal(empty.expenses.length,0);
+    await request('/students','POST',token,{...student,name:'طالب التجريب'});
+    assert.equal((await request('/mode','PUT',token,{mode:'production',password:'36485606'})).status,200);
+    token=await login();
+    const restored=await (await request('/data','GET',token)).json();
+    assert.equal(restored.students[0].name,student.name);
+    await request('/mode','PUT',token,{mode:'test',password:'36485606'});
+    server.close();server=await service.startServer();
+    assert.equal((await (await request('/mode')).json()).mode,'test');
+    token=await login();
+    assert.equal((await (await request('/data','GET',token)).json()).students[0].name,'طالب التجريب');
+  } finally {server.close();require(path.join(dir,'db.js')).close();}
+});

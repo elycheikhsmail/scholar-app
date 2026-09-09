@@ -11,6 +11,37 @@ const publicDir = path.join(__dirname, "public");
 const sessions = new Map();
 let server = null;
 let actualPort = DEFAULT_PORT;
+let applicationMode = 'production';
+let modeGeneration = 0;
+function modeInfo() { return { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج' }; }
+function publicSettings() { return { ...db.publicSettings(), applicationMode }; }
+function modeFile() { return path.join(baseDir(), 'database', 'application-mode.json'); }
+function readMode() {
+  if (!fs.existsSync(modeFile())) return 'production';
+  const mode = JSON.parse(fs.readFileSync(modeFile(), 'utf8')).mode;
+  if (!['production','test'].includes(mode)) throw new Error('إعداد وضع التطبيق غير صحيح.');
+  return mode;
+}
+function switchMode(mode) {
+  if (!['production','test'].includes(mode)) throw new Error('وضع التطبيق غير صحيح.');
+  if (mode === applicationMode) return;
+  const previous = applicationMode;
+  const initialSettings = db.getData().settings;
+  const temporary = modeFile() + '.tmp';
+  try {
+    db.init(baseDir(), { mode, initialSettings });
+    fs.writeFileSync(temporary, JSON.stringify({mode}), {mode:0o600});
+    fs.renameSync(temporary, modeFile());
+  } catch (error) {
+    try { fs.unlinkSync(temporary); } catch {}
+    db.init(baseDir(), {mode:previous});
+    throw error;
+  }
+  applicationMode = mode;
+  modeGeneration++;
+  sessions.clear();
+}
+
 
 function baseDir() {
   if (process.versions.electron) return require("electron").app.getPath("userData");
@@ -39,6 +70,7 @@ function auth(req) {
 }
 
 function body(req) {
+  const generation = modeGeneration;
   return new Promise((resolve, reject) => {
     let raw = "";
     req.on("data", chunk => {
@@ -49,6 +81,7 @@ function body(req) {
       }
     });
     req.on("end", () => {
+      if (generation !== modeGeneration) return reject(new Error("تم تغيير وضع التطبيق. أعد تسجيل الدخول قبل إعادة المحاولة."));
       try { resolve(raw ? JSON.parse(raw) : {}); }
       catch { reject(new Error("بيانات غير صحيحة.")); }
     });
@@ -91,6 +124,8 @@ async function api(req, res) {
   if (method === "OPTIONS") return json(res, 204, {});
   if (parts[0] !== "api") return sendFile(res, u.pathname);
 
+  if (parts[1] === "mode" && method === "GET") return json(res, 200, modeInfo());
+
   if (parts[1] === "login" && method === "POST") {
     const b = await body(req);
     if (!db.checkLogin(b.username, b.password)) {
@@ -98,11 +133,11 @@ async function api(req, res) {
     }
     const token = crypto.randomBytes(32).toString("hex");
     sessions.set(token, { createdAt: Date.now() });
-    return json(res, 200, { token, settings: db.publicSettings() });
+    return json(res, 200, { token, settings: publicSettings() });
   }
 
   if (parts[1] === "settings" && method === "GET") {
-    return json(res, 200, db.publicSettings());
+    return json(res, 200, publicSettings());
   }
 
   if (!auth(req)) return json(res, 401, { error: "يجب تسجيل الدخول." });
@@ -117,6 +152,13 @@ async function api(req, res) {
   }
 
   try {
+    if (parts[1] === "mode" && method === "PUT") {
+      const input = await body(req);
+      const current = db.publicSettings();
+      if (!db.checkLogin(current.username, input.password)) return json(res, 403, {error:'كلمة المرور غير صحيحة.'});
+      switchMode(input.mode);
+      return json(res, 200, modeInfo());
+    }
     if (parts[1] === "exams" && method === "GET") return json(res, 200, db.getExamData());
     if (parts[1] === "exam-settings" && method === "PUT") return json(res, 200, db.saveExamSettings(await body(req)));
     if (parts[1] === "exam-records" && method === "POST") return json(res, 200, db.saveExamRecord(await body(req)));
@@ -165,7 +207,7 @@ async function api(req, res) {
       const current = db.publicSettings();
       if (!db.checkLogin(current.username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
       if (b.newPassword && b.newPassword.length < 4) return json(res, 400, { error: "كلمة المرور الجديدة قصيرة جدًا." });
-      return json(res, 200, { ok: true, settings: db.updateSettings(b) });
+      return json(res, 200, { ok: true, settings: { ...db.updateSettings(b), applicationMode } });
     }
   } catch (error) {
     console.error("API ERROR:", error);
@@ -203,7 +245,8 @@ async function startServer() {
     };
   }
 
-  db.init(baseDir());
+  applicationMode = readMode();
+  db.init(baseDir(), {mode:applicationMode});
   actualPort = await findFreePort();
 
   server = http.createServer((req, res) => {

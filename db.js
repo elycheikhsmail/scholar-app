@@ -172,9 +172,11 @@ function save(connection = sqlite) {
   }
 }
 
-function init(baseDir) {
+function init(baseDir, options = {}) {
+  const mode = options.mode || 'production';
+  if (!['production','test'].includes(mode)) throw new Error('وضع التطبيق غير صحيح.');
   close();
-  const dbDir = path.join(baseDir, 'database');
+  const dbDir = mode === 'test' ? path.join(baseDir, 'database', 'testing') : path.join(baseDir, 'database');
   fs.mkdirSync(dbDir, { recursive: true });
   filePath = path.join(dbDir, 'school-data.sqlite');
   const legacyPath = path.join(dbDir, 'school-data.json');
@@ -188,6 +190,7 @@ function init(baseDir) {
       data = readData();
     } else {
       data = fs.existsSync(legacyPath) ? JSON.parse(fs.readFileSync(legacyPath, 'utf8')) : clone(DEFAULT_DATA);
+      if (!fs.existsSync(legacyPath) && options.initialSettings) data.settings = clone(options.initialSettings);
       if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('Fichier JSON de migration invalide.');
       for (const key of COLLECTIONS) {
         if (key in data && !Array.isArray(data[key])) throw new Error(`Collection JSON invalide: ${key}`);
