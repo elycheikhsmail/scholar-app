@@ -154,10 +154,10 @@ async function api(req, res) {
   try {
     if (parts[1] === "mode" && method === "PUT") {
       const input = await body(req);
-      const current = db.publicSettings();
-      if (!db.checkLogin(current.username, input.password)) return json(res, 403, {error:'كلمة المرور غير صحيحة.'});
       switchMode(input.mode);
-      return json(res, 200, modeInfo());
+      const token = crypto.randomBytes(32).toString('hex');
+      sessions.set(token, {createdAt:Date.now()});
+      return json(res, 200, {...modeInfo(), token, settings:publicSettings()});
     }
     if (parts[1] === "exams" && method === "GET") return json(res, 200, db.getExamData());
     if (parts[1] === "exam-settings" && method === "PUT") return json(res, 200, db.saveExamSettings(await body(req)));

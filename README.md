@@ -126,7 +126,7 @@ Test du générateur et de la sauvegarde : `node tests/seed-demo.test.js`.
 
 ## Modes production et test
 
-Dans **الإعدادات → وضع استخدام التطبيق**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis saisir le mot de passe du mode courant. Le changement conserve les données de chaque mode et demande une nouvelle connexion. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.
+Dans **الإعدادات → وضع استخدام التطبيق**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.
 
 - Production (mode initial) : `database/school-data.sqlite`. Les données déjà présentes restent à cet emplacement, y compris les éventuelles données de démonstration ajoutées auparavant.
 - Test : `database/testing/school-data.sqlite`, avec ses propres sauvegardes dans `database/testing/backups/`.

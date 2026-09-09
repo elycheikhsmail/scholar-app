@@ -244,10 +244,9 @@
   <div class="panel">
     <h3>وضع استخدام التطبيق</h3>
     <p>لكل وضع قاعدة بيانات ونسخ احتياطية مستقلة. البيانات الحالية محفوظة في وضع الإنتاج. يبدأ وضع التجريب بقاعدة جديدة دون نسخ الطلاب أو الحسابات.</p>
-    <p>عند إنشاء قاعدة جديدة تُنسخ إعدادات المدرسة وبيانات الدخول الحالية فقط. التبديل يعيدك إلى صفحة الدخول، ويحتفظ كل وضع ببياناته عند العودة إليه.</p>
+    <p>عند إنشاء قاعدة جديدة تُنسخ إعدادات المدرسة وبيانات الدخول الحالية فقط. التبديل مباشر دون كلمة مرور أو إعادة تسجيل الدخول، ويحتفظ كل وضع ببياناته عند العودة إليه.</p>
     <form id="applicationModeForm" class="inline-form">
       <label>الوضع<select id="applicationMode"><option value="production">وضع الإنتاج</option><option value="test">وضع التجريب — نسخة للتجريب فقط</option></select></label>
-      <label>كلمة مرور الوضع الحالي<input id="modePassword" type="password" autocomplete="current-password" required></label>
       <button class="primary">تبديل الوضع</button>
     </form>
   </div>

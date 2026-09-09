@@ -220,11 +220,10 @@ test('mode API persists selection, rejects stale sessions and delayed writes, an
   const login = async()=> (await (await request('/login','POST','',{username:'yaghoub',password:'36485606'})).json()).token;
   try {
     assert.equal((await (await request('/mode')).json()).mode,'production');
-    assert.equal((await request('/mode','PUT','',{mode:'test',password:'36485606'})).status,401);
+    assert.equal((await request('/mode','PUT','',{mode:'test'})).status,401);
     let token = await login();
     await request('/students','POST',token,student);
-    assert.equal((await request('/mode','PUT',token,{mode:'test',password:'wrong'})).status,403);
-    assert.equal((await request('/mode','PUT',token,{mode:'invalid',password:'36485606'})).status,400);
+    assert.equal((await request('/mode','PUT',token,{mode:'invalid'})).status,400);
     // Start an authenticated request in production, but finish its body after switching.
     const http = require('node:http');
     let delayed;
@@ -233,7 +232,11 @@ test('mode API persists selection, rejects stale sessions and delayed writes, an
       delayed.on('error',reject);delayed.write('{"category":"stale",');
     });
     await new Promise(resolve=>setTimeout(resolve,50));
-    assert.equal((await request('/mode','PUT',token,{mode:'test',password:'36485606'})).status,200);
+    const switched = await request('/mode','PUT',token,{mode:'test'});
+    assert.equal(switched.status,200);
+    const replacement = await switched.json();
+    assert.equal((await request('/data','GET',replacement.token)).status,200);
+    assert.equal(replacement.settings.applicationMode,'test');
     delayed.end('"amount":50}');
     assert.equal(await delayedResult,400);
     assert.equal((await request('/data','GET',token)).status,401);
@@ -241,11 +244,11 @@ test('mode API persists selection, rejects stale sessions and delayed writes, an
     const empty=await (await request('/data','GET',token)).json();
     assert.equal(empty.students.length,0);assert.equal(empty.expenses.length,0);
     await request('/students','POST',token,{...student,name:'طالب التجريب'});
-    assert.equal((await request('/mode','PUT',token,{mode:'production',password:'36485606'})).status,200);
+    assert.equal((await request('/mode','PUT',token,{mode:'production'})).status,200);
     token=await login();
     const restored=await (await request('/data','GET',token)).json();
     assert.equal(restored.students[0].name,student.name);
-    await request('/mode','PUT',token,{mode:'test',password:'36485606'});
+    await request('/mode','PUT',token,{mode:'test'});
     server.close();server=await service.startServer();
     assert.equal((await (await request('/mode')).json()).mode,'test');
     token=await login();

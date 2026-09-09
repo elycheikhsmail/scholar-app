@@ -69,7 +69,8 @@ function applySettings(){applyApplicationMode(state.settings.applicationMode);$(
 function setupMonths(id){$(id).innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}
 $('feeMonth').innerHTML=`<option value="رسوم التسجيل">رسوم التسجيل</option>`+months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');setupMonths('salaryMonth');setupMonths('advanceMonth');$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
 
-$('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const x=await api('/login',{method:'POST',body:JSON.stringify({username:western($('loginUsername').value),password:western($('loginPassword').value)})});state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();go('dashboard')}catch(err){toast(err.message)}});
+async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();go('dashboard')}
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const x=await api('/login',{method:'POST',body:JSON.stringify({username:western($('loginUsername').value),password:western($('loginPassword').value)})});await enterApplication(x)}catch(err){toast(err.message)}});
 $('logoutBtn').onclick=async()=>{try{await api('/logout',{method:'POST'})}catch{}location.reload()};
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.section));
 function go(id){document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.section===id));document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active-section',x.id===id));if(id==='dashboard')renderDashboard();if(id==='students')renderStudents();if(id==='fees')renderFees();if(id==='collections')renderPaymentHistory();if(id==='staff'){renderTeachers();renderSalary();renderAdvances()}if(id==='expenses')renderExpenses();if(id==='exams'){renderExamSection();}if(id==='reports')renderReports();if(id==='settings'){renderSettings();renderDepartments()}}
@@ -475,9 +476,19 @@ $('applicationModeForm').onsubmit = async event => {
   if ($('applicationMode').value === state.settings.applicationMode) return toast('هذا هو الوضع الحالي بالفعل.');
   button.disabled = true;
   try {
-    await api('/mode',{method:'PUT',body:JSON.stringify({mode:$('applicationMode').value,password:western($('modePassword').value)})});
+    const result = await api('/mode',{method:'PUT',body:JSON.stringify({mode:$('applicationMode').value})});
+    sessionStorage.setItem('modeSwitchToken',result.token);
     location.reload();
-  } catch(error) { toast(error.message); } finally { $('modePassword').value = ''; button.disabled = false; }
+  } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };
 checkApplicationMode();
 setInterval(checkApplicationMode,15000);
+
+// Consume the replacement session once; reload clears every old-mode form and record ID.
+(async () => {
+  const token = sessionStorage.getItem('modeSwitchToken');
+  sessionStorage.removeItem('modeSwitchToken');
+  if (!token) return;
+  try { await enterApplication({token,settings:await api('/settings')}); }
+  catch(error) { state.token = ''; toast(error.message); }
+})();
