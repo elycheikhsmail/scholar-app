@@ -101,6 +101,9 @@
       <label>رسوم التسجيل<input id="studentRegistrationFee" type="number" min="0" step="0.01" required></label>
       <label>الرسوم الشهرية<input id="studentMonthlyFee" type="number" min="0" step="0.01" required></label>
       <label>تسري الرسوم الشهرية من شهر<select id="studentFeeFrom" required></select></label>
+      <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
+      <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
+      <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
       <div class="form-actions"><button class="primary">حفظ الرسوم</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button><button type="button" class="secondary" id="closeStudentFees">إغلاق استمارة الطالب</button></div>
     </form>
     <p id="studentPaidSummary" class="hint-box"></p>
@@ -113,7 +116,7 @@
     <div id="studentLedger" class="hidden">
       <h3 class="table-title" id="studentLedgerTitle">كشف مستحقات الطالب حسب الشهر</h3>
       <p>يُحتسب الاستحقاق من شهر التسجيل حتى شهر المغادرة، بالرسوم التي كانت سارية في كل شهر. وتُوزَّع الدفعات تلقائيًا على أقدم استحقاق غير مسدَّد، ويبقى الفائض رصيدًا دائنًا للطالب.</p>
-      <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الدفعات المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
+      <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>الرسوم</th><th>الخصم</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الدفعات المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
       <h3 class="table-title" id="studentLedgerPaymentsTitle">تفاصيل دفعات الطالب</h3>
       <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>
     </div>
@@ -121,12 +124,27 @@
   <div class="panel fee-toolbar">
     <label>نوع الرسوم<select id="feeMonth"><option value="رسوم التسجيل">رسوم التسجيل</option></select></label>
     <label>القسم<select id="feeDepartment"></select></label>
+    <label>الحالة<select id="feeStatus">
+      <option value="">الكل</option>
+      <option value="due">عليه متبقٍّ</option>
+      <option value="late">متأخر فقط</option>
+      <option value="paid">مسدَّد بالكامل</option>
+      <option value="none">بلا رسوم</option>
+    </select></label>
+    <label>أدنى متبقٍّ<input id="feeMinRemaining" type="number" min="0" step="1" placeholder="0"></label>
     <label>بحث<input id="feeSearch" placeholder="اسم الطالب أو الرقم المدرسي"></label>
   </div>
   <div class="panel"><div id="feeTotals" class="totals-line"></div>
-    <h3 class="table-title" id="feesTableTitle">جدول مستحقات الطلاب</h3><div class="table-scroll"><table aria-labelledby="feesTableTitle"><thead><tr>
-      <th>القسم</th><th>الرقم المدرسي</th><th>رقم النداء</th><th>الطالب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>تاريخ الاستحقاق</th><th>الحالة</th><th>دفعة جديدة</th><th>إجراء</th>
-    </tr></thead><tbody id="feesTable"></tbody></table></div>
+    <div class="table-tools">
+      <h3 class="table-title" id="feesTableTitle">جدول مستحقات الطلاب</h3>
+      <div class="actions">
+        <button type="button" class="secondary" id="exportFees">تصدير CSV</button>
+        <button type="button" class="secondary" id="printFees">طباعة الكشف</button>
+        <button type="button" class="secondary" id="printReminders">إشعارات أولياء الأمور</button>
+      </div>
+    </div>
+    <div class="table-scroll"><table aria-labelledby="feesTableTitle"><thead><tr id="feesHead"></tr></thead><tbody id="feesTable"></tbody></table></div>
+    <p id="feesRowNotice" class="hint-box hidden"></p>
   </div>
 </section>
 
@@ -241,7 +259,16 @@
   </div>
 </section>
 
-<section id="reports" class="section"><div class="section-head"><div><h2>التقارير</h2><p>ملخص الدخل والخارج</p></div></div><div class="cards"><div class="stat-card"><b id="rIncome">0</b><span>إجمالي الدخل</span></div><div class="stat-card"><b id="rOut">0</b><span>إجمالي الخارج</span></div><div class="stat-card highlight"><b id="rNet">0</b><span>الصافي</span></div></div></section>
+<section id="reports" class="section"><div class="section-head"><div><h2>التقارير</h2><p>ملخص الدخل والخارج</p></div></div><div class="cards"><div class="stat-card"><b id="rIncome">0</b><span>إجمالي الدخل</span></div><div class="stat-card"><b id="rOut">0</b><span>إجمالي الخارج</span></div><div class="stat-card highlight"><b id="rNet">0</b><span>الصافي</span></div></div>
+  <div class="panel">
+    <h3 class="table-title" id="departmentDuesTitle">ملخص المستحقات حسب القسم</h3>
+    <div class="table-scroll"><table aria-labelledby="departmentDuesTitle"><thead><tr><th>القسم</th><th>عدد الطلاب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>عدد المتأخرين</th></tr></thead><tbody id="departmentDuesTable"></tbody></table></div>
+  </div>
+  <div class="panel">
+    <h3 class="table-title" id="topDebtorsTitle">أعلى المديونين</h3>
+    <div class="table-scroll"><table aria-labelledby="topDebtorsTitle"><thead><tr><th>الطالب</th><th>القسم</th><th>ولي الأمر</th><th>الهاتف</th><th>أشهر غير مسدَّدة</th><th>أقدم استحقاق</th><th>المتبقي</th></tr></thead><tbody id="topDebtorsTable"></tbody></table></div>
+  </div>
+</section>
 
 <section id="settings" class="section"><div class="section-head"><div><h2>الإعدادات</h2><p>بيانات المدرسة والدخول والأقسام</p></div></div>
   <div class="panel">

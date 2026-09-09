@@ -9,6 +9,10 @@ const DEFAULT_PORT = Number(process.env.SCHOOL_PORT || 3780);
 const HOST = process.env.SCHOOL_HOST || "127.0.0.1";
 const publicDir = path.join(__dirname, "public");
 const sessions = new Map();
+const SESSION_TTL = Number(process.env.SCHOOL_SESSION_TTL_MS || 12 * 60 * 60 * 1000);
+const LOGIN_WINDOW = 5 * 60 * 1000;
+const LOGIN_ATTEMPTS = 8;
+const loginFailures = new Map();
 let server = null;
 let actualPort = DEFAULT_PORT;
 let applicationMode = 'production';
@@ -48,15 +52,19 @@ function baseDir() {
   return __dirname;
 }
 
+const LOOPBACK_ORIGIN = /^https?:\/\/(127\.0\.0\.1|\[::1\]|localhost)(:\d+)?$/;
 function json(res, status, payload) {
   const text = JSON.stringify(payload);
-  res.writeHead(status, {
+  const headers = {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
-    "Access-Control-Allow-Origin": "*",
+    "Vary": "Origin",
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
-  });
+  };
+  // Recorded once per request, so every response answers the same way.
+  if (LOOPBACK_ORIGIN.test(res.corsOrigin || "")) headers["Access-Control-Allow-Origin"] = res.corsOrigin;
+  res.writeHead(status, headers);
   res.end(text);
 }
 
@@ -66,7 +74,30 @@ function getToken(req) {
 }
 
 function auth(req) {
-  return sessions.has(getToken(req));
+  const token = getToken(req);
+  const session = sessions.get(token);
+  if (!session) return false;
+  if (Date.now() - session.createdAt > SESSION_TTL) { sessions.delete(token); return false; }
+  return true;
+}
+
+function clientKey(req) {
+  return req.socket.remoteAddress || 'local';
+}
+
+// Throttle repeated failures so the password cannot be ground down locally.
+function loginBlocked(req) {
+  const record = loginFailures.get(clientKey(req));
+  if (!record) return 0;
+  if (Date.now() - record.first > LOGIN_WINDOW) { loginFailures.delete(clientKey(req)); return 0; }
+  return record.count >= LOGIN_ATTEMPTS ? Math.ceil((LOGIN_WINDOW - (Date.now() - record.first)) / 1000) : 0;
+}
+
+function noteLoginFailure(req) {
+  const key = clientKey(req);
+  const record = loginFailures.get(key);
+  if (!record || Date.now() - record.first > LOGIN_WINDOW) loginFailures.set(key, { first: Date.now(), count: 1 });
+  else record.count++;
 }
 
 function body(req) {
@@ -121,16 +152,21 @@ async function api(req, res) {
   const parts = u.pathname.split("/").filter(Boolean);
   const method = req.method;
 
+  res.corsOrigin = req.headers.origin || "";
   if (method === "OPTIONS") return json(res, 204, {});
   if (parts[0] !== "api") return sendFile(res, u.pathname);
 
   if (parts[1] === "mode" && method === "GET") return json(res, 200, modeInfo());
 
   if (parts[1] === "login" && method === "POST") {
+    const wait = loginBlocked(req);
+    if (wait) return json(res, 429, { error: `محاولات كثيرة. أعد المحاولة بعد ${wait} ثانية.` });
     const b = await body(req);
     if (!db.checkLogin(b.username, b.password)) {
+      noteLoginFailure(req);
       return json(res, 401, { error: "اسم المستخدم أو كلمة المرور غير صحيحة." });
     }
+    loginFailures.delete(clientKey(req));
     const token = crypto.randomBytes(32).toString("hex");
     sessions.set(token, { createdAt: Date.now() });
     return json(res, 200, { token, settings: publicSettings() });
@@ -148,7 +184,7 @@ async function api(req, res) {
   }
 
   if (parts[1] === "data" && method === "GET") {
-    return json(res, 200, db.getData());
+    return json(res, 200, db.getCoreData());
   }
 
   try {

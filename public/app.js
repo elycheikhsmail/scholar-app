@@ -4,7 +4,7 @@ let state={token:'',settings:null,data:null,departments:[],examData:{settings:{}
 const $=id=>document.getElementById(id);
 const API_BASE=window.location.protocol==='file:'?'http://127.0.0.1:3780/api':'/api';
 const money=n=>Number(n||0).toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
-const western=v=>String(v??'').replace(/[٠-٩]/g,d=>String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+const western=v=>String(v??'').replace(/[٠-٩۰-۹]/g,d=>String(Math.max('٠١٢٣٤٥٦٧٨٩'.indexOf(d),'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))));
 
 // Native prompt() is unavailable in Electron and some embedded browsers.
 function showInputDialog(message, defaultValue = '', confirmation = false) {
@@ -56,6 +56,10 @@ const askConfirm = message => showInputDialog(message, '', true);
 
 const today=()=>new Date().toISOString().slice(0,10);
 const currentMonth=()=>{const m=new Date().getMonth()+1;return m>=10?months[m-10]:m<=6?months[m+2]:months[0]};
+const debounce=(fn,ms=200)=>{let timer;return(...args)=>{clearTimeout(timer);timer=setTimeout(()=>fn(...args),ms)}};
+// The total view is an extra entry in the fee selector only; the selectors that
+// pick which fee a payment settles must stay a plain list of months.
+const monthOptionsHtml=()=>`<option value="${REGISTRATION}">${REGISTRATION}</option>`+MONTHS.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
 function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(`${API_BASE}${path}`,{...options,headers}).then(async r=>{const x=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&state.token&&path!=='/login')location.reload();throw Error(x.error||'حدث خطأ.');}return x})}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3200)}
@@ -67,7 +71,7 @@ document.addEventListener('input',e=>{if(e.target.matches('input[type=number],in
 async function load(){state.data=await api('/data');state.departments=await api('/departments');state.examData=await api('/exams');populateDepartments();populateExamDepartments();refreshStudentFeeDetails()}
 function applySettings(){applyApplicationMode(state.settings.applicationMode);$('schoolName').textContent=state.settings.schoolName;$('schoolYear').textContent=state.settings.schoolYear;$('loginSchoolName').textContent=state.settings.schoolName;$('managerNameHome').textContent=state.settings.managerName||'غير محدد';$('managerPhoneHome').textContent=western(state.settings.managerPhone||'')}
 function setupMonths(id){$(id).innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}
-$('feeMonth').innerHTML=`<option value="رسوم التسجيل">رسوم التسجيل</option>`+months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');setupMonths('salaryMonth');setupMonths('advanceMonth');$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
+$('feeMonth').innerHTML=monthOptionsHtml();setupMonths('salaryMonth');setupMonths('advanceMonth');$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
 
 async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();go('dashboard')}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const x=await api('/login',{method:'POST',body:JSON.stringify({username:western($('loginUsername').value),password:western($('loginPassword').value)})});await enterApplication(x)}catch(err){toast(err.message)}});
@@ -105,7 +109,7 @@ function resetStudent(){if(!$('studentForm'))return;$('studentForm').reset();$('
 $('cancelStudent').onclick=resetStudent;
 $('className').addEventListener('change',()=>{$('callNo').value=$('className').value?firstCallNo($('className').value,$('studentId').value||null):''})
 $('studentForm').addEventListener('submit',async e=>{e.preventDefault();const p={schoolNo:western($('schoolNo').value),name:$('studentName').value,callNo:$('callNo').value,gender:$('gender').value,nni:western($('nni').value),birthPlace:$('birthPlace').value,birthDate:$('birthDate').value,guardianName:$('guardianName').value,guardianPhone:western($('guardianPhone').value),className:$('className').value,registrationDate:$('registrationDate').value,status:$('studentStatus').value,leaveDate:$('studentLeaveDate').value,notes:$('studentNotes').value};try{const id=$('studentId').value;let created=null;if(id){if(!(await requirePassword()))return;created=await api(`/students/${id}`,{method:'PUT',body:JSON.stringify(p)})}else created=await api('/students',{method:'POST',body:JSON.stringify(p)});await load();resetStudent();renderStudents();renderFees();renderPaymentHistory();toast('تم حفظ الطالب.');}catch(err){toast(err.message)}});
-$('studentSearch').oninput=renderStudents;
+$('studentSearch').oninput=debounce(renderStudents);
 $('studentDepartmentFilter').onchange=renderStudents;
 let ledgerCache=null,ledgerData=null,ledgerSettings=null;
 function ledgers(){
@@ -140,13 +144,156 @@ function renderStudents(){const q=$('studentSearch').value.toLowerCase().trim(),
 window.editStudent=id=>{const s=state.data.students.find(x=>x.id===id);if(!s)return;for(const [id2,v] of Object.entries({studentId:s.id,className:s.className,callNo:s.callNo,schoolNo:s.schoolNo,studentName:s.name,gender:s.gender||'',nni:s.nni,birthPlace:s.birthPlace,birthDate:s.birthDate,guardianName:s.guardianName,guardianPhone:s.guardianPhone,registrationDate:s.registrationDate,studentStatus:s.status||ACTIVE_STATUS,studentLeaveDate:s.leaveDate||'',studentNotes:s.notes}))$(id2).value=v??'';toggleLeaveField();showEditForm('students','studentForm','studentName')}
 window.removeStudent=async id=>{await deleteWithPassword(`/students/${id}`,'هل تريد حذف الطالب وجميع دفعاته؟','تم حذف الطالب وجميع دفعاته.');};
 
-$('feeMonth').onchange=()=>{renderFees();renderPaymentHistory()};$('feeDepartment').onchange=renderFees;$('feeSearch').oninput=renderFees;
+const TOTAL_MODE='__total__';
+const FEE_ROW_LIMIT=300;
+let feeSort={key:'name',dir:1},feeShowAll=false,feeView={month:'',rows:[]};
+const daysBetween=(from,to)=>Math.round((new Date(to+'T00:00:00')-new Date(from+'T00:00:00'))/86400000);
+
+$('feeMonth').insertAdjacentHTML('afterbegin',`<option value="${TOTAL_MODE}">إجمالي المستحقات (كل الأشهر)</option>`);
+$('feeMonth').onchange=()=>{feeShowAll=false;renderFees();renderPaymentHistory()};
+$('feeDepartment').onchange=renderFees;
+$('feeStatus').onchange=renderFees;
+$('feeMinRemaining').oninput=debounce(renderFees);
+$('feeSearch').oninput=debounce(renderFees);
 function registrationFeesPaid(student){const row=chargeOf(student,REGISTRATION);return !!row&&row.amount>0&&row.remaining<=0}
-function renderFees(){const m=$('feeMonth').value,dep=$('feeDepartment').value,q=$('feeSearch').value.toLowerCase().trim();const list=state.data.students.filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(q));let dueT=0,paidT=0,remT=0,creditT=0;$('feesTable').innerHTML=list.map(s=>{const row=chargeOf(s,m),due=row?row.amount:0,paid=row?row.paid:0,rem=row?row.remaining:0,late=m===REGISTRATION?false:lateFor(s,m),[status,cls]=statusFor(s,m);dueT+=due;paidT+=paid;remT+=rem;creditT+=creditFor(s);return `<tr class="${late&&rem>0?'overdue-row':''}"><td>${esc(s.className)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.callNo)}</td><td>${esc(s.name)}</td><td>${money(due)}</td><td>${money(paid)}</td><td class="${rem>0?(late?'overdue-strong':'overdue-soft'):'status-paid'}">${money(rem)}</td><td>${row?western(row.dueDate):'—'}</td><td class="${cls}">${status}</td><td><input id="fp-${s.id}" class="payment-input" type="number" min="1"></td><td><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">تفاصيل حساب الطالب</button><button class="btn-pay" onclick="payFee(${s.id})">حفظ وطباعة</button></td></tr>`}).join('');$('feeTotals').innerHTML=`<span>المستحق: ${money(dueT)}</span><span class="status-paid">المدفوع: ${money(paidT)}</span><span class="overdue-soft">المتبقي: ${money(remT)}</span><span class="status-overpaid">رصيد دائن للطلاب: ${money(creditT)}</span>`}
-window.payFee=async id=>{const input=$(`fp-${id}`),amount=Number(input.value)||0;if(!amount)return toast('أدخل مبلغ الدفعة.');try{const payment=await api('/student-payments',{method:'POST',body:JSON.stringify({studentId:id,month:$('feeMonth').value,amount,date:today()})});await load();renderFees();renderPaymentHistory();renderStudents();renderDashboard();input.value='';toast('تم تسجيل الدفعة.');printStudentReceipt(payment.id)}catch(e){toast(e.message)}};
-$('collectionMonth').innerHTML += $('feeMonth').innerHTML;
+
+// One table row per student: a single month, or the whole year in the total view.
+function feeRowFor(student,month){
+  const ledger=ledgerOf(student);
+  if(month===TOTAL_MODE){
+    const oldest=ledger.oldestUnpaid;
+    return {student,ledger,gross:round2(ledger.rows.reduce((sum,row)=>sum+row.gross,0)),discount:ledger.totalDiscount,
+      due:ledger.totalDue,paid:ledger.allocated,remaining:ledger.outstanding,
+      dueDate:oldest?oldest.dueDate:'',charged:ledger.rows.length>0,unpaidCount:ledger.unpaidCount};
+  }
+  const row=ledger.byMonth.get(month);
+  return {student,ledger,gross:row?row.gross:0,discount:row?row.discount:0,due:row?row.amount:0,paid:row?row.paid:0,
+    remaining:row?row.remaining:0,dueDate:row?row.dueDate:'',charged:!!row,unpaidCount:row&&row.remaining>0?1:0};
+}
+function overdueDays(row){return row.remaining>0&&row.dueDate&&row.dueDate<today()?daysBetween(row.dueDate,today()):0}
+function rowStatus(row,month){
+  if(month!==TOTAL_MODE)return statusFor(row.student,month);
+  if(!row.charged)return['خارج فترة القيد','status-exempt'];
+  if(row.due<=0)return['لا توجد رسوم','status-exempt'];
+  if(row.remaining<=0)return['مسدَّد بالكامل','status-paid'];
+  return[`غير مسدَّد: ${row.unpaidCount}`,'status-unpaid'];
+}
+function passesFeeFilter(row,status,minRemaining){
+  if(row.remaining<minRemaining)return false;
+  if(status==='due')return row.remaining>0;
+  if(status==='late')return overdueDays(row)>0;
+  if(status==='paid')return row.due>0&&row.remaining<=0;
+  if(status==='none')return row.due<=0;
+  return true;
+}
+
+const FEE_COLUMNS=[
+  {key:'className',label:'القسم',value:r=>r.student.className||''},
+  {key:'schoolNo',label:'الرقم المدرسي',value:r=>r.student.schoolNo||''},
+  {key:'callNo',label:'رقم النداء',value:r=>Number(r.student.callNo)||0},
+  {key:'name',label:'الطالب',value:r=>r.student.name||''},
+  {key:'gross',label:'الرسوم',value:r=>r.gross},
+  {key:'discount',label:'الخصم',value:r=>r.discount},
+  {key:'due',label:'المستحق',value:r=>r.due},
+  {key:'paid',label:'المدفوع',value:r=>r.paid},
+  {key:'remaining',label:'المتبقي',value:r=>r.remaining},
+  {key:'dueDate',label:'تاريخ الاستحقاق',value:r=>r.dueDate||''},
+  {key:'age',label:'عمر الدَّين',value:r=>overdueDays(r)}
+];
+function feeColumnLabel(column,month){return column.key==='dueDate'&&month===TOTAL_MODE?'أقدم استحقاق غير مسدَّد':column.label}
+function sortFeeRows(rows){
+  const column=FEE_COLUMNS.find(c=>c.key===feeSort.key)||FEE_COLUMNS[3];
+  return rows.sort((a,b)=>{
+    const x=column.value(a),y=column.value(b);
+    const compared=typeof x==='number'&&typeof y==='number'?x-y:String(x).localeCompare(String(y),'ar');
+    return compared*feeSort.dir||String(a.student.name||'').localeCompare(String(b.student.name||''),'ar');
+  });
+}
+$('feesHead').onclick=event=>{
+  const key=event.target.closest('[data-sort]')?.dataset.sort;
+  if(!key)return;
+  feeSort=feeSort.key===key?{key,dir:-feeSort.dir}:{key,dir:1};
+  renderFees();
+};
+function ageCell(days){
+  if(!days)return '<td>—</td>';
+  return `<td class="${days>60?'overdue-strong':days>30?'status-partial':'overdue-soft'}">${money(days)} يومًا</td>`;
+}
+function feeRowHtml(row,month){
+  const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month),blocked=row.ledger.outstanding<=0;
+  return `<tr class="${days>0?'overdue-row':''}"><td>${esc(s.className)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.callNo)}</td><td>${esc(s.name)}</td><td>${money(row.gross)}</td><td class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td>${money(row.due)}</td><td>${money(row.paid)}</td><td class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td>${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td class="${cls}">${esc(label)}</td><td><input id="fp-${s.id}" class="payment-input" type="number" min="1" max="${row.ledger.outstanding}" ${blocked?'disabled':''}></td><td><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">تفاصيل حساب الطالب</button><button class="btn-pay" onclick="payFee(${s.id})" ${blocked?'disabled':''}>حفظ وطباعة</button></td></tr>`;
+}
+function renderFees(){
+  const month=$('feeMonth').value,dep=$('feeDepartment').value,query=$('feeSearch').value.toLowerCase().trim();
+  const status=$('feeStatus').value,minRemaining=Number($('feeMinRemaining').value)||0;
+  const rows=sortFeeRows(state.data.students
+    .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(query))
+    .map(s=>feeRowFor(s,month))
+    .filter(row=>passesFeeFilter(row,status,minRemaining)));
+  feeView={month,rows};
+  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th>الحالة</th><th>دفعة جديدة</th><th>إجراء</th>';
+  const totals=rows.reduce((a,r)=>({gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit}),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
+  const shown=feeShowAll?rows:rows.slice(0,FEE_ROW_LIMIT);
+  $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')||`<tr><td colspan="14">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
+  const capped=rows.length>FEE_ROW_LIMIT;
+  $('feesRowNotice').classList.toggle('hidden',!capped);
+  $('feesRowNotice').innerHTML=capped?`يُعرض ${money(shown.length)} من ${money(rows.length)} صفًّا. <button type="button" class="secondary" id="showAllFees">${feeShowAll?'الاكتفاء بأول '+FEE_ROW_LIMIT:'عرض كل الصفوف'}</button>`:'';
+  if($('showAllFees'))$('showAllFees').onclick=()=>{feeShowAll=!feeShowAll;renderFees()};
+  $('feeTotals').innerHTML=`<span>الطلاب: ${money(rows.length)}</span><span>الرسوم: ${money(totals.gross)}</span><span class="status-exempt">الخصم: ${money(totals.discount)}</span><span>المستحق: ${money(totals.due)}</span><span class="status-paid">المدفوع: ${money(totals.paid)}</span><span class="overdue-soft">المتبقي: ${money(totals.remaining)}</span><span class="status-overpaid">رصيد دائن: ${money(totals.credit)}</span>`;
+}
+
+// --- export and printing ----------------------------------------------------
+function feeSheetRows(){
+  const {month,rows}=feeView;
+  const head=['القسم','الرقم المدرسي','رقم النداء','الطالب','ولي الأمر','الهاتف','الرسوم','الخصم','المستحق','المدفوع','المتبقي',month===TOTAL_MODE?'أقدم استحقاق غير مسدَّد':'تاريخ الاستحقاق','التأخير بالأيام','الحالة'];
+  return [head,...rows.map(r=>[r.student.className||'',r.student.schoolNo||'',r.student.callNo||'',r.student.name||'',
+    r.student.guardianName||'',r.student.guardianPhone||'',r.gross,r.discount,r.due,r.paid,r.remaining,
+    r.charged&&r.dueDate?r.dueDate:'',overdueDays(r)||'',rowStatus(r,month)[0]])];
+}
+function feeSheetTitle(){return feeView.month===TOTAL_MODE?'إجمالي مستحقات الطلاب':`مستحقات الطلاب — ${feeView.month}`}
+const PRINT_STYLE='*{box-sizing:border-box}body{font-family:Arial,Tahoma,sans-serif;color:#111;margin:14px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 10px;font-weight:400;color:#444}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #999;padding:4px 5px;text-align:right}th{background:#eee}.notice{border:1px solid #999;border-radius:6px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid}.notice h3{margin:0 0 6px;font-size:14px}.total{font-weight:900}.print{margin:10px 0;padding:8px 14px;border:0;background:#111;color:#fff;border-radius:5px;font-weight:700;cursor:pointer}@media print{.print{display:none}}';
+function openPrintWindow(title,bodyHtml){
+  const w=window.open('','_blank','width=1000,height=760');
+  if(!w){toast('اسمح للنوافذ المنبثقة حتى تتم الطباعة.');return}
+  const banner=state.settings?.applicationMode==='test'?'<h2>نسخة للتجريب فقط</h2>':'';
+  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${PRINT_STYLE}</style></head><body><h1>${esc(state.settings?.schoolName||'')}</h1><h2>${esc(title)} — السنة الدراسية ${esc(state.settings?.schoolYear||'')} — ${western(today())}</h2>${banner}<button class="print" onclick="window.print()">طباعة</button>${bodyHtml}</body></html>`);
+  w.document.close();
+}
+$('exportFees').onclick=()=>{
+  if(!feeView.rows.length)return toast('لا توجد صفوف للتصدير.');
+  const cell=value=>{const text=String(value??'');return /[";\n]/.test(text)?`"${text.replace(/"/g,'""')}"`:text};
+  // The BOM makes Excel read the Arabic headers as UTF-8.
+  const blob=new Blob(['﻿'+feeSheetRows().map(row=>row.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob),link=document.createElement('a');
+  link.href=url;link.download=`${feeSheetTitle()} — ${today()}.csv`;
+  document.body.append(link);link.click();link.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  toast('تم تصدير الملف.');
+};
+$('printFees').onclick=()=>{
+  if(!feeView.rows.length)return toast('لا توجد صفوف للطباعة.');
+  const [head,...body]=feeSheetRows();
+  const totals=feeView.rows.reduce((a,r)=>({due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining}),{due:0,paid:0,remaining:0});
+  const headHtml=head.map(h=>`<th>${esc(h)}</th>`).join('');
+  const bodyHtml=body.map(row=>`<tr>${row.map(c=>`<td>${esc(typeof c==='number'?money(c):c)}</td>`).join('')}</tr>`).join('');
+  const footHtml=`<tr class="total"><td colspan="8">الإجمالي (${money(feeView.rows.length)} طالبًا)</td><td>${money(totals.due)}</td><td>${money(totals.paid)}</td><td>${money(totals.remaining)}</td><td colspan="3"></td></tr>`;
+  openPrintWindow(feeSheetTitle(),`<table><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody><tfoot>${footHtml}</tfoot></table>`);
+};
+$('printReminders').onclick=()=>{
+  const debtors=feeView.rows.filter(row=>row.remaining>0);
+  if(!debtors.length)return toast('لا يوجد طلاب عليهم متبقٍّ ضمن التصفية الحالية.');
+  const notices=debtors.map(row=>{
+    const unpaid=row.ledger.rows.filter(charge=>charge.remaining>0);
+    const lines=unpaid.map(charge=>`<tr><td>${esc(charge.month)}</td><td>${esc(charge.dueDate)}</td><td>${money(charge.remaining)}</td></tr>`).join('');
+    return `<div class="notice"><h3>${esc(row.student.name)} — ${esc(row.student.className)} — رقم النداء ${esc(row.student.callNo)}</h3><div>ولي الأمر: ${esc(row.student.guardianName||'—')} — الهاتف: ${esc(row.student.guardianPhone||'—')}</div><table><thead><tr><th>الاستحقاق</th><th>تاريخ الاستحقاق</th><th>المتبقي</th></tr></thead><tbody>${lines}</tbody><tfoot><tr class="total"><td colspan="2">إجمالي المتبقي</td><td>${money(row.ledger.outstanding)} أوقية</td></tr></tfoot></table><div>نرجو تسديد المبلغ لدى إدارة المدرسة. توقيع الإدارة: ____________</div></div>`;
+  }).join('');
+  openPrintWindow(`إشعارات أولياء الأمور (${money(debtors.length)})`,notices);
+};
+
+window.payFee=async id=>{const input=$(`fp-${id}`),amount=Number(input.value)||0;if(!amount)return toast('أدخل مبلغ الدفعة.');const selected=$('feeMonth').value;const month=selected===TOTAL_MODE?(ledgerOf(studentById(id))?.oldestUnpaid?.month||REGISTRATION):selected;try{const payment=await api('/student-payments',{method:'POST',body:JSON.stringify({studentId:id,month,amount,date:today()})});await load();renderFees();renderPaymentHistory();renderStudents();renderDashboard();input.value='';toast('تم تسجيل الدفعة.');printStudentReceipt(payment.id)}catch(e){toast(e.message)}};
+$('collectionMonth').innerHTML += monthOptionsHtml();
 $('collectionFilters').onsubmit = event => event.preventDefault();
-$('collectionSearch').oninput = renderPaymentHistory;
+$('collectionSearch').oninput = debounce(renderPaymentHistory);
 for (const id of ['collectionStudent','collectionMonth','collectionFrom','collectionTo']) $(id).onchange = renderPaymentHistory;
 $('collectionFilters').onreset = () => requestAnimationFrame(renderPaymentHistory);
 function renderPaymentHistory() {
@@ -295,7 +442,24 @@ async function deleteWithPassword(path, confirmMessage, successMessage){
 async function requirePassword(){const p=await askInput('أدخل كلمة المرور لإتمام هذه العملية:');if(p===null)return false;try{const s=await api('/settings');const x=await api('/login',{method:'POST',body:JSON.stringify({username:s.username,password:western(p)})});return Boolean(x.token)}catch{toast('كلمة المرور غير صحيحة.');return false}}
 function renderDashboard(){const d=state.data,male=d.students.filter(s=>s.gender==='ذكر').length,female=d.students.filter(s=>s.gender==='أنثى').length,fees=d.studentPayments.reduce((a,x)=>a+Number(x.amount||0),0),sal=d.teacherPayments.reduce((a,x)=>a+Number(x.amount||0),0),adv=d.teacherAdvances.reduce((a,x)=>a+Number(x.amount||0),0),exp=d.expenses.reduce((a,x)=>a+Number(x.amount||0),0);$('sStudents').textContent=money(d.students.length);$('studentGenderSummary').textContent=`ذكور: ${money(male)} | إناث: ${money(female)}`;$('sTeachers').textContent=money(d.teachers.length);$('sFees').textContent=money(fees);$('sSalaries').textContent=money(sal+adv);$('sExpenses').textContent=money(exp);$('sNet').textContent=money(fees-sal-adv-exp);
 const m=currentMonth();$('dMonth').textContent=m;$('dFees').textContent=money(d.studentPayments.filter(x=>x.month===m).reduce((a,x)=>a+Number(x.amount||0),0));$('dSalary').textContent=money(d.teacherPayments.filter(x=>x.month===m).reduce((a,x)=>a+Number(x.amount||0),0));$('dExpenses').textContent=money(d.expenses.filter(x=>x.date.slice(0,7)===today().slice(0,7)).reduce((a,x)=>a+Number(x.amount||0),0))}
-function renderReports(){const d=state.data,income=d.studentPayments.reduce((a,x)=>a+Number(x.amount||0),0),out=d.teacherPayments.reduce((a,x)=>a+Number(x.amount||0),0)+d.teacherAdvances.reduce((a,x)=>a+Number(x.amount||0),0)+d.expenses.reduce((a,x)=>a+Number(x.amount||0),0);$('rIncome').textContent=money(income);$('rOut').textContent=money(out);$('rNet').textContent=money(income-out)}
+function renderDuesReports(){
+  const accounts=state.data.students.map(student=>({student,ledger:ledgerOf(student)}));
+  const byDepartment=new Map();
+  for(const account of accounts){
+    const key=account.student.className||'—';
+    const totals=byDepartment.get(key)||{count:0,due:0,paid:0,remaining:0,late:0};
+    totals.count++;totals.due+=account.ledger.totalDue;totals.paid+=account.ledger.allocated;totals.remaining+=account.ledger.outstanding;
+    if(account.ledger.oldestUnpaid&&account.ledger.oldestUnpaid.dueDate<today())totals.late++;
+    byDepartment.set(key,totals);
+  }
+  const departments=[...byDepartment.entries()].sort((a,b)=>b[1].remaining-a[1].remaining);
+  const grand=departments.reduce((a,[,t])=>({count:a.count+t.count,due:a.due+t.due,paid:a.paid+t.paid,remaining:a.remaining+t.remaining,late:a.late+t.late}),{count:0,due:0,paid:0,remaining:0,late:0});
+  $('departmentDuesTable').innerHTML=departments.map(([name,t])=>`<tr><td>${esc(name)}</td><td>${money(t.count)}</td><td>${money(t.due)}</td><td class="status-paid">${money(t.paid)}</td><td class="${t.remaining>0?'overdue-soft':'status-paid'}">${money(t.remaining)}</td><td class="${t.late>0?'overdue-strong':''}">${money(t.late)}</td></tr>`).join('')
+    +(departments.length?`<tr class="totals-row"><td>الإجمالي</td><td>${money(grand.count)}</td><td>${money(grand.due)}</td><td class="status-paid">${money(grand.paid)}</td><td class="overdue-soft">${money(grand.remaining)}</td><td>${money(grand.late)}</td></tr>`:'<tr><td colspan="6">لا يوجد طلاب.</td></tr>');
+  const debtors=accounts.filter(a=>a.ledger.outstanding>0).sort((a,b)=>b.ledger.outstanding-a.ledger.outstanding).slice(0,20);
+  $('topDebtorsTable').innerHTML=debtors.map(({student,ledger})=>`<tr><td>${esc(student.name)}</td><td>${esc(student.className)}</td><td>${esc(student.guardianName||'—')}</td><td>${esc(student.guardianPhone||'—')}</td><td>${money(ledger.unpaidCount)}</td><td>${ledger.oldestUnpaid?esc(ledger.oldestUnpaid.month)+' — '+western(ledger.oldestUnpaid.dueDate):'—'}</td><td class="overdue-strong">${money(ledger.outstanding)}</td></tr>`).join('')||'<tr><td colspan="7">لا توجد مستحقات غير مسددة.</td></tr>';
+}
+function renderReports(){const d=state.data,income=d.studentPayments.reduce((a,x)=>a+Number(x.amount||0),0),out=d.teacherPayments.reduce((a,x)=>a+Number(x.amount||0),0)+d.teacherAdvances.reduce((a,x)=>a+Number(x.amount||0),0)+d.expenses.reduce((a,x)=>a+Number(x.amount||0),0);$('rIncome').textContent=money(income);$('rOut').textContent=money(out);$('rNet').textContent=money(income-out);renderDuesReports()}
 setDate('registrationDate');setDate('teacherStart');setDate('salaryDate');setDate('advanceDate');setDate('expenseDate');toggleRoleFields();
 
 
@@ -420,7 +584,7 @@ function printExamRecord(id){
 }
 
 let selectedFeeStudentId = null;
-$('studentPaymentMonth').innerHTML = $('feeMonth').innerHTML;
+$('studentPaymentMonth').innerHTML = monthOptionsHtml();
 function selectedFeeStudent() { return state.data?.students.find(s => Number(s.id) === Number(selectedFeeStudentId)); }
 window.openStudentFees = (id, showLedger = false) => {
   selectedFeeStudentId = Number(id);
@@ -431,9 +595,14 @@ window.openStudentFees = (id, showLedger = false) => {
   $('studentLedger').classList.toggle('hidden', !showLedger);
   $('studentRegistrationFee').value = student.registrationFee || 0;
   $('studentFeeFrom').value = months.includes($('feeMonth').value) ? $('feeMonth').value : currentMonth();
+  $('studentDiscountType').value = student.discountType || '';
+  $('studentDiscountValue').value = student.discountValue || '';
+  $('studentDiscountReason').value = student.discountReason || '';
+  toggleDiscountFields();
   showFeeForMonth();
   $('studentPaymentAmount').value = '';
-  $('studentPaymentMonth').value = $('feeMonth').value;
+  const selectedMonth=$('feeMonth').value;
+  $('studentPaymentMonth').value = selectedMonth===TOTAL_MODE ? (ledgerOf(student).oldestUnpaid?.month || REGISTRATION) : selectedMonth;
   $('studentPaymentDate').value = today();
   refreshStudentFeeDetails();
   if (showLedger) {
@@ -446,16 +615,23 @@ function refreshStudentFeeDetails() {
   $('studentFeesIdentity').textContent = `${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
   const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
   const ledger = ledgerOf(student);
-  $('studentPaidSummary').textContent = `إجمالي المستحق: ${money(ledger.totalDue)} — المدفوع: ${money(ledger.totalPaid)} — المتبقي: ${money(ledger.outstanding)}${ledger.credit > 0 ? ` — رصيد دائن: ${money(ledger.credit)}` : ''} أوقية. أدخل دفعة غير مسجلة فقط؛ تُوزَّع تلقائيًا على أقدم استحقاق غير مسدَّد.`;
+  $('studentPaidSummary').textContent = `إجمالي المستحق: ${money(ledger.totalDue)} — المدفوع: ${money(ledger.totalPaid)} — المتبقي: ${money(ledger.outstanding)}${ledger.totalDiscount > 0 ? ` — الخصم: ${money(ledger.totalDiscount)}` : ''}${ledger.credit > 0 ? ` — رصيد دائن: ${money(ledger.credit)}` : ''} أوقية${student.discountReason ? ` (${student.discountReason})` : ''}. أدخل دفعة غير مسجلة فقط؛ تُوزَّع تلقائيًا على أقدم استحقاق غير مسدَّد.`;
   $('studentLedgerRows').innerHTML = [REGISTRATION,...months].map(month => {
     const row = ledger.byMonth.get(month);
-    if (!row) return `<tr><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
+    if (!row) return `<tr><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
     const period = row.dueDate < today().slice(0,7)+'-01' ? 'سابقة' : row.dueDate.slice(0,7) === today().slice(0,7) ? 'جارية' : 'قادمة';
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
-    return `<tr><td>${esc(month)}</td><td>${esc(row.dueDate)}</td><td>${period}</td><td>${money(row.amount)}</td><td>${money(row.paid)}</td><td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td><td class="paid-months">${covered}</td></tr>`;
+    return `<tr><td>${esc(month)}</td><td>${esc(row.dueDate)}</td><td>${period}</td><td>${money(row.gross)}</td><td class="${row.discount > 0 ? 'status-exempt' : ''}">${row.discount > 0 ? money(row.discount) : '—'}</td><td>${money(row.amount)}</td><td>${money(row.paid)}</td><td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td><td class="paid-months">${covered}</td></tr>`;
   }).join('');
   $('studentLedgerPayments').innerHTML = payments.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).map(p=>`<tr><td>${esc(invoiceNo(p))}</td><td>${esc(paymentLabel(p))}</td><td>${money(p.amount)}</td><td>${esc(p.date)}</td></tr>`).join('') || '<tr><td colspan="4">لا توجد دفعات مسجلة لهذا الطالب.</td></tr>';
 }
+function toggleDiscountFields(){
+  const on=Boolean($('studentDiscountType').value);
+  $('discountValueWrap').classList.toggle('hidden-field',!on);
+  $('discountReasonWrap').classList.toggle('hidden-field',!on);
+  if(!on){$('studentDiscountValue').value='';$('studentDiscountReason').value=''}
+}
+$('studentDiscountType').onchange=toggleDiscountFields;
 // The form edits one fee period at a time, so it shows that period's amount.
 function showFeeForMonth(){const student=selectedFeeStudent();if(student)$('studentMonthlyFee').value=monthlyFeeFor(student,$('studentFeeFrom').value)}
 $('studentFeeFrom').innerHTML = months.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
@@ -469,7 +645,7 @@ $('studentFeesForm').onsubmit = async event => {
   const button = event.submitter;
   button.disabled = true;
   try {
-    await api(`/students/${student.id}/fees`, {method:'PUT',body:JSON.stringify({registrationFee:$('studentRegistrationFee').value,monthlyFee:$('studentMonthlyFee').value,effectiveFrom:$('studentFeeFrom').value})});
+    await api(`/students/${student.id}/fees`, {method:'PUT',body:JSON.stringify({registrationFee:$('studentRegistrationFee').value,monthlyFee:$('studentMonthlyFee').value,effectiveFrom:$('studentFeeFrom').value,discountType:$('studentDiscountType').value,discountValue:western($('studentDiscountValue').value),discountReason:$('studentDiscountReason').value})});
     await load(); renderFees(); renderDashboard(); toast('تم حفظ رسوم الطالب.');
   } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };

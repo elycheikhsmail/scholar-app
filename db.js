@@ -34,13 +34,26 @@ function createSchema(connection = sqlite) {
   }
 }
 
+let touched;
 function readData() {
   const result = {};
+  touched = new Set();
   for (const row of sqlite.prepare('SELECT key, value FROM settings').all()) {
     Object.defineProperty(result, row.key, { value: JSON.parse(row.value), enumerable: true, writable: true, configurable: true });
   }
+  // Parsing every record of every collection cost more than most operations
+  // needed, so a collection materialises on first access and only the
+  // collections an operation actually reached are written back.
   for (const table of COLLECTIONS) {
-    result[table] = sqlite.prepare(`SELECT record FROM "${table}" ORDER BY position`).all().map(row => JSON.parse(row.record));
+    let rows;
+    Object.defineProperty(result, table, {
+      enumerable: true, configurable: true,
+      get() {
+        if (!rows) { rows = sqlite.prepare(`SELECT record FROM "${table}" ORDER BY position`).all().map(row => JSON.parse(row.record)); touched.add(table); }
+        return rows;
+      },
+      set(value) { rows = value; touched.add(table); }
+    });
   }
   return result;
 }
@@ -55,7 +68,7 @@ function createBackup() {
   try {
     snapshot.exec('BEGIN IMMEDIATE');
     createSchema(snapshot);
-    save(snapshot);
+    save(snapshot, new Set(COLLECTIONS));
     snapshot.prepare("INSERT INTO metadata(key, value) VALUES ('schemaVersion', '1')").run();
     snapshot.exec('COMMIT');
   } finally {
@@ -143,16 +156,18 @@ function verifyPassword(password, stored) {
   return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
 }
 
-function save(connection = sqlite) {
+function save(connection = sqlite, only = touched) {
   // The caller holds BEGIN IMMEDIATE: only changed rows are written.
-  for (const [key, value] of Object.entries(data)) {
+  // Object.keys avoids the collection getters, which would defeat lazy loading.
+  for (const key of Object.keys(data)) {
     if (!COLLECTIONS.includes(key)) {
       connection.prepare(`INSERT INTO settings(key, value) VALUES (?, ?)
         ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value != excluded.value`)
-        .run(key, JSON.stringify(value));
+        .run(key, JSON.stringify(data[key]));
     }
   }
   for (const table of COLLECTIONS) {
+    if (only && !only.has(table)) continue;
     const previous = new Map(connection.prepare(`SELECT id, position, record FROM "${table}"`).all().map(row => [row.id, row]));
     const seen = new Set();
     const upsert = connection.prepare(`INSERT INTO "${table}" (id, position, record) VALUES (?, ?, ?)
@@ -197,7 +212,7 @@ function init(baseDir, options = {}) {
         if (key in data && !Array.isArray(data[key])) throw new Error(`Collection JSON invalide: ${key}`);
       }
       normalizeData();
-      save();
+      save(sqlite, new Set(COLLECTIONS));
       sqlite.prepare("INSERT INTO metadata(key, value) VALUES ('schemaVersion', '1')").run();
     }
     sqlite.exec('COMMIT');
@@ -226,6 +241,9 @@ function normalizeData() {
     if (!dues.STUDENT_STATUSES.includes(clean(s.status))) s.status = dues.ACTIVE_STATUS;
     if (typeof s.leaveDate !== 'string') s.leaveDate = '';
     if (s.status === dues.ACTIVE_STATUS) s.leaveDate = '';
+    if (!dues.DISCOUNT_TYPES.includes(clean(s.discountType))) s.discountType = '';
+    s.discountValue = s.discountType ? Math.max(0, Number(s.discountValue) || 0) : 0;
+    if (typeof s.discountReason !== 'string') s.discountReason = '';
     if (!Array.isArray(s.feeHistory) || !s.feeHistory.length) {
       s.feeHistory = [{ fromMonth: dues.MONTHS[dues.enrolmentIndex(s, startYear)], monthlyFee: Math.max(0, Number(s.monthlyFee) || 0), date: clean(s.registrationDate) }];
     }
@@ -258,6 +276,14 @@ function publicSettings() {
 }
 
 function getData() { return clone(data); }
+function getCoreData() {
+  const result = {};
+  for (const key of Object.keys(data)) {
+    if (key === 'exams' || key === 'examSettings') continue;
+    result[key] = clone(data[key]);
+  }
+  return result;
+}
 function checkLogin(username, password) {
   return clean(username) === clean(data.settings.username) && verifyPassword(password, data.settings.passwordHash);
 }
@@ -363,6 +389,16 @@ function validateStudent(s, id = null) {
   if (leaveDate && registrationDate && leaveDate < registrationDate) throw new Error('تاريخ المغادرة يجب أن يكون بعد تاريخ التسجيل.');
 }
 
+function validateDiscount(input) {
+  const type = clean(input.discountType);
+  if (!dues.DISCOUNT_TYPES.includes(type)) throw new Error('نوع الخصم غير صحيح.');
+  const value = type ? Number(input.discountValue) : 0;
+  if (type && (!Number.isFinite(value) || value < 0)) throw new Error('قيمة الخصم يجب أن تكون رقمًا لا يقل عن صفر.');
+  if (type === 'percent' && value > 100) throw new Error('نسبة الخصم لا يمكن أن تتجاوز 100٪.');
+  if (type && value === 0) throw new Error('أدخل قيمة الخصم أو اختر «بدون خصم».');
+  return { discountType: type, discountValue: type ? value : 0, discountReason: type ? clean(input.discountReason) : '' };
+}
+
 function addStudent(s) {
   validateStudent(s);
   const student = {
@@ -382,7 +418,8 @@ function addStudent(s) {
     notes: clean(s.notes),
     gender: clean(s.gender),
     status: clean(s.status) || dues.ACTIVE_STATUS,
-    leaveDate: clean(s.leaveDate)
+    leaveDate: clean(s.leaveDate),
+    discountType: '', discountValue: 0, discountReason: ''
   };
   student.feeHistory = [{ fromMonth: enrolmentMonth(student), monthlyFee: student.monthlyFee, date: student.registrationDate }];
   data.students.push(student);
@@ -450,6 +487,7 @@ function updateStudentFees(id, input) {
   const baseline = enrolmentMonth(student);
   const fromMonth = clean(input.effectiveFrom) || baseline;
   if (!dues.MONTHS.includes(fromMonth)) throw new Error('اختر الشهر الذي تسري منه الرسوم الجديدة.');
+  const discount = validateDiscount(input);
   const monthlyFee = Number(input.monthlyFee);
   const previousFee = Math.max(0, Number(student.monthlyFee) || 0);
   const history = (Array.isArray(student.feeHistory) ? student.feeHistory : [])
@@ -460,6 +498,7 @@ function updateStudentFees(id, input) {
   history.push({ fromMonth, monthlyFee, date: new Date().toISOString().slice(0,10) });
   history.sort((a,b) => dues.MONTHS.indexOf(a.fromMonth) - dues.MONTHS.indexOf(b.fromMonth));
   student.registrationFee = Number(input.registrationFee);
+  Object.assign(student, discount);
   student.feeHistory = history;
   student.monthlyFee = history[history.length - 1].monthlyFee;
   save(); return student;
@@ -472,13 +511,22 @@ function deleteStudent(id) {
   save();
 }
 
+// Student payments now match the cap already enforced on staff salaries: the
+// account cannot be paid beyond what it owes.
+function assertWithinOutstanding(student, amount, excludePaymentId = null) {
+  const payments = data.studentPayments.filter(x => Number(x.studentId) === Number(student.id) && Number(x.id) !== Number(excludePaymentId));
+  const outstanding = dues.ledgerFor(student, payments, data.settings).outstanding;
+  if (outstanding <= 0) throw new Error('لا توجد مستحقات غير مسددة على هذا الطالب.');
+  if (amount > outstanding) throw new Error(`المتبقي على الطالب هو ${outstanding} أوقية.`);
+}
+
 function addStudentPayment(p) {
   const student = data.students.find(x => Number(x.id) === Number(p.studentId));
   if (!student) throw new Error('الطالب غير موجود.');
   const amount = Number(p.amount) || 0;
   const month = clean(p.month);
   if (!month || amount <= 0) throw new Error('أدخل الشهر والمبلغ بشكل صحيح.');
-  const existing = data.studentPayments.filter(x => Number(x.studentId) === Number(student.id) && clean(x.month) === month).reduce((a,x)=>a+Number(x.amount||0),0);
+  assertWithinOutstanding(student, amount);
   const payment = { id: nextId('studentPayments'), invoiceNo:`F-${String(nextId('studentPayments')).padStart(6,'0')}`, studentId:Number(student.id), month, paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly', amount, date:clean(p.date)||new Date().toISOString().slice(0,10), notes:clean(p.notes) };
   data.studentPayments.push(payment); save(); return payment;
 }
@@ -486,7 +534,7 @@ function updateStudentPayment(id,p) {
   const payment = data.studentPayments.find(x=>Number(x.id)===Number(id)); if(!payment)throw new Error('الدفعة غير موجودة.');
   const student=data.students.find(x=>Number(x.id)===Number(payment.studentId)); if(!student)throw new Error('الطالب غير موجود.');
   const amount=Number(p.amount)||0, month=clean(p.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
-  const others=data.studentPayments.filter(x=>Number(x.studentId)===student.id&&clean(x.month)===month&&Number(x.id)!==payment.id).reduce((a,x)=>a+Number(x.amount||0),0);
+  assertWithinOutstanding(student, amount, payment.id);
   Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:clean(p.date)||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=`F-${String(payment.id).padStart(6,'0')}`; save(); return payment;
 }
 function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filter(x=>Number(x.id)!==Number(id));save();}
@@ -598,11 +646,11 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,updateStudentFees,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,updateStudentFees,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.
-const readOperations = new Set(['getData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData']);
+const readOperations = new Set(['getData', 'getCoreData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData']);
 for (const [name, operation] of Object.entries(module.exports)) {
   if (name === 'init') continue;
   module.exports[name] = (...args) => {

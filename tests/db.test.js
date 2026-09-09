@@ -261,3 +261,47 @@ test('mode API persists selection, rejects stale sessions and delayed writes, an
     assert.equal((await (await request('/data','GET',token)).json()).students[0].name,'طالب التجريب');
   } finally {server.close();require(path.join(dir,'db.js')).close();}
 });
+
+test('sessions expire, repeated login failures are throttled, and CORS is limited to loopback', async () => {
+  const dir = temp();
+  copySources(dir);
+  const previous = { port: process.env.SCHOOL_PORT, ttl: process.env.SCHOOL_SESSION_TTL_MS };
+  process.env.SCHOOL_PORT = '23882';
+  process.env.SCHOOL_SESSION_TTL_MS = '300';
+  const { startServer } = require(path.join(dir, 'server.js'));
+  for (const [key, value] of [['SCHOOL_PORT', previous.port], ['SCHOOL_SESSION_TTL_MS', previous.ttl]]) {
+    if (value === undefined) delete process.env[key]; else process.env[key] = value;
+  }
+  const server = await startServer();
+  const login = (password = '36485606') => fetch(`${server.url}/api/login`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username: 'yaghoub', password })
+  });
+  try {
+    const { token } = await (await login()).json();
+    const headers = { Authorization: `Bearer ${token}` };
+    assert.equal((await fetch(`${server.url}/api/data`, { headers })).status, 200);
+    await new Promise(resolve => setTimeout(resolve, 400));
+    assert.equal((await fetch(`${server.url}/api/data`, { headers })).status, 401, 'the session expired');
+
+    // A page on another origin gets no permission to read the response.
+    const allowed = await fetch(`${server.url}/api/settings`, { headers: { Origin: server.url } });
+    assert.equal(allowed.headers.get('access-control-allow-origin'), server.url);
+    const foreign = await fetch(`${server.url}/api/settings`, { headers: { Origin: 'https://example.com' } });
+    assert.equal(foreign.headers.get('access-control-allow-origin'), null);
+
+    let throttled = null;
+    for (let attempt = 0; attempt < 10 && !throttled; attempt++) {
+      const response = await login('wrong-password');
+      if (response.status === 429) throttled = response;
+      else assert.equal(response.status, 401);
+    }
+    assert.ok(throttled, 'repeated failures are eventually refused');
+    assert.match((await throttled.json()).error, /محاولات كثيرة/);
+    // The lockout also covers the correct password, so guessing cannot continue.
+    assert.equal((await login()).status, 429);
+  } finally {
+    server.close();
+    require(path.join(dir, 'db.js')).close();
+  }
+});

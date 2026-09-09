@@ -47,6 +47,12 @@ Le serveur écoute uniquement sur `127.0.0.1` par défaut. Le paramètre `SCHOOL
 
 Le serveur utilise le port `3780` par défaut. Si ce port est déjà utilisé, il cherche automatiquement un port disponible jusqu'à `3800`.
 
+## Accès et sessions
+
+- Les sessions expirent après 12 heures (`SCHOOL_SESSION_TTL_MS` pour une autre durée).
+- Après huit échecs de connexion en cinq minutes depuis la même adresse, les tentatives sont refusées jusqu'à la fin de la fenêtre.
+- Les réponses de l'API n'autorisent l'accès cross-origin que depuis l'adresse locale qui sert l'interface.
+
 ## Tests E2E
 
 Le projet contient un test E2E Playwright qui vérifie le parcours de base : connexion, affichage du tableau de bord, navigation vers les élèves et déconnexion.
@@ -82,13 +88,15 @@ Les données sont stockées dans **SQLite**, dans `database/school-data.sqlite` 
 
 Au premier lancement, le fichier `database/school-data.json` existant est importé automatiquement dans une transaction. Le JSON original reste intact, mais les modifications suivantes sont enregistrées uniquement dans SQLite. Un JSON invalide bloque la migration avec une erreur : il n'est jamais remplacé silencieusement par une base vide. Les lancements suivants utilisent directement SQLite.
 
-Chaque collection possède sa table (élèves, paiements, employés, dépenses, examens, classes), avec une ligne par enregistrement. Les champs sont conservés en JSON dans les lignes pour préserver les champs facultatifs et les résultats d'examens imbriqués. Les identifiants sont des clés primaires ; les validations métier restent dans `db.js`. Chaque opération recharge un état cohérent sous transaction et seules les lignes modifiées sont écrites.
+Chaque collection possède sa table (élèves, paiements, employés, dépenses, examens, classes), avec une ligne par enregistrement. Les champs sont conservés en JSON dans les lignes pour préserver les champs facultatifs et les résultats d'examens imbriqués. Les identifiants sont des clés primaires ; les validations métier restent dans `db.js`. Chaque opération recharge un état cohérent sous transaction et seules les lignes modifiées sont écrites. Les collections sont analysées à la première lecture : une opération ne paie que les collections qu'elle touche, et seules celles-ci sont réécrites. Les sauvegardes et la migration écrivent toujours l'ensemble.
+
+`GET /api/data` ne renvoie pas les examens, que l'interface lit déjà via `GET /api/exams`.
 
 L'effacement des données crée d'abord une copie SQLite cohérente dans `database/backups/`. Pour une sauvegarde manuelle, arrêter complètement l'application avant de copier la base (ne pas copier seulement le fichier principal pendant son utilisation en mode WAL).
 
 Tests de migration, de persistance et de transactions : `node --test tests/db.test.js`.
 
-Les élèves portent aussi `status`, `leaveDate` et `feeHistory` (voir « Calcul des frais dus »). Une base JSON migrée reçoit ces champs automatiquement ; une base SQLite existante fonctionne sans migration, l'ancien tarif servant de valeur de repli.
+Les élèves portent aussi `status`, `leaveDate`, `feeHistory`, `discountType`, `discountValue` et `discountReason` (voir « Calcul des frais dus »). Une base JSON migrée reçoit ces champs automatiquement ; une base SQLite existante fonctionne sans migration, l'ancien tarif servant de valeur de repli.
 
 Les bases de données, sauvegardes, journaux, fichiers `.env`, résultats de tests et fichiers de compilation sont exclus du dépôt Git par `.gitignore`.
 
@@ -102,9 +110,22 @@ Le moteur de calcul est dans `public/fees.js`, partagé par l'interface et le se
 
 **Affectation des paiements.** Un paiement est un crédit sur le compte de l'élève, affecté automatiquement au plus ancien montant dû non soldé (FIFO), par date de paiement puis par identifiant. Un règlement couvrant trois mois solde donc bien les trois mois, quel que soit le mois indiqué sur le reçu. Le surplus restant reste au crédit de l'élève et n'est plus compté comme une dette. Le relevé de l'élève affiche, pour chaque montant dû, les factures qui l'ont couvert.
 
+**Remises et exonérations.** Un élève peut porter une remise, en pourcentage ou en montant fixe mensuel, avec un motif (bourse, remise fratrie…). Elle s'applique aux frais mensuels, jamais aux frais d'inscription, et ne peut pas rendre un montant négatif. Le relevé sépare les frais bruts, la remise et le montant dû.
+
+**Plafond des paiements.** Un paiement ne peut pas dépasser ce que le compte doit encore, comme c'était déjà le cas pour les salaires. Le message d'erreur indique le reste exact.
+
 **Dates d'échéance.** Chaque mois échoit au jour d'inscription de ce mois, ramené au dernier jour si le mois est plus court.
 
 Tests : `node --test tests/fees.test.js`.
+
+## Tableau des frais dus
+
+- **Vue totale.** Le sélecteur de frais propose « إجمالي المستحقات » : une ligne par élève avec le total de l'année, le plus ancien montant dû non soldé et le nombre de montants restants.
+- **Tri et filtres.** Chaque en-tête trie la table (un second clic inverse l'ordre). Les filtres portent sur la classe, l'état (reste à payer, en retard, soldé, sans frais) et un reste minimum.
+- **Ancienneté de la dette.** Une colonne indique le nombre de jours de retard, en trois niveaux au-delà de 30 et de 60 jours.
+- **Export et impression.** Export CSV (séparateur `;`, BOM UTF-8 pour Excel) de la vue filtrée, impression du relevé, et impression d'un avis par élève pour les parents avec le détail des mois impayés.
+- **Volume.** La table affiche 300 lignes puis propose de tout afficher ; les champs de recherche sont temporisés.
+- **Rapports.** La section des rapports résume les créances par classe et classe les vingt plus gros débiteurs avec le contact du tuteur.
 
 ## Structure principale
 

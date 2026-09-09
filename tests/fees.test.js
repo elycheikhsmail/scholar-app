@@ -166,3 +166,82 @@ test('each month falls due on the registration day within that month', () => {
   const november = dues.chargesFor(monthEnd, settings).find(c => c.month === 'نوفمبر');
   assert.equal(november.dueDate, '2026-11-30', 'the day is clamped to the length of the month');
 });
+
+test('a discount reduces the monthly fee but never the registration fee', () => {
+  const dir = temp(); db.init(dir);
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', monthlyFee: 10000, registrationFee: 4000 });
+  assert.equal(student.discountType, '');
+
+  const half = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: 'percent', discountValue: 25, discountReason: 'منحة' });
+  const october = dues.ledgerFor(half, [], settings).byMonth.get('أكتوبر');
+  assert.deepEqual([october.gross, october.discount, october.amount], [10000, 2500, 7500]);
+  assert.equal(dues.ledgerFor(half, [], settings).byMonth.get(dues.REGISTRATION).amount, 4000, 'registration is not discounted');
+  assert.equal(dues.ledgerFor(half, [], settings).totalDiscount, 9 * 2500);
+  assert.equal(half.discountReason, 'منحة');
+
+  const fixed = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: 'amount', discountValue: 3000 });
+  assert.equal(dues.ledgerFor(fixed, [], settings).byMonth.get('أكتوبر').amount, 7000);
+  assert.equal(fixed.discountReason, '', 'the reason is cleared with the discount type');
+
+  // A discount larger than the fee zeroes the charge instead of going negative.
+  const capped = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: 'amount', discountValue: 99999 });
+  assert.equal(dues.ledgerFor(capped, [], settings).byMonth.get('أكتوبر').amount, 0);
+
+  const bad = extra => () => db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', ...extra });
+  assert.throws(bad({ discountType: 'نسبة' }), /نوع الخصم/);
+  assert.throws(bad({ discountType: 'percent', discountValue: 140 }), /100/);
+  assert.throws(bad({ discountType: 'percent', discountValue: -5 }), /لا يقل عن صفر/);
+  assert.throws(bad({ discountType: 'amount', discountValue: 0 }), /أدخل قيمة الخصم/);
+
+  const cleared = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: '' });
+  assert.equal(dues.ledgerFor(cleared, [], settings).byMonth.get('أكتوبر').amount, 10000);
+});
+
+test('a payment cannot exceed what the account still owes', () => {
+  const dir = temp(); db.init(dir);
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', monthlyFee: 1000, registrationFee: 0 });
+  const outstanding = dues.ledgerFor(student, [], settings).totalDue;
+  assert.equal(outstanding, 9000);
+
+  assert.throws(() => db.addStudentPayment({ studentId: student.id, month: 'أكتوبر', amount: 9001 }), /المتبقي على الطالب هو 9000/);
+  const payment = db.addStudentPayment({ studentId: student.id, month: 'أكتوبر', amount: 9000 });
+  assert.throws(() => db.addStudentPayment({ studentId: student.id, month: 'نوفمبر', amount: 1 }), /لا توجد مستحقات/);
+
+  // Editing a payment measures the remainder without counting that payment twice.
+  assert.doesNotThrow(() => db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 8000 }));
+  assert.throws(() => db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 9500 }), /المتبقي على الطالب هو 9000/);
+});
+
+test('the data endpoint payload leaves exams to their own endpoint', () => {
+  const dir = temp(); db.init(dir);
+  const student = db.addStudent({ ...base });
+  db.saveExamSettings({ subjectTemplates: [{ department: '6AF', subjects: [{ id: 'ar', name: 'عربية' }] }] });
+  db.saveExamRecord({ studentId: student.id, department: '6AF', examNo: 1, results: [{ subjectId: 'ar', score: 18 }] });
+
+  const core = db.getCoreData();
+  assert.equal('exams' in core, false);
+  assert.equal('examSettings' in core, false);
+  assert.equal(core.students.length, 1, 'everything the interface still needs is present');
+  assert.equal(core.settings.schoolName, 'مدرسة مكارم الأخلاق الحرة');
+  // The records are untouched and still reachable where the interface reads them.
+  assert.equal(db.getExamData().exams.length, 1);
+  assert.equal(db.getData().exams.length, 1);
+});
+
+test('writing one collection leaves every other collection intact', () => {
+  const dir = temp(); db.init(dir);
+  const student = db.addStudent({ ...base });
+  const teacher = db.addTeacher({ name: 'مدرس', fixedSalary: 500 });
+  db.addExpense({ category: 'كتب', amount: 25 });
+  db.saveExamRecord({ studentId: student.id, department: '6AF', examNo: 1, results: [] });
+  const before = db.getData();
+
+  db.addStudentPayment({ studentId: student.id, month: 'أكتوبر', amount: 10 });
+  db.close(); db.init(dir);
+  const after = db.getData();
+  for (const key of ['teachers', 'expenses', 'exams', 'departments', 'settings']) {
+    assert.deepEqual(after[key], before[key], `${key} survived a students-only write`);
+  }
+  assert.equal(after.studentPayments.length, before.studentPayments.length + 1);
+  assert.equal(after.teachers[0].id, teacher.id);
+});

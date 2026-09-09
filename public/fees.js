@@ -18,6 +18,8 @@ const REGISTRATION = 'رسوم التسجيل';
 const ACTIVE_STATUS = 'نشط';
 const LEFT_STATUSES = ['منقطع','محوَّل','متخرج'];
 const STUDENT_STATUSES = [ACTIVE_STATUS, ...LEFT_STATUSES];
+const DISCOUNT_TYPES = ['', 'percent', 'amount'];
+const DISCOUNT_LABELS = { percent: 'نسبة مئوية', amount: 'مبلغ ثابت' };
 
 // Money is entered to two decimals; rounding keeps allocation remainders exact.
 function round2(value) { return Math.round((Number(value) || 0) * 100) / 100; }
@@ -70,6 +72,17 @@ function monthlyFeeFor(student, month) {
   return fee;
 }
 
+// A scholarship or sibling discount reduces the monthly fee, never the
+// registration fee, and can never take a charge below zero.
+function discountOn(student, gross) {
+  const type = String((student && student.discountType) || '');
+  const value = Math.max(0, Number(student && student.discountValue) || 0);
+  if (!value || gross <= 0) return 0;
+  if (type === 'percent') return round2(gross * Math.min(value, 100) / 100);
+  if (type === 'amount') return round2(Math.min(gross, value));
+  return 0;
+}
+
 function enrolmentIndex(student, startYear) {
   const index = monthIndexOf(student && student.registrationDate, startYear);
   return index === null ? 0 : index;
@@ -95,16 +108,19 @@ function chargesFor(student, settings) {
   const startYear = startYearOf(settings && settings.schoolYear);
   const first = enrolmentIndex(student, startYear);
   const last = departureIndex(student, startYear);
+  const registration = round2(Math.max(0, Number(student.registrationFee) || 0));
   const charges = [{
     month: REGISTRATION,
     dueDate: dueDateFor(student, REGISTRATION, startYear),
-    amount: round2(Math.max(0, Number(student.registrationFee) || 0))
+    gross: registration, discount: 0, amount: registration
   }];
   for (let i = first; i <= last; i++) {
+    const gross = round2(monthlyFeeFor(student, MONTHS[i]));
+    const discount = discountOn(student, gross);
     charges.push({
       month: MONTHS[i],
       dueDate: dueDateFor(student, MONTHS[i], startYear),
-      amount: round2(monthlyFeeFor(student, MONTHS[i]))
+      gross, discount, amount: round2(gross - discount)
     });
   }
   return charges;
@@ -140,8 +156,12 @@ function ledgerFor(student, payments, settings) {
   const byMonth = new Map(rows.map(row => [row.month, row]));
   const totalDue = round2(rows.reduce((sum,row) => sum + row.amount, 0));
   const allocated = round2(rows.reduce((sum,row) => sum + row.paid, 0));
+  const unpaid = rows.filter(row => row.remaining > 0);
   return {
     rows, byMonth, credit,
+    totalDiscount: round2(rows.reduce((sum,row) => sum + (row.discount || 0), 0)),
+    unpaidCount: unpaid.length,
+    oldestUnpaid: unpaid[0] || null,
     totalDue,
     totalPaid: round2(allocated + credit),
     allocated,
@@ -150,6 +170,7 @@ function ledgerFor(student, payments, settings) {
 }
 
 return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDENT_STATUSES,
-  round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, monthlyFeeFor,
+  DISCOUNT_TYPES, DISCOUNT_LABELS,
+  round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, monthlyFeeFor, discountOn,
   enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor };
 });
