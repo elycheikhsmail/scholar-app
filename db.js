@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { DatabaseSync } = require('node:sqlite');
+const dues = require('./public/fees.js');
 
 let data;
 let filePath;
@@ -220,6 +221,15 @@ function normalizeData() {
     remarksRules: Array.isArray(data.examSettings?.remarksRules) ? data.examSettings.remarksRules : clone(DEFAULT_DATA.examSettings.remarksRules),
     decisionRules: Array.isArray(data.examSettings?.decisionRules) ? data.examSettings.decisionRules : clone(DEFAULT_DATA.examSettings.decisionRules)
   };
+  const startYear = dues.startYearOf(data.settings.schoolYear);
+  data.students.forEach(s => {
+    if (!dues.STUDENT_STATUSES.includes(clean(s.status))) s.status = dues.ACTIVE_STATUS;
+    if (typeof s.leaveDate !== 'string') s.leaveDate = '';
+    if (s.status === dues.ACTIVE_STATUS) s.leaveDate = '';
+    if (!Array.isArray(s.feeHistory) || !s.feeHistory.length) {
+      s.feeHistory = [{ fromMonth: dues.MONTHS[dues.enrolmentIndex(s, startYear)], monthlyFee: Math.max(0, Number(s.monthlyFee) || 0), date: clean(s.registrationDate) }];
+    }
+  });
   data.studentPayments.forEach(p => { if (!p.invoiceNo) p.invoiceNo = `F-${String(Number(p.id)||0).padStart(6,'0')}`; if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly'; });
   const feeMap = new Map(DEFAULT_DATA.departments.map(d => [d.name, d.monthlyFee]));
   data.departments = data.departments.map((d, i) => ({ ...d, id: Number(d.id) || i + 1, name: clean(d.name), monthlyFee: d.monthlyFee != null && Number.isFinite(Number(d.monthlyFee)) ? Math.max(0, Number(d.monthlyFee)) : Number(feeMap.get(clean(d.name)) || 0) }));
@@ -314,6 +324,9 @@ function deleteDepartment(id) {
   save();
 }
 
+function schoolStartYear() { return dues.startYearOf(data.settings && data.settings.schoolYear); }
+function enrolmentMonth(student) { return dues.MONTHS[dues.enrolmentIndex(student, schoolStartYear())]; }
+
 function nextCallNo(department, excludeId = null) {
   const used = new Set(
     data.students
@@ -339,6 +352,15 @@ function validateStudent(s, id = null) {
   if (!dep) throw new Error('اختر القسم.');
   if (!data.departments.some(x => clean(x.name) === dep)) throw new Error('القسم غير موجود في قائمة الأقسام.');
   if (s.guardianPhone && !/^\d{8}$/.test(clean(s.guardianPhone))) throw new Error('رقم هاتف ولي الأمر يجب أن يتكون من 8 أرقام.');
+  const status = clean(s.status) || dues.ACTIVE_STATUS;
+  if (!dues.STUDENT_STATUSES.includes(status)) throw new Error('حالة الطالب غير صحيحة.');
+  const leaveDate = clean(s.leaveDate);
+  if (leaveDate && !/^\d{4}-\d{2}-\d{2}$/.test(leaveDate)) throw new Error('تاريخ المغادرة يجب أن يكون بصيغة YYYY-MM-DD.');
+  // A departure must carry a date, because the date is what stops the monthly charges.
+  if (leaveDate && status === dues.ACTIVE_STATUS) throw new Error('اختر حالة المغادرة عند تحديد تاريخ المغادرة.');
+  if (!leaveDate && status !== dues.ACTIVE_STATUS) throw new Error('حدد تاريخ المغادرة عند تغيير حالة الطالب.');
+  const registrationDate = clean(s.registrationDate);
+  if (leaveDate && registrationDate && leaveDate < registrationDate) throw new Error('تاريخ المغادرة يجب أن يكون بعد تاريخ التسجيل.');
 }
 
 function addStudent(s) {
@@ -358,8 +380,11 @@ function addStudent(s) {
     registrationFee: Math.max(0, Number(s.registrationFee) || 0),
     monthlyFee: Math.max(0, Number(s.monthlyFee ?? data.departments.find(d => d.name === clean(s.className))?.monthlyFee ?? data.settings.defaultMonthlyFee) || 0),
     notes: clean(s.notes),
-    gender: clean(s.gender)
+    gender: clean(s.gender),
+    status: clean(s.status) || dues.ACTIVE_STATUS,
+    leaveDate: clean(s.leaveDate)
   };
+  student.feeHistory = [{ fromMonth: enrolmentMonth(student), monthlyFee: student.monthlyFee, date: student.registrationDate }];
   data.students.push(student);
   const initialPaid = Math.max(0, Number(s.initialPaid) || 0);
   const paymentDate = clean(s.initialPaymentDate) || student.registrationDate;
@@ -410,19 +435,33 @@ function updateStudent(id, s) {
     nni: clean(s.nni), gender: clean(s.gender), birthPlace: clean(s.birthPlace), birthDate: clean(s.birthDate),
     guardianName: clean(s.guardianName), guardianPhone: clean(s.guardianPhone), className: newDep,
     registrationDate: clean(s.registrationDate), registrationFee: s.registrationFee === undefined ? student.registrationFee : Math.max(0, Number(s.registrationFee) || 0),
-    monthlyFee: s.monthlyFee === undefined ? student.monthlyFee : Math.max(0, Number(s.monthlyFee) || 0), notes: clean(s.notes)
+    monthlyFee: s.monthlyFee === undefined ? student.monthlyFee : Math.max(0, Number(s.monthlyFee) || 0), notes: clean(s.notes),
+    status: clean(s.status) || dues.ACTIVE_STATUS, leaveDate: clean(s.leaveDate)
   });
   save(); return student;
 }
 
-function updateStudentFees(id, fees) {
+function updateStudentFees(id, input) {
   const student = data.students.find(s => Number(s.id) === Number(id));
   if (!student) throw new Error('الطالب غير موجود.');
   for (const field of ['registrationFee','monthlyFee']) {
-    if (fees[field] === '' || fees[field] == null || !Number.isFinite(Number(fees[field])) || Number(fees[field]) < 0) throw new Error('أدخل رسومًا صحيحة لا تقل عن صفر.');
+    if (input[field] === '' || input[field] == null || !Number.isFinite(Number(input[field])) || Number(input[field]) < 0) throw new Error('أدخل رسومًا صحيحة لا تقل عن صفر.');
   }
-  student.registrationFee = Number(fees.registrationFee);
-  student.monthlyFee = Number(fees.monthlyFee);
+  const baseline = enrolmentMonth(student);
+  const fromMonth = clean(input.effectiveFrom) || baseline;
+  if (!dues.MONTHS.includes(fromMonth)) throw new Error('اختر الشهر الذي تسري منه الرسوم الجديدة.');
+  const monthlyFee = Number(input.monthlyFee);
+  const previousFee = Math.max(0, Number(student.monthlyFee) || 0);
+  const history = (Array.isArray(student.feeHistory) ? student.feeHistory : [])
+    .filter(p => dues.MONTHS.includes(clean(p.fromMonth)) && clean(p.fromMonth) !== fromMonth)
+    .map(p => ({ fromMonth: clean(p.fromMonth), monthlyFee: Math.max(0, Number(p.monthlyFee) || 0), date: clean(p.date) }));
+  // Records predating fee history keep their old fee on the months already billed.
+  if (!history.length && fromMonth !== baseline) history.push({ fromMonth: baseline, monthlyFee: previousFee, date: clean(student.registrationDate) });
+  history.push({ fromMonth, monthlyFee, date: new Date().toISOString().slice(0,10) });
+  history.sort((a,b) => dues.MONTHS.indexOf(a.fromMonth) - dues.MONTHS.indexOf(b.fromMonth));
+  student.registrationFee = Number(input.registrationFee);
+  student.feeHistory = history;
+  student.monthlyFee = history[history.length - 1].monthlyFee;
   save(); return student;
 }
 

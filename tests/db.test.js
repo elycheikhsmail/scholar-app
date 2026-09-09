@@ -9,6 +9,12 @@ const db = require('../db');
 const dirs = [];
 function temp() { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-sqlite-')); dirs.push(dir); return dir; }
 function database(dir) { return path.join(dir, 'database', 'school-data.sqlite'); }
+function copySources(dir) {
+  fs.mkdirSync(path.join(dir, 'public'), { recursive: true });
+  for (const file of ['server.js', 'db.js', path.join('public', 'fees.js')]) {
+    fs.copyFileSync(path.resolve(__dirname, '..', file), path.join(dir, file));
+  }
+}
 function legacy(dir, value) {
   fs.mkdirSync(path.join(dir, 'database'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'database', 'school-data.json'), JSON.stringify(value));
@@ -139,7 +145,7 @@ test('concurrent processes preserve writes and allocate distinct IDs', async () 
 
 test('HTTP server supports login and CRUD using SQLite', async () => {
   const dir = temp();
-  for (const file of ['server.js', 'db.js']) fs.copyFileSync(path.resolve(__dirname, '..', file), path.join(dir, file));
+  copySources(dir);
   const previousPort = process.env.SCHOOL_PORT;
   process.env.SCHOOL_PORT = '23780';
   const { startServer } = require(path.join(dir, 'server.js'));
@@ -210,7 +216,7 @@ test('testing database, settings and reset backups stay separate from production
 
 test('mode API persists selection, rejects stale sessions and delayed writes, and preserves both databases', async () => {
   const dir = temp();
-  for (const file of ['server.js','db.js']) fs.copyFileSync(path.resolve(__dirname,'..',file),path.join(dir,file));
+  copySources(dir);
   const previousPort = process.env.SCHOOL_PORT;
   process.env.SCHOOL_PORT = '23880';
   const service = require(path.join(dir,'server.js'));

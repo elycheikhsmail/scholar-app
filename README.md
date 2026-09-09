@@ -88,7 +88,23 @@ L'effacement des données crée d'abord une copie SQLite cohérente dans `databa
 
 Tests de migration, de persistance et de transactions : `node --test tests/db.test.js`.
 
+Les élèves portent aussi `status`, `leaveDate` et `feeHistory` (voir « Calcul des frais dus »). Une base JSON migrée reçoit ces champs automatiquement ; une base SQLite existante fonctionne sans migration, l'ancien tarif servant de valeur de repli.
+
 Les bases de données, sauvegardes, journaux, fichiers `.env`, résultats de tests et fichiers de compilation sont exclus du dépôt Git par `.gitignore`.
+
+## Calcul des frais dus
+
+Le moteur de calcul est dans `public/fees.js`, partagé par l'interface et le serveur.
+
+**Période d'inscription.** Un élève n'est facturé que des mois compris entre son mois d'inscription et son mois de départ. Un élève inscrit en février ne doit rien pour octobre à janvier ; ces mois apparaissent dans son relevé avec la mention « خارج فترة القيد ». Le champ **حالة الطالب** (نشط, منقطع, محوَّل, متخرج) et le champ **تاريخ المغادرة** arrêtent les frais mensuels : le mois du départ reste facturé, les suivants non. Un départ exige une date, et une date de départ exige un statut de départ.
+
+**Historique des frais.** Chaque élève porte un `feeHistory` : une liste de périodes, chacune commençant à un mois scolaire. Un mois est facturé au tarif de la dernière période commencée avant lui, donc modifier les frais mensuels ne réécrit jamais les mois déjà facturés. Le formulaire des frais demande **تسري الرسوم الشهرية من شهر** pour choisir le mois d'effet. Les fiches créées avant cette version conservent leur ancien tarif sur les mois déjà facturés lors de la première modification.
+
+**Affectation des paiements.** Un paiement est un crédit sur le compte de l'élève, affecté automatiquement au plus ancien montant dû non soldé (FIFO), par date de paiement puis par identifiant. Un règlement couvrant trois mois solde donc bien les trois mois, quel que soit le mois indiqué sur le reçu. Le surplus restant reste au crédit de l'élève et n'est plus compté comme une dette. Le relevé de l'élève affiche, pour chaque montant dû, les factures qui l'ont couvert.
+
+**Dates d'échéance.** Chaque mois échoit au jour d'inscription de ce mois, ramené au dernier jour si le mois est plus court.
+
+Tests : `node --test tests/fees.test.js`.
 
 ## Structure principale
 
@@ -98,6 +114,7 @@ preload.js              Pont sécurisé entre Electron et l'interface
 server.js               Serveur HTTP et API locale
 db.js                   Gestion de la base de données locale
 public/index.html       Interface principale
+public/fees.js          Moteur de calcul des frais dus (périodes, historique, affectation)
 public/app.js           Logique de l'interface
 public/style.css        Styles de l'application
 tests/e2e/              Tests end-to-end

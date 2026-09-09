@@ -27,7 +27,7 @@ test('يسجل الدخول ويتنقل إلى الطلاب ثم يسجل ال�
   await page.locator('#studentDepartmentFilter').selectOption(firstDepartment);
   const visibleDepartments = await page.locator('#studentsTable tr td:first-child').allTextContents();
   expect(visibleDepartments.every(department => department === firstDepartment)).toBe(true);
-  await expect(page.locator('#studentsTable tr').first().locator('td')).toHaveCount(7);
+  await expect(page.locator('#studentsTable tr').first().locator('td')).toHaveCount(8);
   await expect(page.locator('#studentsTable tr').first().getByRole('button', {name:'رسوم الطالب'})).toBeVisible();
 
   const firstStudentName = await page.locator('#studentsTable tr').first().locator('td').nth(3).textContent();
