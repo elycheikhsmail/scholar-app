@@ -74,7 +74,9 @@ const FEE_OPTIONAL_COLUMNS=[...FEE_COLUMNS.filter(column=>column.key!=='name'),
   {key:'status',label:'الحالة'}];
 feeHiddenColumns=new Set([...feeHiddenColumns].filter(key=>FEE_OPTIONAL_COLUMNS.some(column=>column.key===key)));
 function renderFeeColumnOptions(){
-  $('feeColumnOptions').innerHTML=FEE_OPTIONAL_COLUMNS.map(column=>`<label><input type="checkbox" data-fee-column-toggle="${column.key}" ${feeHiddenColumns.has(column.key)?'':'checked'}> ${esc(column.label)}</label>`).join('')+'<button type="button" class="secondary" id="showAllFeeColumns">إظهار الكل</button>';
+  const toggle=column=>`<label><input type="checkbox" data-fee-column-toggle="${column.key}" ${feeHiddenColumns.has(column.key)?'':'checked'}> ${esc(column.label)}</label>`;
+  $('feeColumnOptions').innerHTML=FEE_OPTIONAL_COLUMNS.map(toggle).join('')
+    +'<button type="button" class="secondary" id="showAllFeeColumns">إظهار الكل</button>';
 }
 function applyFeeColumnVisibility(){
   document.querySelectorAll('#fees [data-fee-column]').forEach(cell=>cell.classList.toggle('fee-column-hidden',feeHiddenColumns.has(cell.dataset.feeColumn)));
@@ -114,41 +116,94 @@ function ageCell(days){
   return `<td data-fee-column="age" class="${days>60?'overdue-strong':days>30?'status-partial':'overdue-soft'}">${money(days)} يومًا</td>`;
 }
 function feeRowHtml(row,month){
-  const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month);
-  return `<tr class="${days>0?'overdue-row':''}"><td data-fee-column="className">${esc(s.className)}</td><td data-fee-column="schoolNo">${esc(s.schoolNo)}</td><td data-fee-column="callNo">${esc(s.callNo)}</td><td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td data-fee-column="gross">${money(row.gross)}</td><td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td data-fee-column="due">${money(row.due)}</td><td data-fee-column="paid">${money(row.paid)}</td><td data-fee-column="remaining" class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td data-fee-column="status" class="${cls}">${esc(label)}</td><td data-fee-column="actions" class="fee-row-actions"><button class="fee-form-trigger" onclick="openStudentFees(${s.id})" title="فتح استمارة الرسوم" aria-label="فتح استمارة الرسوم للطالب ${esc(s.name)}">+</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button></td></tr>`;
+  const s=row.student;
+  const days=overdueDays(row);
+  const [label,cls]=rowStatus(row,month);
+  const remainingClass=row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid';
+  return `<tr class="${days>0?'overdue-row':''}">
+    <td data-fee-column="className">${esc(s.className)}</td>
+    <td data-fee-column="schoolNo">${esc(s.schoolNo)}</td>
+    <td data-fee-column="callNo">${esc(s.callNo)}</td>
+    <td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td>
+    <td data-fee-column="gross">${money(row.gross)}</td>
+    <td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td>
+    <td data-fee-column="due">${money(row.due)}</td>
+    <td data-fee-column="paid">${money(row.paid)}</td>
+    <td data-fee-column="remaining" class="${remainingClass}">${money(row.remaining)}</td>
+    <td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>
+    ${ageCell(days)}
+    <td data-fee-column="status" class="${cls}">${esc(label)}</td>
+    <td data-fee-column="actions" class="fee-row-actions"><button class="fee-form-trigger" onclick="openStudentFees(${s.id})" title="فتح استمارة الرسوم" aria-label="فتح استمارة الرسوم للطالب ${esc(s.name)}">+</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button></td>
+  </tr>`;
 }
 function renderFees(){
-  const month=$('feeMonth').value,dep=$('feeDepartment').value,query=$('feeSearch').value.toLowerCase().trim();
-  const status=$('feeStatus').value,minRemaining=Number($('feeMinRemaining').value)||0;
-  const rows=sortFeeRows(state.data.students
-    .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(query))
-    .map(s=>feeRowFor(s,month))
-    .filter(row=>passesFeeFilter(row,status,minRemaining)));
+  const month=$('feeMonth').value;
+  const dep=$('feeDepartment').value;
+  const query=$('feeSearch').value.toLowerCase().trim();
+  const status=$('feeStatus').value;
+  const minRemaining=Number($('feeMinRemaining').value)||0;
+
+  // `candidates` : tout ce que le département et la recherche laissent passer.
+  // Les puces de filtrage rapide comptent sur cet ensemble, le tableau sur le
+  // sous-ensemble que le filtre d'état retient.
   const candidates=state.data.students
     .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(query))
     .map(s=>feeRowFor(s,month));
+  const rows=sortFeeRows(candidates.filter(row=>passesFeeFilter(row,status,minRemaining)));
+  feeView={month,rows};
+
   const statusCounts={due:0,late:0,paid:0};
-  candidates.forEach(row=>{
+  for(const row of candidates){
     if(row.remaining>0)statusCounts.due++;
     if(overdueDays(row)>0)statusCounts.late++;
     if(row.due>0&&row.remaining<=0)statusCounts.paid++;
-  });
-  feeView={month,rows};
-  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th data-fee-column="status">الحالة</th><th data-fee-column="actions">إجراءات</th>';
-  const totals=rows.reduce((a,r)=>({gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit}),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
+  }
+
+  const sortMark=column=>feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):'';
+  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>
+      `<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${sortMark(column)}</th>`
+    ).join('')
+    +'<th data-fee-column="status">الحالة</th><th data-fee-column="actions">إجراءات</th>';
+
+  // Au-delà de FEE_ROW_LIMIT lignes, le tableau est tronqué : le rendu d'un
+  // millier de lignes fige la fenêtre, et un lecteur ne les parcourt pas.
   const shown=feeShowAll?rows:rows.slice(0,FEE_ROW_LIMIT);
-  $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')||`<tr><td colspan="13">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
+  $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')
+    ||`<tr><td colspan="13">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
   applyFeeColumnVisibility();
+
   const capped=rows.length>FEE_ROW_LIMIT;
   $('feesRowNotice').classList.toggle('hidden',!capped);
-  $('feesRowNotice').innerHTML=capped?`يُعرض ${money(shown.length)} من ${money(rows.length)} صفًّا. <button type="button" class="secondary" id="showAllFees">${feeShowAll?'الاكتفاء بأول '+FEE_ROW_LIMIT:'عرض كل الصفوف'}</button>`:'';
+  $('feesRowNotice').innerHTML=capped
+    ? `يُعرض ${money(shown.length)} من ${money(rows.length)} صفًّا. <button type="button" class="secondary" id="showAllFees">${feeShowAll?'الاكتفاء بأول '+FEE_ROW_LIMIT:'عرض كل الصفوف'}</button>`
+    : '';
   if($('showAllFees'))$('showAllFees').onclick=()=>{feeShowAll=!feeShowAll;renderFees()};
+
   const quickCounts={'':candidates.length,due:statusCounts.due,late:statusCounts.late,paid:statusCounts.paid};
-  const quickFilters=FEE_FILTERS.filter(filter=>filter.value!=='none').map(filter=>[filter.value,filter.label,quickCounts[filter.value]]);
-  $('feeQuickFilters').innerHTML=quickFilters.map(([value,label,count])=>`<button type="button" data-fee-status="${value}" class="fee-filter-chip ${status===value?'active':''}" aria-pressed="${status===value}">${label}<b>${money(count)}</b></button>`).join('');
-  const activeFilters=[dep&&`القسم: ${dep}`,status&&`الحالة: ${$('feeStatus').selectedOptions[0].textContent}`,minRemaining>0&&`المتبقي من ${money(minRemaining)}`,query&&`البحث: ${$('feeSearch').value.trim()}`].filter(Boolean);
-  $('feesFilterSummary').innerHTML=`عرض <strong>${money(rows.length)}</strong> طالب${activeFilters.length?` · ${activeFilters.map(esc).join(' · ')}`:' · دون تصفية إضافية'}`;
-  $('feeTotals').innerHTML=`<span><small>الطلاب</small><b>${money(rows.length)}</b></span><span><small>إجمالي المستحق</small><b>${money(totals.due)}</b></span><span class="status-paid"><small>المدفوع</small><b>${money(totals.paid)}</b></span><span class="overdue-soft"><small>المتبقي</small><b>${money(totals.remaining)}</b></span><span class="status-exempt"><small>الخصم</small><b>${money(totals.discount)}</b></span><span class="status-overpaid"><small>رصيد دائن</small><b>${money(totals.credit)}</b></span>`;
+  $('feeQuickFilters').innerHTML=FEE_FILTERS.filter(filter=>filter.value!=='none').map(filter=>
+    `<button type="button" data-fee-status="${filter.value}" class="fee-filter-chip ${status===filter.value?'active':''}" aria-pressed="${status===filter.value}">${filter.label}<b>${money(quickCounts[filter.value])}</b></button>`
+  ).join('');
+
+  const activeFilters=[
+    dep&&`القسم: ${dep}`,
+    status&&`الحالة: ${$('feeStatus').selectedOptions[0].textContent}`,
+    minRemaining>0&&`المتبقي من ${money(minRemaining)}`,
+    query&&`البحث: ${$('feeSearch').value.trim()}`
+  ].filter(Boolean);
+  $('feesFilterSummary').innerHTML=`عرض <strong>${money(rows.length)}</strong> طالب`
+    +(activeFilters.length?` · ${activeFilters.map(esc).join(' · ')}`:' · دون تصفية إضافية');
+
+  const totals=rows.reduce((a,r)=>({
+    gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,
+    paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit
+  }),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
+  const totalCell=(cls,label,value)=>`<span${cls?` class="${cls}"`:''}><small>${label}</small><b>${money(value)}</b></span>`;
+  $('feeTotals').innerHTML=totalCell('','الطلاب',rows.length)
+    +totalCell('','إجمالي المستحق',totals.due)
+    +totalCell('status-paid','المدفوع',totals.paid)
+    +totalCell('overdue-soft','المتبقي',totals.remaining)
+    +totalCell('status-exempt','الخصم',totals.discount)
+    +totalCell('status-overpaid','رصيد دائن',totals.credit);
 }
 
 // --- export and printing ----------------------------------------------------
@@ -187,7 +242,16 @@ $('printReminders').onclick=()=>{
   const notices=debtors.map(row=>{
     const unpaid=row.ledger.rows.filter(charge=>charge.remaining>0);
     const lines=unpaid.map(charge=>`<tr><td>${esc(charge.month)}</td><td>${esc(charge.dueDate)}</td><td>${money(charge.remaining)}</td></tr>`).join('');
-    return `<div class="notice"><h3>${esc(row.student.name)} — ${esc(row.student.className)} — رقم النداء ${esc(row.student.callNo)}</h3><div>ولي الأمر: ${esc(row.student.guardianName||'—')} — الهاتف: ${esc(row.student.guardianPhone||'—')}</div><table><thead><tr><th>الاستحقاق</th><th>تاريخ الاستحقاق</th><th>المتبقي</th></tr></thead><tbody>${lines}</tbody><tfoot><tr class="total"><td colspan="2">إجمالي المتبقي</td><td>${money(row.ledger.outstanding)} أوقية</td></tr></tfoot></table><div>نرجو تسديد المبلغ لدى إدارة المدرسة. توقيع الإدارة: ____________</div></div>`;
+    return `<div class="notice">
+      <h3>${esc(row.student.name)} — ${esc(row.student.className)} — رقم النداء ${esc(row.student.callNo)}</h3>
+      <div>ولي الأمر: ${esc(row.student.guardianName||'—')} — الهاتف: ${esc(row.student.guardianPhone||'—')}</div>
+      <table>
+        <thead><tr><th>الاستحقاق</th><th>تاريخ الاستحقاق</th><th>المتبقي</th></tr></thead>
+        <tbody>${lines}</tbody>
+        <tfoot><tr class="total"><td colspan="2">إجمالي المتبقي</td><td>${money(row.ledger.outstanding)} أوقية</td></tr></tfoot>
+      </table>
+      <div>نرجو تسديد المبلغ لدى إدارة المدرسة. توقيع الإدارة: ____________</div>
+    </div>`;
   }).join('');
   openPrintWindow(`إشعارات أولياء الأمور (${money(debtors.length)})`,notices);
 };
@@ -216,11 +280,67 @@ function renderPaymentHistory() {
   $('collectionTotals').textContent = `عدد الدفعات المعروضة: ${rows.length} — إجمالي التحصيل المعروض: ${money(rows.reduce((total,payment)=>total+Number(payment.amount||0),0))} أوقية`;
   $('studentPaymentHistory').innerHTML = rows.map(p => {
     const student = students.get(String(p.studentId));
-    return `<tr><td>${esc(invoiceNo(p))}</td><td>${esc(student?.name||'محذوف')}</td><td>${esc(paymentLabel(p))}</td><td>${money(p.amount)}</td><td>${esc(western(p.date))}</td><td class="actions"><button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td></tr>`;
+    return `<tr>
+      <td>${esc(invoiceNo(p))}</td>
+      <td>${esc(student?.name||'محذوف')}</td>
+      <td>${esc(paymentLabel(p))}</td>
+      <td>${money(p.amount)}</td>
+      <td>${esc(western(p.date))}</td>
+      <td class="actions"><button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td>
+    </tr>`;
   }).join('') || `<tr><td colspan="6">${invalidRange?'صحّح الفترة الزمنية لعرض الدفعات.':'لا توجد دفعات مطابقة للتصفية.'}</td></tr>`;
 }
 
-function printStudentReceipt(paymentId){const p=state.data.studentPayments.find(x=>Number(x.id)===Number(paymentId));if(!p)return;const s=state.data.students.find(x=>Number(x.id)===Number(p.studentId));if(!s)return;const row=chargeOf(s,p.month),due=row?row.amount:0,remaining=row?row.remaining:0,totalOutstanding=totalOutstandingFor(s),credit=creditFor(s);const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';const date=western(p.date||today());const w=window.open('','_blank','width=420,height=700');if(!w){toast('اسمح للنوافذ المنبثقة حتى يتم فتح الفاتورة.');return;}w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(invoiceNo(p))}</title><style>@page{size:80mm auto;margin:0}*{box-sizing:border-box}body{margin:0;background:#fff;font-family:Arial,Tahoma,sans-serif;color:#111}.receipt{width:72mm;margin:0 auto;padding:4mm 3mm;font-size:12px}.center{text-align:center}.school{font-size:15px;font-weight:900}.title{font-size:14px;font-weight:900;margin:4px 0}.line{border-top:1px dashed #555;margin:5px 0}.row{display:flex;justify-content:space-between;gap:8px;margin:3px 0}.label{font-weight:700}.amount{font-size:14px;font-weight:900}.remaining{font-weight:900}.signature{margin-top:20px;text-align:left}.small{font-size:10px;color:#444}.print{margin-top:10px;width:100%;padding:8px;border:0;background:#111;color:#fff;border-radius:5px;font-weight:700}@media print{.print{display:none}} </style></head><body><div class="receipt">${state.settings.applicationMode==='test'?'<div class="center title">نسخة للتجريب فقط</div>':''}<div class="center school">${esc(school)}</div><div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div><div class="line"></div><div class="center title">إيصال دفع</div><div class="row"><span class="label">رقم الفاتورة</span><span>${esc(invoiceNo(p))}</span></div><div class="row"><span class="label">التاريخ</span><span>${date}</span></div><div class="line"></div><div class="row"><span class="label">الطالب</span><span>${esc(s.name)}</span></div><div class="row"><span class="label">القسم</span><span>${esc(s.className)}</span></div><div class="row"><span class="label">رقم النداء</span><span>${esc(s.callNo)}</span></div><div class="line"></div><div class="row"><span class="label">نوع الرسوم</span><span>${esc(paymentLabel(p))}</span></div><div class="row"><span class="label">إجمالي الرسوم</span><span>${money(due)} أوقية</span></div><div class="row amount"><span>المدفوع الآن</span><span>${money(p.amount)} أوقية</span></div><div class="row remaining"><span>المتبقي لهذه الرسوم</span><span>${money(remaining)} أوقية</span></div><div class="row remaining"><span>إجمالي المتبقي على الطالب</span><span>${money(totalOutstanding)} أوقية</span></div>${credit>0?`<div class="row remaining"><span>رصيد لصالح الطالب</span><span>${money(credit)} أوقية</span></div>`:''}<div class="line"></div><div class="signature">توقيع المحاسب: __________________</div><div class="center small" style="margin-top:10px">شكراً لكم</div><button class="print" onclick="window.print()">طباعة الفاتورة</button></div><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`);w.document.close()}
+// Reçu d'un versement, imprimé sur un rouleau de 80 mm. Il rappelle le reste dû sur
+// ce mois-ci et sur l'ensemble du compte : c'est ce que le parent emporte.
+function printStudentReceipt(paymentId){
+  const payment=state.data.studentPayments.find(x=>Number(x.id)===Number(paymentId));
+  if(!payment)return;
+  const student=state.data.students.find(x=>Number(x.id)===Number(payment.studentId));
+  if(!student)return;
+  const charge=chargeOf(student,payment.month);
+  const due=charge?charge.amount:0;
+  const remaining=charge?charge.remaining:0;
+  const credit=creditFor(student);
+  const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';
+
+  const line=(label,value)=>`<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
+  const amountLine=(cls,label,value)=>`<div class="row ${cls}"><span>${label}</span><span>${value} أوقية</span></div>`;
+  const body=`<div class="receipt">`
+    +(isTestMode()?`<div class="center title">${TEST_MODE_LABEL}</div>`:'')
+    +`<div class="center school">${esc(school)}</div>`
+    +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
+    +`<div class="line"></div>`
+    +`<div class="center title">إيصال دفع</div>`
+    +line('رقم الفاتورة',esc(invoiceNo(payment)))
+    +line('التاريخ',western(payment.date||today()))
+    +`<div class="line"></div>`
+    +line('الطالب',esc(student.name))
+    +line('القسم',esc(student.className))
+    +line('رقم النداء',esc(student.callNo))
+    +`<div class="line"></div>`
+    +line('نوع الرسوم',esc(paymentLabel(payment)))
+    +line('إجمالي الرسوم',`${money(due)} أوقية`)
+    +amountLine('amount','المدفوع الآن',money(payment.amount))
+    +amountLine('remaining','المتبقي لهذه الرسوم',money(remaining))
+    +amountLine('remaining','إجمالي المتبقي على الطالب',money(totalOutstandingFor(student)))
+    +(credit>0?amountLine('remaining','رصيد لصالح الطالب',money(credit)):'')
+    +`<div class="line"></div>`
+    +`<div class="signature">توقيع المحاسب: __________________</div>`
+    +`<div class="center small" style="margin-top:10px">شكراً لكم</div>`
+    +`<button class="print" onclick="window.print()">طباعة الفاتورة</button>`
+    +`</div>`;
+
+  printWindow({
+    title:invoiceNo(payment),
+    style:RECEIPT_STYLE,
+    body,
+    width:420,
+    height:700,
+    blockedMessage:'اسمح للنوافذ المنبثقة حتى يتم فتح الفاتورة.',
+    autoPrint:true
+  });
+}
 // One form for both places a payment is listed: the collections table and the
 // student ledger. It edits the fee the payment settles too, so a payment entered
 // against the wrong month is corrected without deleting and re-entering it.

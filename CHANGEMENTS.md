@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.7.1 — 2026-09-10
+
+- Refactorisation : `public/fees-ui.js` n'a plus de ligne au-dessus de
+  360 caractères ; la plus longue en faisait 3497 (le reçu de paiement, styles
+  compris). Le reçu passe par `printWindow` et la feuille 80 mm de `print.js`.
+- `renderFees` ne parcourt plus deux fois la liste des élèves : le tableau et
+  les compteurs des puces de filtrage partent du même ensemble filtré.
+
 ## 1.7.0 — 2026-09-10
 
 - Nouveau module `public/print.js` : ouverture des fenêtres d'impression,
