@@ -3,6 +3,20 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.9.3 — 2026-09-10
+
+- L'installateur Windows et l'application portent désormais l'icône de l'école,
+  dérivée de `ecole.jpg` : elle apparaît dans la barre des tâches, le menu
+  Démarrer, le raccourci du bureau et la liste des programmes installés.
+- Les propriétés du programme indiquent l'auteur « ely cheikh smail », repris
+  comme mention de copyright dans l'exécutable et dans l'installateur.
+- Technique : `build/icon.png` (512×512, recadré carré depuis `ecole.jpg`) sert
+  de source unique ; `electron-builder` en produit l'icône Windows
+  multi-résolutions (16 à 256 pixels).
+- Vérification : installation silencieuse, lancement, création de la base dans
+  `%APPDATA%` puis désinstallation testés sous Wine à partir de
+  `School-Accounts-Setup-1.9.3.exe`.
+
 ## 1.9.2 — 2026-09-10
 
 - La photo `ecole.jpg` devient l'icône visible de l'application dans l'en-tête

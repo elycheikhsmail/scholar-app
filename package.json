@@ -1,8 +1,9 @@
 {
   "name": "school-accounts",
-  "version": "1.9.2",
+  "version": "1.9.3",
   "description": "نظام حسابات المدرسة وإدارة الطلاب والرسوم والمدرسين والرواتب والمصروفات",
   "main": "main.js",
+  "author": "ely cheikh smail",
   "scripts": {
     "start": "electron .",
     "server": "node server.js",
@@ -33,6 +34,7 @@
     ],
     "win": {
       "target": "nsis",
+      "icon": "build/icon.png",
       "artifactName": "School-Accounts-Setup-${version}.${ext}"
     },
     "nsis": {
