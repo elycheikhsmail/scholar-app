@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.8.1 — 2026-09-10
+
+- Le bouton « تعديل » du registre des salaires ouvre désormais un formulaire
+  modal unique avec le mois, le montant, la date, les heures pertinentes, les
+  notes et le mot de passe, au lieu d'une succession de boîtes de saisie.
+- Le mot de passe est vérifié au moment de l'enregistrement et le formulaire
+  reste ouvert en cas d'erreur pour permettre une correction.
+
 ## 1.8.0 — 2026-09-10
 
 - Le formulaire des frais affiche désormais le tableau « فترات الرسوم الشهرية » :

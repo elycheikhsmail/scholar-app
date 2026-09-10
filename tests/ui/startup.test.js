@@ -11,7 +11,8 @@ test('browser scripts support login, all sections, student fees and session rest
   t.after(() => { db.close(); fs.rmSync(directory, { recursive: true, force: true }); });
   db.init(directory);
   db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر' });
-  db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000 });
+  const teacher=db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000 });
+  db.addTeacherPayment({ teacherId:teacher.id, month:'أكتوبر', amount:3000, date:'2026-09-10', salaryDue:5000 });
   const settings = { ...db.publicSettings(), applicationMode: 'production', version:require('../../package.json').version };
   const responses = {
     '/api/mode': { mode: 'production' },
@@ -30,11 +31,20 @@ test('browser scripts support login, all sections, student fees and session rest
   t.after(() => browser.close());
   const page = await browser.newPage();
   const errors = [];
+  const salaryRequests = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('requestfailed', request => errors.push(request.url()));
   const publicDir = path.resolve(__dirname, '../../public');
   await page.route('http://school.test/**', async route => {
     const pathname = new URL(route.request().url()).pathname;
+    if(pathname==='/api/verify-password'){
+      salaryRequests.push({path:pathname,body:route.request().postDataJSON()});
+      return route.fulfill({json:{ok:true}});
+    }
+    if(/^\/api\/teacher-payments\/\d+$/.test(pathname)){
+      salaryRequests.push({path:pathname,body:route.request().postDataJSON()});
+      return route.fulfill({json:{ok:true}});
+    }
     if (Object.hasOwn(responses, pathname)) return route.fulfill({ json: responses[pathname] });
     const name = pathname === '/' ? 'index.html' : pathname.slice(1);
     if (!/^[a-z-]+\.(html|js|css)$/.test(name) || !fs.existsSync(path.join(publicDir, name))) {
@@ -87,6 +97,25 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#teacherName')).toHaveValue('');
   await page.keyboard.press('Escape');
+  await page.locator('#salaryTable .btn-edit').click();
+  await expect(page.locator('#salaryEditDialog')).toHaveAttribute('open', '');
+  await expect(page.locator('#salaryEditIdentity')).toContainText('موظف تجريبي');
+  await expect(page.locator('#salaryEditAmount')).toHaveValue('3000');
+  await expect(page.locator('#salaryEditDate')).toHaveValue('2026-09-10');
+  await expect(page.locator('#salaryEditPassword')).toHaveAttribute('type','password');
+  await expect(page.locator('#salaryEditPassword')).toHaveValue('');
+  await expect(page.locator('#salaryEditHoursWrap')).toBeHidden();
+  await expect(page.locator('.input-dialog[open]')).toHaveCount(0);
+  await page.locator('#salaryEditAmount').fill('3500');
+  await page.locator('#salaryEditPassword').fill('secret');
+  await page.locator('#salaryEditForm button.primary').click();
+  await expect(page.locator('#salaryEditDialog')).not.toHaveAttribute('open','');
+  assert.deepEqual(salaryRequests,[
+    {path:'/api/verify-password',body:{password:'secret'}},
+    {path:`/api/teacher-payments/${teacher.id}`,body:{
+      month:'أكتوبر',amount:'3500',date:'2026-09-10',notes:'',hours:0,hourlyRate:0,salaryDue:5000
+    }}
+  ]);
   await page.locator('.nav-item[data-section="students"]').click();
   await page.locator('.nav-item[data-section="fees"]').click();
   await page.goBack();

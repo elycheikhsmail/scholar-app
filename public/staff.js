@@ -252,46 +252,59 @@ function renderSalary(){
   $('salaryTable').innerHTML=rows||'<tr><td colspan="8">لا توجد دفعات رواتب.</td></tr>';
 }
 
-window.editSalaryPayment=async id=>{
-  if(!(await requirePassword()))return;
-  const p=state.data.teacherPayments.find(x=>x.id===id);
+window.editSalaryPayment=id=>{
+  const p=state.data.teacherPayments.find(x=>Number(x.id)===Number(id));
   if(!p)return;
   const t=state.data.teachers.find(x=>x.id===p.teacherId);
   if(!t)return;
-  const amount=await askInput('المبلغ المدفوع الجديد',p.amount);
-  if(amount===null)return;
-  const date=await askInput('تاريخ الدفعة بصيغة YYYY-MM-DD',p.date);
-  if(date===null)return;
+  $('salaryEditId').value=p.id;
+  $('salaryEditIdentity').textContent=`${t.name} — ${t.role}`;
+  $('salaryEditMonth').innerHTML=$('salaryMonth').innerHTML;
+  $('salaryEditMonth').value=p.month;
+  $('salaryEditAmount').value=p.amount;
+  $('salaryEditDate').value=p.date||today();
+  $('salaryEditHours').value=Number(p.hours||0);
+  $('salaryEditNotes').value=p.notes||'';
+  $('salaryEditPassword').value='';
+  $('salaryEditHoursWrap').classList.toggle('hidden-field',roleNeedsFixed(t.role));
+  const dialog=$('salaryEditDialog');
+  if(!dialog.open)dialog.showModal();
+  $('salaryEditAmount').focus();
+};
 
-  let hours=Number(p.hours||0);
-  let hourlyRate=Number(p.hourlyRate||t.hourlyRate||0);
-  let due=Number(p.salaryDue||0);
-  if(roleNeedsFixed(t.role)){
-    due=t.fixedSalary||due;
-    hours=0;
-    hourlyRate=0;
-  }else{
-    const enteredHours=await askInput('عدد ساعات الشهر',hours);
-    if(enteredHours===null)return;
-    hours=Number(enteredHours)||0;
-    due=hours*hourlyRate;
-  }
-
+$('salaryEditForm').onsubmit=async event=>{
+  event.preventDefault();
+  const id=Number($('salaryEditId').value);
+  const p=state.data.teacherPayments.find(x=>Number(x.id)===id);
+  const t=p&&state.data.teachers.find(x=>Number(x.id)===Number(p.teacherId));
+  if(!p||!t)return;
+  const fixed=roleNeedsFixed(t.role);
+  const hours=fixed?0:Number($('salaryEditHours').value)||0;
+  const hourlyRate=fixed?0:Number(p.hourlyRate||t.hourlyRate||0);
+  const salaryDue=fixed?Number(t.fixedSalary||p.salaryDue||0):hours*hourlyRate;
   try{
+    await api('/verify-password',{method:'POST',body:JSON.stringify({password:western($('salaryEditPassword').value)})});
     await api(`/teacher-payments/${id}`,{method:'PUT',body:JSON.stringify({
-      month:p.month,
-      amount:western(amount),
-      date,
+      month:$('salaryEditMonth').value,
+      amount:western($('salaryEditAmount').value),
+      date:$('salaryEditDate').value,
+      notes:$('salaryEditNotes').value,
       hours,
       hourlyRate,
-      salaryDue:due
+      salaryDue
     })});
+    $('salaryEditDialog').close();
     await refreshAll();
     toast('تم تعديل دفعة الراتب.');
   }catch(error){
+    $('salaryEditPassword').value='';
+    $('salaryEditPassword').focus();
     toast(error.message);
   }
 };
+$('closeSalaryEdit').onclick=()=>$('salaryEditDialog').close();
+$('cancelSalaryEdit').onclick=()=>$('salaryEditDialog').close();
+$('salaryEditDialog').onclick=event=>{if(event.target===$('salaryEditDialog'))$('salaryEditDialog').close()};
 
 window.deleteSalaryPayment=async id=>{
   await deleteWithPassword(`/teacher-payments/${id}`,'هل تريد حذف دفعة الراتب؟','تم حذف دفعة الراتب.');

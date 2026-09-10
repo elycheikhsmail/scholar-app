@@ -204,6 +204,8 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .export-dialog{--dialog-width:620px}
 .payment-edit-dialog{--dialog-width:620px}
 .payment-edit-dialog .form-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}
+.staff-payment-dialog{--dialog-accent:var(--nav-staff)}
+.staff-payment-dialog .wide-field{grid-column:1/-1}
 .staff-dialog{--dialog-width:900px;--dialog-accent:var(--nav-staff)}
 .staff-dialog .app-dialog-head{align-items:center}
 /* The ledger is the one side panel: full height, hinged on the page edge. */

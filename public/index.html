@@ -217,6 +217,23 @@
     <select id="salaryTeacher" required></select><select id="salaryMonth" required></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date"><button class="primary">تسجيل دفعة</button>
   </form><div id="salaryDueInfo" class="hint-box"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3><div class="table-scroll"><table aria-labelledby="salaryTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="salaryTable"></tbody></table></div></div>
 
+  <dialog id="salaryEditDialog" class="app-dialog payment-edit-dialog staff-payment-dialog" aria-labelledby="salaryEditTitle">
+    <div class="app-dialog-head">
+      <div><h3 id="salaryEditTitle">تعديل دفعة الراتب</h3><p id="salaryEditIdentity"></p></div>
+      <button type="button" class="secondary" id="closeSalaryEdit" aria-label="إغلاق استمارة تعديل دفعة الراتب">إغلاق ✕</button>
+    </div>
+    <form id="salaryEditForm" class="form-grid">
+      <input type="hidden" id="salaryEditId">
+      <label>الشهر<select id="salaryEditMonth" required></select></label>
+      <label>المبلغ المدفوع<input id="salaryEditAmount" type="number" min="1" step="0.01" required></label>
+      <label>تاريخ الدفعة<input id="salaryEditDate" type="date" required></label>
+      <label id="salaryEditHoursWrap">عدد ساعات الشهر<input id="salaryEditHours" type="number" min="0" step="0.01"></label>
+      <label class="wide-field">ملاحظات<input id="salaryEditNotes"></label>
+      <label class="wide-field">كلمة المرور<input id="salaryEditPassword" type="password" autocomplete="current-password" required></label>
+      <div class="form-actions"><button class="primary">حفظ التعديل</button><button type="button" class="secondary" id="cancelSalaryEdit">إلغاء</button></div>
+    </form>
+  </dialog>
+
   <div class="panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required></select><select id="advanceMonth" required></select><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3><div class="table-scroll"><table aria-labelledby="advanceTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>السلفة</th><th>التاريخ</th><th>ملاحظات</th><th>إجراءات</th></tr></thead><tbody id="advanceTable"></tbody></table></div></div>
 </section>
 
