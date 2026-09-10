@@ -47,6 +47,27 @@ Le serveur écoute uniquement sur `127.0.0.1` par défaut. Le paramètre `SCHOOL
 
 Le serveur utilise le port `3780` par défaut. Si ce port est déjà utilisé, il cherche automatiquement un port disponible jusqu'à `3800`.
 
+## Liens directs vers les écrans
+
+Chaque écran possède un fragment d’URL stable. Un lien peut être ouvert avant ou
+après la connexion ; l’application affiche l’écran demandé dès que la session est
+prête. Les boutons précédent et suivant du navigateur suivent également cette
+navigation.
+
+| Écran | Lien local |
+| --- | --- |
+| Tableau de bord | `http://127.0.0.1:3780/#dashboard` |
+| Élèves | `http://127.0.0.1:3780/#students` |
+| Frais mensuels | `http://127.0.0.1:3780/#fees` |
+| Encaissements et factures | `http://127.0.0.1:3780/#collections` |
+| Employés et salaires | `http://127.0.0.1:3780/#staff` |
+| Dépenses | `http://127.0.0.1:3780/#expenses` |
+| Examens | `http://127.0.0.1:3780/#exams` |
+| Rapports | `http://127.0.0.1:3780/#reports` |
+| Paramètres | `http://127.0.0.1:3780/#settings` |
+
+Un fragment inconnu est remplacé automatiquement par `#dashboard`.
+
 ## Accès et sessions
 
 - Les sessions expirent après 12 heures (`SCHOOL_SESSION_TTL_MS` pour une autre durée).

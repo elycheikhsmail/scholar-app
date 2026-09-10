@@ -73,11 +73,43 @@ function applySettings(){applyApplicationMode(state.settings.applicationMode);$(
 function setupMonths(id){$(id).innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}
 $('feeMonth').innerHTML=monthOptionsHtml();setupMonths('salaryMonth');setupMonths('advanceMonth');$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
 
-async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();go('dashboard')}
+async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();const requested=sectionFromLocation();go(requested||'dashboard',{historyMode:requested?'none':'replace'})}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const x=await api('/login',{method:'POST',body:JSON.stringify({username:western($('loginUsername').value),password:western($('loginPassword').value)})});await enterApplication(x)}catch(err){toast(err.message)}});
 $('logoutBtn').onclick=async()=>{try{await api('/logout',{method:'POST'})}catch{}location.reload()};
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.section));
-function go(id){document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.section===id));document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active-section',x.id===id));if(id==='dashboard')renderDashboard();if(id==='students')renderStudents();if(id==='fees')renderFees();if(id==='collections')renderPaymentHistory();if(id==='staff'){renderTeachers();renderSalary();renderAdvances()}if(id==='expenses')renderExpenses();if(id==='exams'){renderExamSection();}if(id==='reports')renderReports();if(id==='settings'){renderSettings();renderDepartments()}}
+const APP_SECTIONS=new Set([...document.querySelectorAll('.nav-item[data-section]')].map(item=>item.dataset.section));
+function sectionFromLocation(){
+  try{
+    const section=decodeURIComponent(location.hash.slice(1));
+    return APP_SECTIONS.has(section)?section:null;
+  }catch{return null}
+}
+function go(id,{historyMode='push'}={}){
+  if(!APP_SECTIONS.has(id))id='dashboard';
+  const targetHash=`#${id}`;
+  if(historyMode!=='none'&&location.hash!==targetHash){
+    history[historyMode==='replace'?'replaceState':'pushState'](null,'',targetHash);
+  }
+  document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.section===id));
+  document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active-section',x.id===id));
+  if(id==='dashboard')renderDashboard();
+  if(id==='students')renderStudents();
+  if(id==='fees')renderFees();
+  if(id==='collections')renderPaymentHistory();
+  if(id==='staff'){renderTeachers();renderSalary();renderAdvances()}
+  if(id==='expenses')renderExpenses();
+  if(id==='exams')renderExamSection();
+  if(id==='reports')renderReports();
+  if(id==='settings'){renderSettings();renderDepartments()}
+}
+function followLocation(){
+  if($('app').classList.contains('hidden'))return;
+  const requested=sectionFromLocation();
+  if(requested)go(requested,{historyMode:'none'});
+  else go('dashboard',{historyMode:'replace'});
+}
+window.addEventListener('hashchange',followLocation);
+window.addEventListener('popstate',followLocation);
 
 function showEditForm(sectionId,formId,focusId){
   if(!$(sectionId)?.classList.contains('active-section'))go(sectionId);

@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.2.0 — 2026-09-10
+
+- Ajout d’un lien direct stable pour chaque écran à l’aide des fragments
+  `#dashboard`, `#students`, `#fees`, `#collections`, `#staff`, `#expenses`,
+  `#exams`, `#reports` et `#settings`.
+- Conservation de l’écran demandé pendant la connexion et lors du rechargement.
+- Prise en charge des boutons précédent et suivant du navigateur.
+- Redirection des fragments inconnus vers le tableau de bord.
+- Documentation de tous les liens locaux dans `README.md`.
+
 ## 1.1.1 — 2026-09-10
 
 - Ajout d’un bouton permettant de choisir les colonnes visibles dans le tableau

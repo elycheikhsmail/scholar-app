@@ -43,17 +43,28 @@ test('browser scripts support login, all sections, student fees and session rest
     const contentType = name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html';
     return route.fulfill({ path: path.join(publicDir, name), contentType });
   });
-  await page.goto('http://school.test/');
+  await page.goto('http://school.test/#students');
   await page.locator('#loginUsername').fill('test');
   await page.locator('#loginPassword').fill('test');
   await page.locator('#loginForm button').click();
   await expect(page.locator('#app')).toBeVisible();
   await expect(page.locator('#appVersion')).toHaveText(require('../../package.json').version);
-  await expect(page.locator('#sStudents')).toHaveText('1');
+  await expect(page.locator('#students')).toHaveClass(/active-section/);
+  await expect(page).toHaveURL(/#students$/);
   for (const section of ['students', 'fees', 'collections', 'staff', 'expenses', 'exams', 'reports', 'settings', 'dashboard']) {
     await page.locator(`.nav-item[data-section="${section}"]`).click();
     await expect(page.locator(`#${section}`)).toHaveClass(/active-section/);
+    await expect(page).toHaveURL(new RegExp(`#${section}$`));
   }
+  await expect(page.locator('#sStudents')).toHaveText('1');
+  await page.locator('.nav-item[data-section="students"]').click();
+  await page.locator('.nav-item[data-section="fees"]').click();
+  await page.goBack();
+  await expect(page.locator('#students')).toHaveClass(/active-section/);
+  await page.goForward();
+  await expect(page.locator('#fees')).toHaveClass(/active-section/);
+  await page.evaluate(() => { location.hash='page-inconnue'; });
+  await expect(page).toHaveURL(/#dashboard$/);
   await page.locator('.nav-item[data-section="fees"]').click();
   await expect(page.locator('#feeQuickFilters button')).toHaveCount(4);
   await page.locator('.fee-column-picker summary').click();
