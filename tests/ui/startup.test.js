@@ -133,6 +133,15 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentsTable .btn-pay').click();
   await expect(page.locator('#studentFeesPanel')).toHaveAttribute('open', '');
   await expect(page.locator('#studentFeesPanel')).toBeVisible();
+  // Editing a monthly fee shows the periods it covers and what a save would change.
+  await expect(page.locator('#studentFeePeriods tr')).toHaveCount(1);
+  await expect(page.locator('#studentFeePreview')).toContainText('لا يوجد تغيير');
+  await expect(page.locator('#saveStudentFees')).toBeDisabled();
+  await page.locator('#studentMonthlyFee').fill('7000');
+  await expect(page.locator('#saveStudentFees')).toBeEnabled();
+  await expect(page.locator('#studentFeePreview')).toContainText('يتغيّر');
+  await page.locator('#resetStudentFees').click();
+  await expect(page.locator('#saveStudentFees')).toBeDisabled();
   await page.locator('#showStudentLedger').click();
   await expect(page.locator('#studentLedgerDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#studentLedger')).toBeVisible();

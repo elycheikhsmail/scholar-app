@@ -202,6 +202,8 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .app-dialog-head.sticky-head{position:sticky;top:-20px;z-index:7;padding-top:17px;margin-top:-18px}
 .fee-form-dialog{--dialog-width:920px}
 .export-dialog{--dialog-width:620px}
+.payment-edit-dialog{--dialog-width:620px}
+.payment-edit-dialog .form-grid{grid-template-columns:repeat(2,minmax(150px,1fr))}
 .staff-dialog{--dialog-width:900px;--dialog-accent:var(--nav-staff)}
 .staff-dialog .app-dialog-head{align-items:center}
 /* The ledger is the one side panel: full height, hinged on the page edge. */
@@ -230,3 +232,17 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .mode-badge{display:inline-block;margin:5px 10px;padding:4px 10px;border-radius:var(--radius-sm);background:var(--green-tint);color:#14532d;font-size:13px;font-weight:900;line-height:1.5;border:1px solid #86cda7}
 .mode-badge.test-mode{background:#fff3cd;color:#713f12;border:2px solid #c07810}
 #applicationModeForm{flex-wrap:wrap}#applicationModeForm label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+
+/* Editing a monthly fee: the periods it applies to, and what a save will change. */
+.fee-preview{grid-column:1/-1;margin:0;padding:12px 14px;border:1px solid var(--border-panel);border-left:4px solid var(--nav-fees);border-radius:var(--radius-md);background:var(--surface-soft);color:var(--text-soft);font-size:13px;line-height:1.7}
+.fee-preview.warn{border-left-color:var(--overdue-soft);background:var(--overdue-row)}
+.fee-preview p{margin:8px 0 0}
+.fee-preview p:last-child{margin-bottom:0}
+.fee-preview-totals{display:flex;flex-wrap:wrap;gap:10px}
+.fee-preview-totals span{display:flex;flex-direction:column;gap:3px;flex:1 1 150px;background:#fff;border:1px solid var(--border-panel);border-radius:var(--radius-md);padding:8px 10px}
+.fee-preview-totals small{color:var(--text-muted);font-size:11px}
+.fee-preview-totals b{font-size:15px;color:var(--text)}
+.fee-periods-scroll{max-height:230px}
+#studentFeesPanel .fee-periods-scroll table{min-width:0}
+.fee-period-active td{background:var(--green-tint)!important;font-weight:800}
+@media(max-width:700px){.fee-preview-totals span{flex-basis:100%}}

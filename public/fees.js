@@ -94,9 +94,42 @@ function monthIndexOf(dateStr, startYear) {
 function feePeriodsOf(student) {
   const history = Array.isArray(student && student.feeHistory) ? student.feeHistory : [];
   return history
-    .map(period => ({ fromMonth: String(period.fromMonth || ''), monthlyFee: Math.max(0, Number(period.monthlyFee) || 0) }))
+    .map(period => ({ fromMonth: String(period.fromMonth || ''), monthlyFee: Math.max(0, Number(period.monthlyFee) || 0), date: String(period.date || '') }))
     .filter(period => MONTHS.includes(period.fromMonth))
     .sort((a,b) => MONTHS.indexOf(a.fromMonth) - MONTHS.indexOf(b.fromMonth));
+}
+
+// The months each fee period covers, so the interface can show the history as
+// ranges the reader can check against a month, instead of a list of start dates.
+function feePeriodRanges(student) {
+  const periods = feePeriodsOf(student);
+  return periods.map((period, index) => {
+    const from = MONTHS.indexOf(period.fromMonth);
+    const next = index + 1 < periods.length ? MONTHS.indexOf(periods[index + 1].fromMonth) : MONTHS.length;
+    return { ...period, toMonth: MONTHS[next - 1], monthCount: Math.max(0, next - from) };
+  });
+}
+
+// A copy of the student with one fee period set, mirroring what the server does
+// in updateStudentFees. The interface runs the ledger over the copy to show the
+// effect of an edit before it is saved.
+function withFeePeriod(student, fromMonth, monthlyFee, settings) {
+  const baseline = MONTHS[enrolmentIndex(student, startYearOf(settings && settings.schoolYear))];
+  const history = feePeriodsOf(student).filter(period => period.fromMonth !== fromMonth);
+  // A record older than the fee history keeps its old fee on the months already billed.
+  if (!history.length && fromMonth !== baseline) {
+    history.push({ fromMonth: baseline, monthlyFee: Math.max(0, Number(student && student.monthlyFee) || 0) });
+  }
+  history.push({ fromMonth, monthlyFee: Math.max(0, Number(monthlyFee) || 0) });
+  history.sort((a, b) => MONTHS.indexOf(a.fromMonth) - MONTHS.indexOf(b.fromMonth));
+  return { ...student, feeHistory: history, monthlyFee: history[history.length - 1].monthlyFee };
+}
+
+// A copy without one period: the only way to undo a period entered by mistake.
+function withoutFeePeriod(student, fromMonth) {
+  const history = feePeriodsOf(student).filter(period => period.fromMonth !== fromMonth);
+  return { ...student, feeHistory: history,
+    monthlyFee: history.length ? history[history.length - 1].monthlyFee : Math.max(0, Number(student && student.monthlyFee) || 0) };
 }
 
 function monthlyFeeFor(student, month) {
@@ -210,6 +243,7 @@ function ledgerFor(student, payments, settings) {
 return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDENT_STATUSES,
   DISCOUNT_TYPES, DISCOUNT_LABELS,
   FEE_STATUS_LABELS, FEE_STATUS_CLASSES, FEE_FILTERS, feeStatusKey, feeStatusOf,
-  round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, monthlyFeeFor, discountOn,
+  round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, feePeriodRanges,
+  withFeePeriod, withoutFeePeriod, monthlyFeeFor, discountOn,
   enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor };
 });

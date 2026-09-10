@@ -271,3 +271,49 @@ test('one vocabulary covers every dues state, and the filters reuse it', () => {
   assert.equal(new Set(Object.values(dues.FEE_STATUS_LABELS)).size,
     Object.keys(dues.FEE_STATUS_LABELS).length, 'no two states share a word');
 });
+
+test('fee periods read back as ranges, and an edit can be previewed or undone', () => {
+  const student = { registrationDate: '2026-10-01', registrationFee: 5000, monthlyFee: 3500,
+    feeHistory: [{ fromMonth: 'أكتوبر', monthlyFee: 3000 }, { fromMonth: 'يناير', monthlyFee: 3500 }] };
+  assert.deepEqual(dues.feePeriodRanges(student).map(r => [r.fromMonth, r.toMonth, r.monthCount, r.monthlyFee]),
+    [['أكتوبر', 'ديسمبر', 3, 3000], ['يناير', 'يونيو', 6, 3500]]);
+
+  // The preview copy must match what the server writes, or it would mislead.
+  const edited = dues.withFeePeriod(student, 'مارس', 4000, settings);
+  assert.deepEqual(edited.feeHistory.map(p => [p.fromMonth, p.monthlyFee]),
+    [['أكتوبر', 3000], ['يناير', 3500], ['مارس', 4000]]);
+  assert.equal(edited.monthlyFee, 4000);
+  assert.equal(dues.monthlyFeeFor(edited, 'فبراير'), 3500);
+  assert.equal(dues.monthlyFeeFor(edited, 'أبريل'), 4000);
+  // Re-editing an existing period replaces it instead of stacking a second one.
+  assert.equal(dues.withFeePeriod(edited, 'يناير', 3600, settings).feeHistory.length, 3);
+
+  // A record with no history keeps its old fee on the months already billed.
+  const legacy = { registrationDate: '2026-10-01', monthlyFee: 2000, feeHistory: [] };
+  assert.deepEqual(dues.withFeePeriod(legacy, 'يناير', 2500, settings).feeHistory.map(p => [p.fromMonth, p.monthlyFee]),
+    [['أكتوبر', 2000], ['يناير', 2500]]);
+
+  // Undoing a period returns its months to the fee before it.
+  const undone = dues.withoutFeePeriod(edited, 'مارس');
+  assert.deepEqual(undone.feeHistory.map(p => p.fromMonth), ['أكتوبر', 'يناير']);
+  assert.equal(dues.monthlyFeeFor(undone, 'أبريل'), 3500);
+});
+
+test('a fee period can be removed, but never the last one', () => {
+  const dir = temp(); db.init(dir);
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', registrationFee: 5000, monthlyFee: 3000 });
+  db.updateStudentFees(student.id, { registrationFee: 5000, monthlyFee: 4000, effectiveFrom: 'يناير' });
+  const withTwo = db.getData().students.find(s => s.id === student.id);
+  assert.equal(withTwo.feeHistory.length, 2);
+  assert.equal(dues.monthlyFeeFor(withTwo, 'مارس'), 4000);
+
+  db.removeStudentFeePeriod(student.id, 'يناير');
+  const withOne = db.getData().students.find(s => s.id === student.id);
+  assert.deepEqual(withOne.feeHistory.map(p => p.fromMonth), ['أكتوبر']);
+  // The record's headline fee follows the last period that survives.
+  assert.equal(withOne.monthlyFee, 3000);
+  assert.equal(dues.monthlyFeeFor(withOne, 'مارس'), 3000);
+
+  assert.throws(() => db.removeStudentFeePeriod(student.id, 'أكتوبر'), /الوحيدة/);
+  assert.throws(() => db.removeStudentFeePeriod(student.id, 'مايو'), /لا توجد فترة/);
+});

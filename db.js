@@ -506,6 +506,24 @@ function updateStudentFees(id, input) {
   save(); return student;
 }
 
+// Until now a period entered on the wrong month could never be taken back: the
+// form only ever added or replaced one. Removing the last period is refused —
+// a student always has a fee in force — so that case is an edit, not a delete.
+function removeStudentFeePeriod(id, fromMonth) {
+  const student = data.students.find(s => Number(s.id) === Number(id));
+  if (!student) throw new Error('الطالب غير موجود.');
+  const month = clean(fromMonth);
+  const periods = dues.feePeriodsOf(student);
+  if (!periods.some(period => period.fromMonth === month)) throw new Error('لا توجد فترة رسوم تبدأ من هذا الشهر.');
+  if (periods.length <= 1) throw new Error('لا يمكن حذف فترة الرسوم الوحيدة؛ عدّل قيمتها بدل حذفها.');
+  const kept = new Set(dues.withoutFeePeriod(student, month).feeHistory.map(period => period.fromMonth));
+  student.feeHistory = (Array.isArray(student.feeHistory) ? student.feeHistory : [])
+    .filter(period => kept.has(clean(period.fromMonth)))
+    .map(period => ({ fromMonth: clean(period.fromMonth), monthlyFee: Math.max(0, Number(period.monthlyFee) || 0), date: clean(period.date) }));
+  student.monthlyFee = student.feeHistory[student.feeHistory.length - 1].monthlyFee;
+  save(); return student;
+}
+
 function deleteStudent(id) {
   const n = Number(id);
   data.students = data.students.filter(x => Number(x.id) !== n);
@@ -648,7 +666,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,updateStudentFees,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,updateStudentFees,removeStudentFeePeriod,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

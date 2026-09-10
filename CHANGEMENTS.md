@@ -3,6 +3,30 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.8.0 — 2026-09-10
+
+- Le formulaire des frais affiche désormais le tableau « فترات الرسوم الشهرية » :
+  une ligne par période, avec le mois de début, le mois de fin, le nombre de mois
+  concernés, le montant mensuel et la date de saisie.
+- « تعديل » charge une période dans le formulaire ; la période en cours
+  d’édition est surlignée dans le tableau.
+- « حذف » supprime une période saisie par erreur, ses mois reprenant le tarif de
+  la période précédente. Auparavant une période ne pouvait qu’être ajoutée ou
+  remplacée : une erreur de mois était définitive.
+- Refus de supprimer la dernière période restante : un élève a toujours un tarif
+  en vigueur, ce cas est une modification et non une suppression.
+- Aperçu en direct avant l’enregistrement : montant dû total et reste à payer
+  avant et après, nombre et noms des frais modifiés, avertissement lorsque des
+  mois déjà soldés sont recalculés ou qu’une échéance passée est touchée.
+- L’aperçu couvre aussi la remise, qui s’applique rétroactivement à tous les
+  mois : son effet n’était signalé nulle part.
+- Le bouton « حفظ الرسوم » est désactivé quand rien ne change, ce qui évite
+  d’enregistrer une période identique à la précédente.
+- Ajout du bouton « استعادة القيم المحفوظة » pour revenir aux valeurs
+  enregistrées sans rouvrir la fenêtre.
+- Nouvelle route `DELETE /students/:id/fee-periods/:month`, protégée par mot de
+  passe côté interface.
+
 ## 1.7.1 — 2026-09-10
 
 - Refactorisation : `public/fees-ui.js` n'a plus de ligne au-dessus de

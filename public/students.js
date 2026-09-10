@@ -106,13 +106,7 @@ window.openStudentFees = (id, showLedger = false) => {
   if (!student) return;
   go('fees');
   if(!showLedger&&!$('studentFeesPanel').open)$('studentFeesPanel').showModal();
-  $('studentRegistrationFee').value = student.registrationFee || 0;
-  $('studentFeeFrom').value = months.includes($('feeMonth').value) ? $('feeMonth').value : currentMonth();
-  $('studentDiscountType').value = student.discountType || '';
-  $('studentDiscountValue').value = student.discountValue || '';
-  $('studentDiscountReason').value = student.discountReason || '';
-  toggleDiscountFields();
-  showFeeForMonth();
+  fillStudentFeeForm(student, months.includes($('feeMonth').value) ? $('feeMonth').value : currentMonth());
   $('studentPaymentAmount').value = '';
   const selectedMonth=$('feeMonth').value;
   $('studentPaymentMonth').value = selectedMonth===TOTAL_MODE ? (ledgerOf(student).oldestUnpaid?.month || REGISTRATION) : selectedMonth;
@@ -120,6 +114,108 @@ window.openStudentFees = (id, showLedger = false) => {
   refreshStudentFeeDetails();
   if(showLedger)openStudentLedgerDialog();
   else showEditForm('fees','studentFeesForm','studentRegistrationFee');
+};
+function fillStudentFeeForm(student, month) {
+  $('studentRegistrationFee').value = student.registrationFee || 0;
+  $('studentFeeFrom').value = month;
+  $('studentDiscountType').value = student.discountType || '';
+  $('studentDiscountValue').value = student.discountValue || '';
+  $('studentDiscountReason').value = student.discountReason || '';
+  toggleDiscountFields();
+  showFeeForMonth();
+}
+
+// The student the form currently describes, as a record the ledger engine reads,
+// or null while an amount is still unusable.
+function draftFeeStudent(student) {
+  const monthlyFee = Number(western($('studentMonthlyFee').value));
+  const registrationFee = Number(western($('studentRegistrationFee').value));
+  if (![monthlyFee, registrationFee].every(value => Number.isFinite(value) && value >= 0)) return null;
+  return { ...withFeePeriod(student, $('studentFeeFrom').value, monthlyFee, state.settings || {}),
+    registrationFee,
+    discountType: $('studentDiscountType').value,
+    discountValue: western($('studentDiscountValue').value),
+    discountReason: $('studentDiscountReason').value };
+}
+
+// Saving rewrites every month the new fee reaches, and a discount reaches even
+// months already settled. Both used to happen silently; the form now names the
+// affected dues and the new totals before anything is written.
+function renderStudentFeePreview() {
+  const box = $('studentFeePreview'), save = $('saveStudentFees'), student = selectedFeeStudent();
+  if (!student) { box.textContent = ''; box.className = 'fee-preview hidden'; return; }
+  const draft = draftFeeStudent(student);
+  if (!draft) { box.className = 'fee-preview warn'; box.textContent = 'أدخل رسومًا صحيحة لا تقل عن صفر.'; save.disabled = true; return; }
+  const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
+  const before = ledgerOf(student), after = ledgerFor(draft, payments, state.settings || {});
+  const amountOf = (ledger, month) => { const row = ledger.byMonth.get(month); return row ? row.amount : null; };
+  const changed = [REGISTRATION, ...months].filter(month => amountOf(before, month) !== amountOf(after, month));
+  const reasonChanged = (student.discountReason || '') !== $('studentDiscountReason').value;
+  if (!changed.length) {
+    box.className = 'fee-preview';
+    box.textContent = reasonChanged ? 'سيُحفظ سبب الخصم دون تغيير أي مبلغ.' : 'لا يوجد تغيير عن القيم المحفوظة.';
+    save.disabled = !reasonChanged;
+    return;
+  }
+  save.disabled = false;
+  const settled = changed.filter(month => { const row = before.byMonth.get(month); return row && row.amount > 0 && row.remaining <= 0; });
+  const past = changed.filter(month => { const row = before.byMonth.get(month); return row && row.dueDate < today(); });
+  const names = changed.length > 6 ? esc(changed[0]) + ' … ' + esc(changed[changed.length - 1]) : changed.map(esc).join('، ');
+  const total = (label, from, to) => '<span><small>' + label + '</small><b>' + money(from) + ' ← ' + money(to) + '</b></span>';
+  box.className = settled.length ? 'fee-preview warn' : 'fee-preview';
+  box.innerHTML = '<div class="fee-preview-totals">'
+    + total('إجمالي المستحق', before.totalDue, after.totalDue)
+    + total('المتبقي', before.outstanding, after.outstanding)
+    + (after.credit !== before.credit ? total('رصيد دائن', before.credit, after.credit) : '')
+    + '</div><p>يتغيّر ' + money(changed.length) + ' من الرسوم: ' + names + '.</p>'
+    + (past.length ? '<p>منها ' + money(past.length) + ' مضى تاريخ استحقاقها.</p>' : '')
+    + (settled.length ? '<p class="status-unpaid">تنبيه: ' + money(settled.length) + ' من هذه الرسوم مسدَّدة بالكامل وسيُعاد احتسابها، وقد يظهر رصيد دائن أو متبقٍّ جديد.</p>' : '');
+}
+
+// The history was invisible: the form showed one month's fee and nothing else.
+function renderStudentFeePeriods() {
+  const student = selectedFeeStudent(), current = $('studentFeeFrom').value;
+  const ranges = student ? feePeriodRanges(student) : [];
+  $('studentFeePeriods').innerHTML = ranges.map(range =>
+    '<tr class="' + (range.fromMonth === current ? 'fee-period-active' : '') + '">'
+    + '<td>' + esc(range.fromMonth) + '</td><td>' + esc(range.toMonth || '—') + '</td>'
+    + '<td>' + money(range.monthCount) + '</td><td>' + money(range.monthlyFee) + '</td>'
+    + '<td>' + (range.date ? western(range.date) : '—') + '</td>'
+    + '<td class="actions"><button type="button" class="btn-edit" data-period-month="' + esc(range.fromMonth) + '">تعديل</button>'
+    + (ranges.length > 1 ? '<button type="button" class="btn-delete" data-period-month="' + esc(range.fromMonth) + '" data-period-remove="1">حذف</button>' : '')
+    + '</td></tr>').join('')
+    || '<tr><td colspan="6">لا توجد فترات رسوم بعد.</td></tr>';
+}
+$('studentFeePeriods').onclick = event => {
+  const button = event.target.closest('[data-period-month]');
+  if (!button) return;
+  if (button.dataset.periodRemove) return removeStudentFeePeriod(button.dataset.periodMonth);
+  $('studentFeeFrom').value = button.dataset.periodMonth;
+  showFeeForMonth();
+  renderStudentFeePeriods();
+  renderStudentFeePreview();
+  $('studentMonthlyFee').focus();
+};
+async function removeStudentFeePeriod(month) {
+  const student = selectedFeeStudent();
+  if (!student) return;
+  if (!(await askConfirm('هل تريد حذف فترة الرسوم التي تبدأ من ' + month + '؟ ستسري على أشهرها رسوم الفترة السابقة.'))) return;
+  if (!(await requirePassword())) return;
+  try {
+    await api('/students/' + student.id + '/fee-periods/' + encodeURIComponent(month), {method:'DELETE'});
+    await load();
+    const updated = selectedFeeStudent();
+    if (updated) fillStudentFeeForm(updated, $('studentFeeFrom').value);
+    renderFees(); renderDashboard(); refreshStudentFeeDetails();
+    toast('تم حذف فترة الرسوم.');
+  } catch(error) { toast(error.message); }
+}
+$('resetStudentFees').onclick = () => {
+  const student = selectedFeeStudent();
+  if (!student) return;
+  fillStudentFeeForm(student, $('studentFeeFrom').value);
+  renderStudentFeePeriods();
+  renderStudentFeePreview();
 };
 function openStudentLedgerDialog(){
   refreshStudentFeeDetails();
@@ -143,7 +239,10 @@ function refreshStudentFeeDetails() {
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
     return `<tr><td>${esc(month)}</td><td>${esc(row.dueDate)}</td><td>${period}</td><td>${money(row.gross)}</td><td class="${row.discount > 0 ? 'status-exempt' : ''}">${row.discount > 0 ? money(row.discount) : '—'}</td><td>${money(row.amount)}</td><td>${money(row.paid)}</td><td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td><td class="paid-months">${covered}</td></tr>`;
   }).join('');
-  $('studentLedgerPayments').innerHTML = payments.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).map(p=>`<tr><td>${esc(invoiceNo(p))}</td><td>${esc(paymentLabel(p))}</td><td>${money(p.amount)}</td><td>${esc(p.date)}</td></tr>`).join('') || '<tr><td colspan="4">لا توجد دفعات مسجلة لهذا الطالب.</td></tr>';
+  // The ledger is where a wrong payment is noticed, so it edits and deletes in place.
+  renderStudentFeePeriods();
+  renderStudentFeePreview();
+  $('studentLedgerPayments').innerHTML = payments.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).map(p=>`<tr><td>${esc(invoiceNo(p))}</td><td>${esc(paymentLabel(p))}</td><td>${money(p.amount)}</td><td>${esc(western(p.date))}</td><td class="actions"><button type="button" class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button type="button" class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button type="button" class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td></tr>`).join('') || '<tr><td colspan="5">لا توجد دفعات مسجلة لهذا الطالب.</td></tr>';
 }
 function toggleDiscountFields(){
   const on=Boolean($('studentDiscountType').value);
@@ -155,7 +254,9 @@ $('studentDiscountType').onchange=toggleDiscountFields;
 // The form edits one fee period at a time, so it shows that period's amount.
 function showFeeForMonth(){const student=selectedFeeStudent();if(student)$('studentMonthlyFee').value=monthlyFeeFor(student,$('studentFeeFrom').value)}
 $('studentFeeFrom').innerHTML = months.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
-$('studentFeeFrom').onchange = showFeeForMonth;
+$('studentFeeFrom').onchange = () => { showFeeForMonth(); renderStudentFeePeriods(); renderStudentFeePreview(); };
+for (const id of ['studentRegistrationFee','studentMonthlyFee','studentDiscountValue','studentDiscountReason']) $(id).addEventListener('input', renderStudentFeePreview);
+$('studentDiscountType').addEventListener('change', renderStudentFeePreview);
 $('showStudentLedger').onclick=openStudentLedgerDialog;
 $('closeStudentLedger').onclick=()=>$('studentLedgerDialog').close();
 $('studentLedgerDialog').onclick=event=>{if(event.target===$('studentLedgerDialog'))$('studentLedgerDialog').close()};
@@ -170,7 +271,7 @@ $('studentFeesForm').onsubmit = async event => {
   try {
     await api(`/students/${student.id}/fees`, {method:'PUT',body:JSON.stringify({registrationFee:$('studentRegistrationFee').value,monthlyFee:$('studentMonthlyFee').value,effectiveFrom:$('studentFeeFrom').value,discountType:$('studentDiscountType').value,discountValue:western($('studentDiscountValue').value),discountReason:$('studentDiscountReason').value})});
     await load(); renderFees(); renderDashboard(); toast('تم حفظ رسوم الطالب.');
-  } catch(error) { toast(error.message); } finally { button.disabled = false; }
+  } catch(error) { toast(error.message); } finally { button.disabled = false; renderStudentFeePreview(); }
 };
 $('studentFeePaymentForm').onsubmit = async event => {
   event.preventDefault();
