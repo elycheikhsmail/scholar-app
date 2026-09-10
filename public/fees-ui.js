@@ -218,14 +218,8 @@ function feeSheetTitle(){return feeView.month===TOTAL_MODE?'إجمالي مست�
 // `openPrintWindow` et les feuilles de style d'impression vivent dans print.js.
 $('exportFees').onclick=()=>{
   if(!feeView.rows.length)return toast('لا توجد صفوف للتصدير.');
-  const cell=value=>{const text=String(value??'');return /[";\n]/.test(text)?`"${text.replace(/"/g,'""')}"`:text};
-  // The BOM makes Excel read the Arabic headers as UTF-8.
-  const blob=new Blob(['﻿'+feeSheetRows().map(row=>row.map(cell).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob),link=document.createElement('a');
-  link.href=url;link.download=`${feeSheetTitle()} — ${today()}.csv`;
-  document.body.append(link);link.click();link.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),2000);
-  toast('تم تصدير الملف.');
+  downloadXlsx(`${feeSheetTitle()} — ${today()}.xlsx`,'مستحقات الطلاب',feeSheetRows());
+  toast('تم تصدير الملف إلى Excel.');
 };
 $('printFees').onclick=()=>{
   if(!feeView.rows.length)return toast('لا توجد صفوف للطباعة.');

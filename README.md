@@ -160,7 +160,7 @@ Tests : `node --test tests/fees.test.js`.
 - **Vue totale.** Le sélecteur de frais propose « إجمالي المستحقات » : une ligne par élève avec le total de l'année, le plus ancien montant dû non soldé et le nombre de montants restants.
 - **Tri et filtres.** Chaque en-tête trie la table (un second clic inverse l'ordre). Les filtres portent sur la classe, l'état (reste à payer, en retard, soldé, sans frais) et un reste minimum.
 - **Ancienneté de la dette.** Une colonne indique le nombre de jours de retard, en trois niveaux au-delà de 30 et de 60 jours.
-- **Export et impression.** Export CSV (séparateur `;`, BOM UTF-8 pour Excel) de la vue filtrée, impression du relevé, et impression d'un avis par élève pour les parents avec le détail des mois impayés.
+- **Export et impression.** Export Excel `.xlsx` natif de la vue filtrée, impression du relevé, et impression d'un avis par élève pour les parents avec le détail des mois impayés.
 - **Volume.** La table affiche 300 lignes puis propose de tout afficher ; les champs de recherche sont temporisés.
 - **Rapports.** La section des rapports résume les créances par classe et classe les vingt plus gros débiteurs avec le contact du tuteur.
 

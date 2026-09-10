@@ -141,6 +141,17 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#resetFeeFilters').click();
   await expect(page.locator('#feeSearch')).toHaveValue('');
   await expect(page.locator('#feesTable')).toContainText('طالب تجريبي');
+  const feesExcelDownload=page.waitForEvent('download');
+  await page.locator('#exportFees').click();
+  const feesWorkbook=await feesExcelDownload;
+  assert.match(feesWorkbook.suggestedFilename(),/\.xlsx$/);
+  const feesWorkbookStream=await feesWorkbook.createReadStream();
+  const feesWorkbookChunks=[];
+  for await(const chunk of feesWorkbookStream)feesWorkbookChunks.push(chunk);
+  const feesWorkbookBytes=Buffer.concat(feesWorkbookChunks);
+  assert.equal(feesWorkbookBytes.subarray(0,2).toString(),'PK');
+  assert.match(feesWorkbookBytes.toString(),/xl\/worksheets\/sheet1\.xml/);
+  assert.match(feesWorkbookBytes.toString(),/طالب تجريبي/);
   // The filters, the chips and the rows all read from the one dues vocabulary.
   await expect(page.locator('#feeStatus option')).toHaveCount(5);
   await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');

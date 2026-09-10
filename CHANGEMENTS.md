@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.8.2 — 2026-09-10
+
+- Le tableau des montants dus est désormais exporté dans un vrai classeur Excel
+  `.xlsx`, comme le registre des élèves, et non plus dans un fichier CSV destiné
+  à être interprété par Excel.
+- Le libellé du bouton et la confirmation de l'export indiquent clairement le
+  format Excel.
+
 ## 1.8.1 — 2026-09-10
 
 - Le bouton « تعديل » du registre des salaires ouvre désormais un formulaire
