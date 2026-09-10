@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.6.1 — 2026-09-10
+
+- Refactorisation : `public/reports.js` était écrit en style compacté (27 lignes,
+  jusqu'à 755 caractères par ligne). Le fichier est réécrit en forme lisible, sans
+  changement de comportement.
+- Les six totalisations `reduce` identiques passent par un seul `sumAmount`.
+- Les modèles de lignes de tableau sont éclatés en une balise `<td>` par ligne.
+
 ## 1.6.0 — 2026-09-10
 
 - Les champs de date se saisissent désormais dans l'ordre utilisé par l'école :
