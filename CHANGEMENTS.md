@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.6.3 — 2026-09-10
+
+- Refactorisation : `public/settings.js` passe de six lignes compactées (jusqu'à
+  948 caractères) à une forme lisible, sans changement de comportement.
+- Le remplissage du formulaire de réglages passe par une table de champs au lieu
+  de onze affectations à la suite.
+
 ## 1.6.2 — 2026-09-10
 
 - Refactorisation : `public/staff.js` passe de 69 lignes compactées (jusqu'à 1080
