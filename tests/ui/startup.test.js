@@ -58,6 +58,18 @@ test('browser scripts support login, all sections, student fees and session rest
     await expect(page).toHaveURL(new RegExp(`#${section}$`));
   }
   await expect(page.locator('#sStudents')).toHaveText('1');
+  await page.locator('.nav-item[data-section="students"]').click();
+  const excelDownload=page.waitForEvent('download');
+  await page.locator('#exportStudentsExcel').click();
+  const workbook=await excelDownload;
+  assert.match(workbook.suggestedFilename(),/\.xlsx$/);
+  const workbookStream=await workbook.createReadStream();
+  const workbookChunks=[];
+  for await(const chunk of workbookStream)workbookChunks.push(chunk);
+  const workbookBytes=Buffer.concat(workbookChunks);
+  assert.equal(workbookBytes.subarray(0,2).toString(),'PK');
+  assert.match(workbookBytes.toString(),/xl\/worksheets\/sheet1\.xml/);
+  assert.match(workbookBytes.toString(),/طالب تجريبي/);
   await page.locator('.nav-item[data-section="staff"]').click();
   await page.locator('#teachersTable .btn-edit').click();
   await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');

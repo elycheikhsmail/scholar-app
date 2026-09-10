@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.3.0 — 2026-09-10
+
+- Ajout d’un bouton « تصدير Excel » dans le registre des élèves.
+- Export des élèves correspondant au département et à la recherche actifs dans
+  un véritable fichier `.xlsx` compatible avec Microsoft Excel.
+- Inclusion des données scolaires, personnelles, du responsable, de
+  l’inscription, du statut et des notes dans le fichier.
+- Génération entièrement locale du classeur, sans envoi de données ni connexion
+  internet.
+
 ## 1.2.5 — 2026-09-10
 
 - Ouverture de l’استمارة الموظف dans une fenêtre modale lors d’un clic sur
