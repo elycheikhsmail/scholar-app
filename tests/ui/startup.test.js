@@ -112,6 +112,21 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#resetFeeFilters').click();
   await expect(page.locator('#feeSearch')).toHaveValue('');
   await expect(page.locator('#feesTable')).toContainText('طالب تجريبي');
+  // The filters, the chips and the rows all read from the one dues vocabulary.
+  await expect(page.locator('#feeStatus option')).toHaveCount(5);
+  await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');
+  await expect(page.locator('#feeQuickFilters button').nth(2)).toContainText('متأخر');
+  // Every modal is built from the shared dialog system.
+  for (const id of ['studentFeesPanel', 'studentLedgerDialog', 'studentExportDialog', 'teacherDialog']) {
+    await expect(page.locator(`#${id}`)).toHaveClass(/app-dialog/);
+  }
+  // One colour per screen: the tokens keep two sections from sharing a value.
+  const navColours = await page.evaluate(() => ['fees', 'collections', 'staff'].map(section =>
+    getComputedStyle(document.querySelector(`.nav-item[data-section="${section}"]`)).color));
+  assert.equal(new Set(navColours).size, navColours.length, 'each screen keeps its own colour');
+  // No table renders as a blank strip any more.
+  await page.locator('.nav-item[data-section="expenses"]').click();
+  await expect(page.locator('#expensesTable')).toContainText('لا توجد مصروفات مسجلة');
   await page.locator('.nav-item[data-section="students"]').click();
   await page.locator('#studentsTable .btn-edit').click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');

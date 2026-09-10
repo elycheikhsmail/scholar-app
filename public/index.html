@@ -88,8 +88,8 @@
       <span id="studentCount"></span>
       <button type="button" class="secondary" id="exportStudentsExcel">تصدير Excel</button>
     </div>
-    <dialog id="studentExportDialog" class="export-dialog" aria-labelledby="studentExportTitle">
-      <div class="export-dialog-head">
+    <dialog id="studentExportDialog" class="app-dialog export-dialog" aria-labelledby="studentExportTitle">
+      <div class="app-dialog-head">
         <div><h3 id="studentExportTitle">أعمدة تصدير Excel</h3><p id="studentExportCount"></p></div>
         <button type="button" class="secondary" id="closeStudentExport" aria-label="إغلاق استمارة التصدير">إغلاق ✕</button>
       </div>
@@ -111,8 +111,8 @@
 
 <section id="fees" class="section">
   <div class="section-head"><div><h2>الرسوم الشهرية</h2><p>اختر الشهر والقسم ثم سجّل الدفعات</p></div></div>
-  <dialog id="studentFeesPanel" class="fee-form-dialog" aria-labelledby="studentFeesTitle">
-    <div class="fee-form-dialog-head">
+  <dialog id="studentFeesPanel" class="app-dialog fee-form-dialog" aria-labelledby="studentFeesTitle">
+    <div class="app-dialog-head sticky-head">
       <div><h3 id="studentFeesTitle">استمارة رسوم الطالب</h3><p id="studentFeesIdentity"></p></div>
       <button type="button" class="secondary" id="closeStudentFees" aria-label="إغلاق استمارة الرسوم">إغلاق ✕</button>
     </div>
@@ -133,8 +133,8 @@
       <div class="form-actions"><button class="primary">تسجيل الدفعة</button></div>
     </form>
   </dialog>
-  <dialog id="studentLedgerDialog" class="ledger-dialog" aria-labelledby="studentLedgerTitle">
-    <div class="ledger-dialog-head">
+  <dialog id="studentLedgerDialog" class="app-dialog ledger-dialog" aria-labelledby="studentLedgerTitle">
+    <div class="app-dialog-head sticky-head">
       <div><h3 class="table-title" id="studentLedgerTitle">كشف مستحقات الطالب حسب الشهر</h3><p id="studentLedgerIdentity"></p></div>
       <button type="button" class="secondary" id="closeStudentLedger" aria-label="إغلاق كشف الحساب">إغلاق ✕</button>
     </div>
@@ -148,13 +148,7 @@
   <div class="panel fee-toolbar">
     <label>نوع الرسوم<select id="feeMonth"><option value="رسوم التسجيل">رسوم التسجيل</option></select></label>
     <label>القسم<select id="feeDepartment"></select></label>
-    <label>الحالة<select id="feeStatus">
-      <option value="">الكل</option>
-      <option value="due">عليه متبقٍّ</option>
-      <option value="late">متأخر فقط</option>
-      <option value="paid">مسدَّد بالكامل</option>
-      <option value="none">بلا رسوم</option>
-    </select></label>
+    <label>الحالة<select id="feeStatus"></select></label>
     <label>أدنى متبقٍّ<input id="feeMinRemaining" type="number" min="0" step="1" placeholder="0"></label>
     <label>بحث<input id="feeSearch" placeholder="اسم الطالب أو الرقم المدرسي"></label>
     <button type="button" class="secondary fee-reset" id="resetFeeFilters">مسح التصفية</button>
@@ -193,13 +187,13 @@
     <p id="collectionFilterError" role="alert" class="status-unpaid hidden">تاريخ البداية يجب ألا يتجاوز تاريخ النهاية.</p>
     <div id="collectionTotals" class="totals-line" role="status" aria-live="polite"></div>
   </div>
-  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل التحصيل والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
+  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل التحصيل والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>النوع</th><th>المبلغ</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
 </section>
 
 <section id="staff" class="section">
   <div class="section-head"><div><h2>الموظفون والرواتب</h2><p>المعلمون والأساتذة والمحاسب والمراقب والعامل اليدوي</p></div><button type="button" class="primary" id="addTeacher">+ إضافة موظف</button></div>
-  <dialog id="teacherDialog" class="staff-dialog" aria-labelledby="teacherDialogTitle">
-    <div class="staff-dialog-head"><h3 id="teacherDialogTitle">إضافة موظف</h3><button type="button" class="secondary" id="closeTeacherDialog" aria-label="إغلاق استمارة الموظف">إغلاق ✕</button></div>
+  <dialog id="teacherDialog" class="app-dialog staff-dialog" aria-labelledby="teacherDialogTitle">
+    <div class="app-dialog-head sticky-head"><h3 id="teacherDialogTitle">إضافة موظف</h3><button type="button" class="secondary" id="closeTeacherDialog" aria-label="إغلاق استمارة الموظف">إغلاق ✕</button></div>
     <form id="teacherForm" class="staff-grid">
     <input type="hidden" id="teacherId">
     <label>اسم الموظف<input id="teacherName" required></label>
@@ -217,9 +211,9 @@
 
   <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form">
     <select id="salaryTeacher" required></select><select id="salaryMonth" required></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date"><button class="primary">تسجيل دفعة</button>
-  </form><div id="salaryDueInfo" class="hint-box"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3><div class="table-scroll"><table aria-labelledby="salaryTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>إجراء</th></tr></thead><tbody id="salaryTable"></tbody></table></div></div>
+  </form><div id="salaryDueInfo" class="hint-box"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3><div class="table-scroll"><table aria-labelledby="salaryTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="salaryTable"></tbody></table></div></div>
 
-  <div class="panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required></select><select id="advanceMonth" required></select><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3><div class="table-scroll"><table aria-labelledby="advanceTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>السلفة</th><th>التاريخ</th><th>ملاحظات</th><th>إجراء</th></tr></thead><tbody id="advanceTable"></tbody></table></div></div>
+  <div class="panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required></select><select id="advanceMonth" required></select><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3><div class="table-scroll"><table aria-labelledby="advanceTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>السلفة</th><th>التاريخ</th><th>ملاحظات</th><th>إجراءات</th></tr></thead><tbody id="advanceTable"></tbody></table></div></div>
 </section>
 
 <section id="expenses" class="section"><div class="section-head"><div><h2>المصروفات</h2><p>تسجيل ومتابعة مصروفات المدرسة</p></div></div>
@@ -275,8 +269,8 @@
       <input id="decisionText" placeholder="القرار: ناجح / معيد / مطرود">
       <button class="primary" id="addDecisionRule" type="button">إضافة قرار</button>
     </div>
-    <h3 class="table-title" id="remarksRulesTableTitle">جدول قواعد الملاحظات</h3><div class="table-scroll"><table aria-labelledby="remarksRulesTableTitle"><thead><tr><th>حد المعدل</th><th>الملاحظة</th><th>حذف</th></tr></thead><tbody id="remarksRulesTable"></tbody></table></div>
-    <h3 class="table-title" id="decisionRulesTableTitle">جدول قواعد القرارات</h3><div class="table-scroll"><table aria-labelledby="decisionRulesTableTitle"><thead><tr><th>حد المعدل</th><th>القرار</th><th>حذف</th></tr></thead><tbody id="decisionRulesTable"></tbody></table></div>
+    <h3 class="table-title" id="remarksRulesTableTitle">جدول قواعد الملاحظات</h3><div class="table-scroll"><table aria-labelledby="remarksRulesTableTitle"><thead><tr><th>حد المعدل</th><th>الملاحظة</th><th>إجراءات</th></tr></thead><tbody id="remarksRulesTable"></tbody></table></div>
+    <h3 class="table-title" id="decisionRulesTableTitle">جدول قواعد القرارات</h3><div class="table-scroll"><table aria-labelledby="decisionRulesTableTitle"><thead><tr><th>حد المعدل</th><th>القرار</th><th>إجراءات</th></tr></thead><tbody id="decisionRulesTable"></tbody></table></div>
   </div>
 
   <div class="panel">
@@ -320,7 +314,7 @@
 </main></div>
 <footer class="app-footer">الإصدار <span id="appVersion">—</span></footer>
 </div>
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite"></div>
 <script src="excel.js"></script>
 <script src="fees.js"></script>
 <script src="core.js"></script>

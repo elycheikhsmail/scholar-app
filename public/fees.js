@@ -21,6 +21,44 @@ const STUDENT_STATUSES = [ACTIVE_STATUS, ...LEFT_STATUSES];
 const DISCOUNT_TYPES = ['', 'percent', 'amount'];
 const DISCOUNT_LABELS = { percent: 'نسبة مئوية', amount: 'مبلغ ثابت' };
 
+// One vocabulary for the state of a due, shared by the month view, the total
+// view and the dues filters. Before this, the same situation could be called
+// «تم الدفع» in one table, «مسدَّد بالكامل» in the next and «مسدَّد» on a filter chip.
+const FEE_STATUS_LABELS = {
+  outside: 'خارج فترة القيد',   // the student was not enrolled that month
+  none: 'بلا رسوم',             // enrolled, but nothing is charged
+  paid: 'مسدَّد بالكامل',
+  late: 'متأخر',                // still owing after the due date
+  partial: 'عليه متبقٍّ',        // part paid, not yet late
+  unpaid: 'لم يُدفع بعد'         // nothing paid, not yet late
+};
+const FEE_STATUS_CLASSES = {
+  outside: 'status-exempt', none: 'status-exempt', paid: 'status-paid',
+  late: 'status-unpaid', partial: 'status-partial', unpaid: 'status-unpaid'
+};
+
+// `charge` is a ledger row, or null when the student is outside the period.
+function feeStatusKey(charge, today) {
+  if (!charge) return 'outside';
+  if (!(charge.amount > 0)) return 'none';
+  if (!(charge.remaining > 0)) return 'paid';
+  if (charge.dueDate && String(today) > charge.dueDate) return 'late';
+  return charge.paid > 0 ? 'partial' : 'unpaid';
+}
+function feeStatusOf(charge, today) {
+  const key = feeStatusKey(charge, today);
+  return [FEE_STATUS_LABELS[key], FEE_STATUS_CLASSES[key], key];
+}
+
+// The filters name the same states, so a chip and a row never disagree.
+const FEE_FILTERS = [
+  { value: '', label: 'الكل' },
+  { value: 'due', label: FEE_STATUS_LABELS.partial },
+  { value: 'late', label: FEE_STATUS_LABELS.late },
+  { value: 'paid', label: FEE_STATUS_LABELS.paid },
+  { value: 'none', label: FEE_STATUS_LABELS.none }
+];
+
 // Money is entered to two decimals; rounding keeps allocation remainders exact.
 function round2(value) { return Math.round((Number(value) || 0) * 100) / 100; }
 
@@ -171,6 +209,7 @@ function ledgerFor(student, payments, settings) {
 
 return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDENT_STATUSES,
   DISCOUNT_TYPES, DISCOUNT_LABELS,
+  FEE_STATUS_LABELS, FEE_STATUS_CLASSES, FEE_FILTERS, feeStatusKey, feeStatusOf,
   round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, monthlyFeeFor, discountOn,
   enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor };
 });

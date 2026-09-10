@@ -5,6 +5,7 @@ let feeHiddenColumns=new Set();
 try{feeHiddenColumns=new Set(JSON.parse(localStorage.getItem('feeHiddenColumns')||'[]'))}catch{}
 const daysBetween=(from,to)=>Math.round((new Date(to+'T00:00:00')-new Date(from+'T00:00:00'))/86400000);
 
+$('feeStatus').innerHTML=FEE_FILTERS.map(filter=>`<option value="${esc(filter.value)}">${esc(filter.label)}</option>`).join('');
 $('feeMonth').insertAdjacentHTML('afterbegin',`<option value="${TOTAL_MODE}">إجمالي المستحقات (كل الأشهر)</option>`);
 $('feeMonth').onchange=()=>{feeShowAll=false;renderFees();renderPaymentHistory()};
 $('feeDepartment').onchange=renderFees;
@@ -42,10 +43,10 @@ function feeRowFor(student,month){
 function overdueDays(row){return row.remaining>0&&row.dueDate&&row.dueDate<today()?daysBetween(row.dueDate,today()):0}
 function rowStatus(row,month){
   if(month!==TOTAL_MODE)return statusFor(row.student,month);
-  if(!row.charged)return['خارج فترة القيد','status-exempt'];
-  if(row.due<=0)return['لا توجد رسوم','status-exempt'];
-  if(row.remaining<=0)return['مسدَّد بالكامل','status-paid'];
-  return[`غير مسدَّد: ${row.unpaidCount}`,'status-unpaid'];
+  const charge=row.charged?{amount:row.due,paid:row.paid,remaining:row.remaining,dueDate:row.dueDate}:null;
+  const[label,cls,key]=feeStatusOf(charge,today());
+  // Across the whole year the count of open dues is what the reader needs.
+  return[key==='late'||key==='partial'||key==='unpaid'?`${label}: ${money(row.unpaidCount)}`:label,cls];
 }
 function passesFeeFilter(row,status,minRemaining){
   if(row.remaining<minRemaining)return false;
@@ -133,7 +134,7 @@ function renderFees(){
     if(row.due>0&&row.remaining<=0)statusCounts.paid++;
   });
   feeView={month,rows};
-  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th data-fee-column="status">الحالة</th><th data-fee-column="actions">إجراء</th>';
+  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th data-fee-column="status">الحالة</th><th data-fee-column="actions">إجراءات</th>';
   const totals=rows.reduce((a,r)=>({gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit}),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
   const shown=feeShowAll?rows:rows.slice(0,FEE_ROW_LIMIT);
   $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')||`<tr><td colspan="13">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
@@ -142,7 +143,8 @@ function renderFees(){
   $('feesRowNotice').classList.toggle('hidden',!capped);
   $('feesRowNotice').innerHTML=capped?`يُعرض ${money(shown.length)} من ${money(rows.length)} صفًّا. <button type="button" class="secondary" id="showAllFees">${feeShowAll?'الاكتفاء بأول '+FEE_ROW_LIMIT:'عرض كل الصفوف'}</button>`:'';
   if($('showAllFees'))$('showAllFees').onclick=()=>{feeShowAll=!feeShowAll;renderFees()};
-  const quickFilters=[['','الكل',candidates.length],['due','عليه متبقٍّ',statusCounts.due],['late','متأخر',statusCounts.late],['paid','مسدَّد',statusCounts.paid]];
+  const quickCounts={'':candidates.length,due:statusCounts.due,late:statusCounts.late,paid:statusCounts.paid};
+  const quickFilters=FEE_FILTERS.filter(filter=>filter.value!=='none').map(filter=>[filter.value,filter.label,quickCounts[filter.value]]);
   $('feeQuickFilters').innerHTML=quickFilters.map(([value,label,count])=>`<button type="button" data-fee-status="${value}" class="fee-filter-chip ${status===value?'active':''}" aria-pressed="${status===value}">${label}<b>${money(count)}</b></button>`).join('');
   const activeFilters=[dep&&`القسم: ${dep}`,status&&`الحالة: ${$('feeStatus').selectedOptions[0].textContent}`,minRemaining>0&&`المتبقي من ${money(minRemaining)}`,query&&`البحث: ${$('feeSearch').value.trim()}`].filter(Boolean);
   $('feesFilterSummary').innerHTML=`عرض <strong>${money(rows.length)}</strong> طالب${activeFilters.length?` · ${activeFilters.map(esc).join(' · ')}`:' · دون تصفية إضافية'}`;

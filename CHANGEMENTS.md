@@ -3,6 +3,29 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.5.0 — 2026-09-10
+
+- Introduction de jetons de design (`:root`) : toutes les couleurs, arrondis et
+  ombres répétés sont définis une seule fois et réutilisés partout.
+- Une seule couleur par écran : « سجل التحصيل والفواتير » ne partage plus le vert
+  de « الرسوم الشهرية », et les règles de navigation sont regroupées en un bloc.
+- Fusion des quatre blocs de fenêtres modales quasi identiques en un seul système
+  (`.app-dialog`), les variantes ne déclarant que largeur, accent et panneau
+  latéral.
+- Vocabulaire unique pour l'état des créances, partagé par la vue mensuelle, la
+  vue annuelle et les filtres : « مسدَّد بالكامل / متأخر / عليه متبقٍّ /
+  لم يُدفع بعد / بلا رسوم / خارج فترة القيد ».
+- Les options du filtre « الحالة » et les puces de filtrage rapide sont générées
+  depuis ce vocabulaire, elles ne peuvent plus diverger.
+- Messages de succès et d'erreur annoncés aux lecteurs d'écran
+  (`role="status"` sur la zone de notification).
+- Ajout des états vides manquants : élèves, employés, dépenses, départements,
+  règles de remarques et de décisions.
+- Un seul intitulé « إجراءات » pour la colonne d'actions de tous les tableaux.
+- Tests : nouveau test de domaine sur le vocabulaire des créances, et
+  vérifications de fumée sur le système de fenêtres, les couleurs de sections et
+  les états vides.
+
 ## 1.4.0 — 2026-09-10
 
 - Le bouton « تصدير Excel » du registre des élèves ouvre désormais une fenêtre

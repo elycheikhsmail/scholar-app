@@ -247,3 +247,27 @@ test('writing one collection leaves every other collection intact', () => {
   assert.equal(after.studentPayments.length, before.studentPayments.length + 1);
   assert.equal(after.teachers[0].id, teacher.id);
 });
+
+test('one vocabulary covers every dues state, and the filters reuse it', () => {
+  const at = (charge, today) => dues.feeStatusOf(charge, today);
+  assert.deepEqual(at(null, '2027-01-15').slice(0, 2), ['خارج فترة القيد', 'status-exempt']);
+  assert.deepEqual(at({ amount: 0, paid: 0, remaining: 0, dueDate: '2026-10-01' }, '2027-01-15').slice(0, 2),
+    ['بلا رسوم', 'status-exempt']);
+  assert.deepEqual(at({ amount: 100, paid: 100, remaining: 0, dueDate: '2026-10-01' }, '2027-01-15').slice(0, 2),
+    ['مسدَّد بالكامل', 'status-paid']);
+  // Past the due date the row says «متأخر», the same word the filter uses.
+  assert.deepEqual(at({ amount: 100, paid: 40, remaining: 60, dueDate: '2026-10-01' }, '2027-01-15').slice(0, 2),
+    ['متأخر', 'status-unpaid']);
+  assert.deepEqual(at({ amount: 100, paid: 40, remaining: 60, dueDate: '2027-05-01' }, '2027-01-15').slice(0, 2),
+    ['عليه متبقٍّ', 'status-partial']);
+  assert.deepEqual(at({ amount: 100, paid: 0, remaining: 100, dueDate: '2027-05-01' }, '2027-01-15').slice(0, 2),
+    ['لم يُدفع بعد', 'status-unpaid']);
+
+  // Every filter label is either «الكل» or a label a row can actually show.
+  const rowLabels = new Set(Object.values(dues.FEE_STATUS_LABELS));
+  for (const filter of dues.FEE_FILTERS) {
+    assert.ok(filter.value === '' || rowLabels.has(filter.label), `${filter.label} matches a row label`);
+  }
+  assert.equal(new Set(Object.values(dues.FEE_STATUS_LABELS)).size,
+    Object.keys(dues.FEE_STATUS_LABELS).length, 'no two states share a word');
+});

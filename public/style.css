@@ -1,20 +1,90 @@
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:#25323b;background:#f4f7fb}body{overflow:hidden}.hidden{display:none!important}.topbar{height:76px;background:#ef7d16;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;gap:18px;box-shadow:0 2px 12px #0002}.topbar h1{font-size:23px;margin:0}.school-year{font-size:13px}.top-date{display:flex;flex-direction:column;align-items:center;gap:2px}.top-date strong{font-size:19px}.top-date span{font-size:13px}.logout{border:1px solid #fff8;background:#fff1;color:#fff;border-radius:9px;padding:10px 15px;cursor:pointer}.layout{height:calc(100vh - 76px);display:flex;min-height:0}.sidebar{width:220px;flex:0 0 220px;background:#fff;border-left:1px solid #dde5ea;padding:12px;overflow-y:auto}.nav-item{width:100%;border:0;background:#f2f5f7;margin-bottom:8px;padding:14px 12px;border-radius:12px;display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;cursor:pointer;text-align:right}.nav-item.dashboard{color:#df6900}.nav-item.students{color:#1769aa}.nav-item.fees{color:#168a4a}.nav-item.staff{color:#7b3fb0}.nav-item.expenses{color:#c74436}.nav-item.reports{color:#008a91}.nav-item.settings{color:#45515b}.nav-item.active{color:#fff}.nav-item.dashboard.active{background:#ef7d16}.nav-item.students.active{background:#1769aa}.nav-item.fees.active{background:#168a4a}.nav-item.staff.active{background:#7b3fb0}.nav-item.expenses.active{background:#c74436}.nav-item.reports.active{background:#008a91}.nav-item.settings.active{background:#45515b}.content{flex:1;min-width:0;overflow-y:auto;padding:22px}.section{display:none;max-width:1600px;margin:auto}.active-section{display:block}.section-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:16px}.section-head h2{margin:0;font-size:27px}.section-head p{margin:5px 0 0;color:#70808b}.panel{background:#fff;border:1px solid #e0e6eb;border-radius:15px;padding:18px;margin-bottom:18px;box-shadow:0 3px 15px #1a28320c}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}.stat-card{background:#fff;border:1px solid #e0e6eb;border-radius:15px;padding:18px;display:flex;flex-direction:column;gap:8px;box-shadow:0 3px 15px #1a28320c}.stat-card b{font-size:25px;direction:ltr;text-align:right}.stat-card span{color:#6d7b84}.stat-card small{font-size:12px;color:#6d7b84}.student-stat small{direction:rtl;font-weight:700}.manager-panel{background:linear-gradient(135deg,#fff,#f4faf7)}.manager-title{font-size:18px;font-weight:900;color:#168a4a;margin-bottom:12px}.manager-info{display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:14px}.manager-info div{background:#f2f8f4;border:1px solid #d7eadf;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:5px}.manager-info span{color:#70808b;font-size:13px}.manager-info strong{font-size:18px;color:#25323b}.danger-panel{border-color:#f0c2bd}.danger-button{border:0;border-radius:9px;padding:11px 18px;background:#b41616;color:#fff;font:inherit;font-weight:900;cursor:pointer}.stat-card.highlight{background:#168a4a;color:#fff}.stat-card.highlight span{color:#fff}.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.summary-grid div{background:#f4f8fa;border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:5px}.summary-grid span{color:#70808b}.form-grid,.student-grid,.staff-grid{display:grid;gap:14px}.form-grid{grid-template-columns:repeat(4,minmax(170px,1fr))}.student-grid{grid-template-columns:repeat(8,minmax(100px,1fr));align-items:start}.student-label{color:#168a4a;font-weight:900}.staff-grid{grid-template-columns:repeat(4,minmax(180px,1fr))}.form-grid label,.student-label,.staff-grid label,.fee-toolbar label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}.strong-green{color:#168a4a;font-weight:900}.student-label input,.student-label select,.student-label textarea,.staff-grid input,.staff-grid select,.staff-grid textarea,.form-grid input,.form-grid textarea,.fee-toolbar input,.fee-toolbar select,.inline-form input,.inline-form select,.login-card input{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;outline:none;color:#25323b}.dept-field select{height:49px}.call-field input{height:49px;font-weight:900;color:#168a4a}.name-field{grid-column:span 2}.name-field input{height:49px}.notes-field{grid-column:span 2}.notes-field textarea{min-height:72px;resize:vertical}.monthly-fee-field input,.monthly-paid-field input{font-weight:800}.monthly-paid-field input{color:#168a4a}.gender-male{border-top:4px solid #1769aa}.gender-female{border-top:4px solid #c43f7e}.form-grid textarea{min-height:72px;resize:vertical}.form-grid input:focus,.form-grid textarea:focus,.student-label input:focus,.student-label select:focus,.student-label textarea:focus,.staff-grid input:focus,.staff-grid select:focus,.fee-toolbar input:focus,.fee-toolbar select:focus,.inline-form input:focus,.inline-form select:focus,.login-card input:focus{border-color:#1769aa;box-shadow:0 0 0 3px #1769aa14}.form-actions{grid-column:1/-1;display:flex;gap:10px}.primary,.secondary{border:0;border-radius:9px;padding:11px 18px;font:inherit;font-weight:800;cursor:pointer}.primary{background:#1769aa;color:#fff}.secondary{background:#e9eef2;color:#263238}.wide{width:100%}.table-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.table-tools input{max-width:430px;border:1px solid #cad5dc;border-radius:9px;padding:10px;font:inherit}.table-scroll{overflow:auto;max-height:450px;border:1px solid #dbe3e8;border-radius:10px}.students-scroll{max-height:520px}.table-scroll table{width:100%;min-width:1250px;border-collapse:collapse}.table-scroll th.sortable{cursor:pointer;user-select:none}.table-scroll th.sortable:hover{background:#e2eaf0}.table-scroll tr.totals-row td{font-weight:900;background:#eef3f6}.table-scroll th,.table-scroll td{padding:9px 8px;border:1px solid #d9e1e6;text-align:right;white-space:nowrap}.table-scroll th{position:sticky;top:0;background:#eef3f6;z-index:3}.table-scroll tbody tr:nth-child(even){background:#fafcfd}.table-scroll tbody tr:hover{background:#f0f7ff}.actions{display:flex;gap:5px}.btn-edit,.btn-delete,.btn-pay{border:0;border-radius:7px;padding:6px 9px;cursor:pointer;font-weight:800}.btn-edit{background:#e5f1fb;color:#1769aa}.btn-delete{background:#fde8e6;color:#b72d20}.btn-pay{background:#e6f7ee;color:#168a4a}.btn-pay:disabled,.payment-input:disabled{opacity:.45;cursor:not-allowed}.payment-input{width:105px!important;padding:7px!important}.student-payment-box{display:flex;gap:4px;align-items:center}.status-paid{color:#168a4a;font-weight:900}.status-overpaid{color:#7b3fb0;font-weight:950}.status-unpaid{color:#b41616;font-weight:900}.status-exempt{color:#70808b;font-weight:700}.department-form{display:grid;grid-template-columns:180px 180px auto;align-items:end;gap:10px}.department-form input{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;outline:none}.expenses-form{grid-template-columns:repeat(10,minmax(0,1fr))}.expenses-form label{min-width:0}.expenses-form .wide-field{grid-column:span 2}.expenses-form .form-actions{grid-column:1/-1}.expenses-form input,.expenses-form textarea{max-width:100%}.expenses-form label:nth-of-type(6) textarea{max-width:100%}.expenses-form textarea{min-height:68px}.expenses-form label:nth-of-type(1),.expenses-form label:nth-of-type(2),.expenses-form label:nth-of-type(3),.expenses-form label:nth-of-type(4),.expenses-form label:nth-of-type(5){grid-column:span 2}.status-partial,.remaining-red{color:#d23b31;font-weight:800}.overdue-soft{color:#e25d53;font-weight:700}.overdue-strong{color:#b41616;font-weight:950}.overdue-row{background:#fff0ef!important}.paid-months{max-width:250px;white-space:normal!important;line-height:1.6}.fee-toolbar,.inline-form{display:flex;align-items:end;gap:12px}.fee-toolbar label{width:230px}.inline-form>*{flex:1}.inline-form .primary{flex:0 0 auto}.totals-line{display:flex;gap:25px;flex-wrap:wrap;margin-bottom:12px;font-weight:800}.hint-box{padding:10px 12px;background:#f1f7fb;border-radius:9px;margin:9px 0;color:#52626d}.hidden-field{display:none!important}.login-screen{height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#fff7ed,#edf5ff)}.login-card{width:min(420px,100%);background:#fff;border-radius:20px;padding:30px;box-shadow:0 15px 45px #15253622;text-align:center}.logo{font-size:50px}.login-card h1{margin:8px 0;font-size:25px}.login-card p{color:#71808b}.login-card form{display:grid;gap:13px;text-align:right}.login-card label{display:grid;gap:6px;font-weight:800}.login-card small{display:block;margin-top:18px;color:#88949d}#toast{position:fixed;bottom:22px;left:22px;z-index:30;background:#263238;color:#fff;padding:12px 18px;border-radius:10px;display:none;max-width:460px}
+/* Design tokens.
+   Every colour, radius and shadow that appears more than once lives here, so a
+   new screen reuses an existing value instead of inventing a near-identical
+   one. Plain #fff is left inline: it is unambiguous and never drifts. */
+:root{
+  /* palette */
+  --orange:#ef7d16;      /* brand: top bar, dashboard */
+  --orange-ink:#df6900;  /* darker orange: readable as text on a light row */
+  --blue:#1769aa;
+  --green:#168a4a;
+  --green-dark:#10733d;
+  --teal:#0f6f8c;
+  --purple:#7b3fb0;
+  --brick:#c74436;
+  --amber:#a65d00;
+  --cyan:#008a91;
+  --slate:#45515b;
+  --red:#b41616;
+  --red-ink:#b72d20;
+  --crimson:#d23b31;
+  --coral:#e25d53;
+  /* tints, for soft badges and row action buttons */
+  --green-tint:#e6f7ee;
+  --green-tint-soft:#f1f7f3;
+  --blue-tint:#e5f1fb;
+  --red-tint:#fde8e6;
+  /* neutrals */
+  --text:#25323b;
+  --text-muted:#70808b;
+  --text-soft:#52626d;
+  --bg:#f4f7fb;
+  --surface-soft:#f4f8fa;
+  --surface-head:#eef3f6;
+  --row-alt:#fafcfd;
+  --row-hover:#f0f7ff;
+  --border:#dde5ea;
+  --border-panel:#e0e6eb;
+  --border-field:#cad5dc;
+  --border-table:#d9e1e6;
+  /* one colour per screen: no two entries share a value */
+  --nav-dashboard:var(--orange);
+  --nav-dashboard-ink:var(--orange-ink);
+  --nav-students:var(--blue);
+  --nav-fees:var(--green);
+  --nav-collections:var(--teal);
+  --nav-staff:var(--purple);
+  --nav-expenses:var(--brick);
+  --nav-exams:var(--amber);
+  --nav-reports:var(--cyan);
+  --nav-settings:var(--slate);
+  /* dues status, paired with the labels in fees.js */
+  --status-paid:var(--green);
+  --status-partial:var(--crimson);
+  --status-unpaid:var(--red);
+  --status-exempt:var(--text-muted);
+  --status-overpaid:var(--purple);
+  --overdue-soft:var(--coral);
+  --overdue-strong:var(--red);
+  --overdue-row:#fff0ef;
+  /* shape */
+  --radius-sm:7px;
+  --radius-md:9px;
+  --radius-lg:12px;
+  --radius-xl:15px;
+  --radius-dialog:18px;
+  --radius-pill:999px;
+  --shadow-panel:0 3px 15px #1a28320c;
+  --shadow-dialog:0 22px 70px #172b3b42;
+  --backdrop:#172b3b73;
+}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;font-family:"Segoe UI",Tahoma,Arial,sans-serif;color:var(--text);background:var(--bg)}body{overflow:hidden}.hidden{display:none!important}.topbar{height:76px;background:var(--orange);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 22px;gap:18px;box-shadow:0 2px 12px #0002}.topbar h1{font-size:23px;margin:0}.school-year{font-size:13px}.top-date{display:flex;flex-direction:column;align-items:center;gap:2px}.top-date strong{font-size:19px}.top-date span{font-size:13px}.logout{border:1px solid #fff8;background:#fff1;color:#fff;border-radius:var(--radius-md);padding:10px 15px;cursor:pointer}.layout{height:calc(100vh - 76px);display:flex;min-height:0}.sidebar{width:220px;flex:0 0 220px;background:#fff;border-left:1px solid var(--border);padding:12px;overflow-y:auto}.nav-item{width:100%;border:0;background:#f2f5f7;margin-bottom:8px;padding:14px 12px;border-radius:var(--radius-lg);display:flex;align-items:center;gap:10px;font-size:15px;font-weight:800;cursor:pointer;text-align:right}.nav-item.dashboard{color:var(--nav-dashboard-ink)}.nav-item.students{color:var(--nav-students)}.nav-item.fees{color:var(--nav-fees)}.nav-item.collections{color:var(--nav-collections)}.nav-item.staff{color:var(--nav-staff)}.nav-item.expenses{color:var(--nav-expenses)}.nav-item.exams{color:var(--nav-exams)}.nav-item.reports{color:var(--nav-reports)}.nav-item.settings{color:var(--nav-settings)}.nav-item.active{color:#fff}.nav-item.dashboard.active{background:var(--nav-dashboard)}.nav-item.students.active{background:var(--nav-students)}.nav-item.fees.active{background:var(--nav-fees)}.nav-item.collections.active{background:var(--nav-collections)}.nav-item.staff.active{background:var(--nav-staff)}.nav-item.expenses.active{background:var(--nav-expenses)}.nav-item.exams.active{background:var(--nav-exams)}.nav-item.reports.active{background:var(--nav-reports)}.nav-item.settings.active{background:var(--nav-settings)}.content{flex:1;min-width:0;overflow-y:auto;padding:22px}.section{display:none;max-width:1600px;margin:auto}.active-section{display:block}.section-head{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:16px}.section-head h2{margin:0;font-size:27px}.section-head p{margin:5px 0 0;color:var(--text-muted)}.panel{background:#fff;border:1px solid var(--border-panel);border-radius:var(--radius-xl);padding:18px;margin-bottom:18px;box-shadow:var(--shadow-panel)}.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:18px}.stat-card{background:#fff;border:1px solid var(--border-panel);border-radius:var(--radius-xl);padding:18px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow-panel)}.stat-card b{font-size:25px;direction:ltr;text-align:right}.stat-card span{color:var(--text-muted)}.stat-card small{font-size:12px;color:var(--text-muted)}.student-stat small{direction:rtl;font-weight:700}.manager-panel{background:linear-gradient(135deg,#fff,#f4faf7)}.manager-title{font-size:18px;font-weight:900;color:var(--green);margin-bottom:12px}.manager-info{display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:14px}.manager-info div{background:#f2f8f4;border:1px solid #d7eadf;border-radius:var(--radius-md);padding:12px;display:flex;flex-direction:column;gap:5px}.manager-info span{color:var(--text-muted);font-size:13px}.manager-info strong{font-size:18px;color:var(--text)}.danger-panel{border-color:#f0c2bd}.danger-button{border:0;border-radius:var(--radius-md);padding:11px 18px;background:var(--red);color:#fff;font:inherit;font-weight:900;cursor:pointer}.stat-card.highlight{background:var(--green);color:#fff}.stat-card.highlight span{color:#fff}.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.summary-grid div{background:var(--surface-soft);border-radius:var(--radius-md);padding:14px;display:flex;flex-direction:column;gap:5px}.summary-grid span{color:var(--text-muted)}.form-grid,.student-grid,.staff-grid{display:grid;gap:14px}.form-grid{grid-template-columns:repeat(4,minmax(170px,1fr))}.student-grid{grid-template-columns:repeat(8,minmax(100px,1fr));align-items:start}.student-label{color:var(--green);font-weight:900}.staff-grid{grid-template-columns:repeat(4,minmax(180px,1fr))}.form-grid label,.student-label,.staff-grid label,.fee-toolbar label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}.strong-green{color:var(--green);font-weight:900}.student-label input,.student-label select,.student-label textarea,.staff-grid input,.staff-grid select,.staff-grid textarea,.form-grid input,.form-grid textarea,.fee-toolbar input,.fee-toolbar select,.inline-form input,.inline-form select,.login-card input{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;outline:none;color:var(--text)}.dept-field select{height:49px}.call-field input{height:49px;font-weight:900;color:var(--green)}.name-field{grid-column:span 2}.name-field input{height:49px}.notes-field{grid-column:span 2}.notes-field textarea{min-height:72px;resize:vertical}.monthly-fee-field input,.monthly-paid-field input{font-weight:800}.monthly-paid-field input{color:var(--green)}.gender-male{border-top:4px solid var(--blue)}.gender-female{border-top:4px solid #c43f7e}.form-grid textarea{min-height:72px;resize:vertical}.form-grid input:focus,.form-grid textarea:focus,.student-label input:focus,.student-label select:focus,.student-label textarea:focus,.staff-grid input:focus,.staff-grid select:focus,.fee-toolbar input:focus,.fee-toolbar select:focus,.inline-form input:focus,.inline-form select:focus,.login-card input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1769aa14}.form-actions{grid-column:1/-1;display:flex;gap:10px}.primary,.secondary{border:0;border-radius:var(--radius-md);padding:11px 18px;font:inherit;font-weight:800;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e9eef2;color:#263238}.wide{width:100%}.table-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.table-tools input{max-width:430px;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;font:inherit}.table-scroll{overflow:auto;max-height:450px;border:1px solid var(--border-table);border-radius:var(--radius-md)}.students-scroll{max-height:520px}.table-scroll table{width:100%;min-width:1250px;border-collapse:collapse}.table-scroll th.sortable{cursor:pointer;user-select:none}.table-scroll th.sortable:hover{background:#e2eaf0}.table-scroll tr.totals-row td{font-weight:900;background:var(--surface-head)}.table-scroll th,.table-scroll td{padding:9px 8px;border:1px solid var(--border-table);text-align:right;white-space:nowrap}.table-scroll th{position:sticky;top:0;background:var(--surface-head);z-index:3}.table-scroll tbody tr:nth-child(even){background:var(--row-alt)}.table-scroll tbody tr:hover{background:var(--row-hover)}.actions{display:flex;gap:5px}.btn-edit,.btn-delete,.btn-pay{border:0;border-radius:var(--radius-sm);padding:6px 9px;cursor:pointer;font-weight:800}.btn-edit{background:var(--blue-tint);color:var(--blue)}.btn-delete{background:var(--red-tint);color:var(--red-ink)}.btn-pay{background:var(--green-tint);color:var(--green)}.btn-pay:disabled,.payment-input:disabled{opacity:.45;cursor:not-allowed}.payment-input{width:105px!important;padding:7px!important}.student-payment-box{display:flex;gap:4px;align-items:center}.status-paid{color:var(--status-paid);font-weight:900}.status-overpaid{color:var(--status-overpaid);font-weight:950}.status-unpaid{color:var(--status-unpaid);font-weight:900}.status-exempt{color:var(--status-exempt);font-weight:700}.department-form{display:grid;grid-template-columns:180px 180px auto;align-items:end;gap:10px}.department-form input{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;outline:none}.expenses-form{grid-template-columns:repeat(10,minmax(0,1fr))}.expenses-form label{min-width:0}.expenses-form .wide-field{grid-column:span 2}.expenses-form .form-actions{grid-column:1/-1}.expenses-form input,.expenses-form textarea{max-width:100%}.expenses-form label:nth-of-type(6) textarea{max-width:100%}.expenses-form textarea{min-height:68px}.expenses-form label:nth-of-type(1),.expenses-form label:nth-of-type(2),.expenses-form label:nth-of-type(3),.expenses-form label:nth-of-type(4),.expenses-form label:nth-of-type(5){grid-column:span 2}.status-partial,.remaining-red{color:var(--status-partial);font-weight:800}.overdue-soft{color:var(--overdue-soft);font-weight:700}.overdue-strong{color:var(--overdue-strong);font-weight:950}.overdue-row{background:var(--overdue-row)!important}.paid-months{max-width:250px;white-space:normal!important;line-height:1.6}.fee-toolbar,.inline-form{display:flex;align-items:end;gap:12px}.fee-toolbar label{width:230px}.inline-form>*{flex:1}.inline-form .primary{flex:0 0 auto}.totals-line{display:flex;gap:25px;flex-wrap:wrap;margin-bottom:12px;font-weight:800}.hint-box{padding:10px 12px;background:#f1f7fb;border-radius:var(--radius-md);margin:9px 0;color:var(--text-soft)}.hidden-field{display:none!important}.login-screen{height:100vh;display:grid;place-items:center;padding:20px;background:linear-gradient(135deg,#fff7ed,#edf5ff)}.login-card{width:min(420px,100%);background:#fff;border-radius:var(--radius-dialog);padding:30px;box-shadow:0 15px 45px #15253622;text-align:center}.logo{font-size:50px}.login-card h1{margin:8px 0;font-size:25px}.login-card p{color:var(--text-muted)}.login-card form{display:grid;gap:13px;text-align:right}.login-card label{display:grid;gap:6px;font-weight:800}.login-card small{display:block;margin-top:18px;color:var(--text-muted)}#toast{position:fixed;bottom:22px;left:22px;z-index:30;background:#263238;color:#fff;padding:12px 18px;border-radius:var(--radius-md);display:none;max-width:460px}
 @media(max-width:1150px){.expenses-form{grid-template-columns:repeat(5,minmax(0,1fr))}.department-form{grid-template-columns:1fr 1fr auto}.expenses-form label:nth-of-type(1),.expenses-form label:nth-of-type(2),.expenses-form label:nth-of-type(3),.expenses-form label:nth-of-type(4),.expenses-form label:nth-of-type(5){grid-column:span 1}.sidebar{width:190px;flex-basis:190px}.cards{grid-template-columns:repeat(3,1fr)}.student-grid{grid-template-columns:repeat(4,minmax(130px,1fr))}.name-field{grid-column:span 2}.form-grid,.staff-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.manager-info{grid-template-columns:1fr}.expenses-form input,.expenses-form textarea{max-width:100%}.department-form{display:grid;grid-template-columns:1fr}.expenses-form{grid-template-columns:1fr}.expenses-form .wide-field{grid-column:auto}body{overflow:auto}.topbar{height:auto;min-height:72px;flex-wrap:wrap;padding:10px 12px}.top-date{display:none}.layout{height:auto;display:block}.sidebar{width:100%;display:flex;overflow-x:auto;gap:7px;padding:8px;position:sticky;top:0;z-index:6}.nav-item{min-width:128px;justify-content:center;margin:0;padding:10px 8px}.nav-item span{font-size:12px}.content{overflow:visible;padding:12px}.cards{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}.student-grid,.form-grid,.staff-grid{grid-template-columns:1fr}.name-field,.notes-field{grid-column:auto}.fee-toolbar,.inline-form{display:grid;grid-template-columns:1fr}.fee-toolbar label{width:auto}.table-scroll{max-height:55vh}.section-head{align-items:flex-start}.topbar h1{font-size:18px}}
+@media(max-width:700px){.student-grid .date-label{grid-column:auto}}
 
-.nav-item.exams{color:#a65d00}.nav-item.exams.active{background:#a65d00;color:#fff}
 .exam-toolbar{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr)) auto;gap:12px;align-items:end}
 .exam-toolbar label,.exam-template-form label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}
-.exam-toolbar input,.exam-toolbar select,.exam-template-form input,.exam-template-form select{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit}
+.exam-toolbar input,.exam-toolbar select,.exam-template-form input,.exam-template-form select{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit}
 .exam-template-form{display:grid;grid-template-columns:1.2fr 1fr 1.5fr .7fr auto auto;gap:10px;align-items:end}
 .exam-entry-area{margin-top:16px}
 .exam-entry-table{width:100%;border-collapse:collapse;min-width:700px}
-.exam-entry-table th,.exam-entry-table td{border:1px solid #d9e1e6;padding:9px;text-align:right}
-.exam-entry-table th{background:#eef3f6}
-.exam-entry-table input{width:100px;border:1px solid #cad5dc;border-radius:7px;padding:8px}
-.exam-total{font-weight:900;color:#168a4a}
-.exam-average{font-weight:950;color:#1769aa}
-.exam-print{background:#f0f7ff;color:#1769aa;border:0;border-radius:7px;padding:6px 9px;font-weight:800;cursor:pointer}
+.exam-entry-table th,.exam-entry-table td{border:1px solid var(--border-table);padding:9px;text-align:right}
+.exam-entry-table th{background:var(--surface-head)}
+.exam-entry-table input{width:100px;border:1px solid var(--border-field);border-radius:var(--radius-sm);padding:8px}
+.exam-total{font-weight:900;color:var(--green)}
+.exam-average{font-weight:950;color:var(--blue)}
+.exam-print{background:var(--row-hover);color:var(--blue);border:0;border-radius:var(--radius-sm);padding:6px 9px;font-weight:800;cursor:pointer}
 .exam-template-subjects{white-space:normal!important;line-height:1.7;max-width:520px}
 .results-sheet{background:#fff;padding:28px;direction:rtl}
 .results-header{text-align:center;line-height:1.7}
@@ -40,60 +110,60 @@
 /* Student dues workspace */
 .fee-reset{white-space:nowrap}
 .fee-quick-filters{display:flex;gap:8px;flex-wrap:wrap;margin:-7px 0 12px}
-.fee-filter-chip{display:flex;align-items:center;gap:8px;border:1px solid #d7e0e5;background:#fff;color:#52626d;border-radius:999px;padding:8px 13px;font:inherit;font-weight:800;cursor:pointer}
-.fee-filter-chip b{background:#edf2f5;border-radius:999px;padding:2px 7px;font-size:12px}
-.fee-filter-chip:hover{border-color:#168a4a;color:#168a4a}
-.fee-filter-chip.active{background:#168a4a;border-color:#168a4a;color:#fff}
+.fee-filter-chip{display:flex;align-items:center;gap:8px;border:1px solid #d7e0e5;background:#fff;color:var(--text-soft);border-radius:var(--radius-pill);padding:8px 13px;font:inherit;font-weight:800;cursor:pointer}
+.fee-filter-chip b{background:#edf2f5;border-radius:var(--radius-pill);padding:2px 7px;font-size:12px}
+.fee-filter-chip:hover{border-color:var(--green);color:var(--green)}
+.fee-filter-chip.active{background:var(--green);border-color:var(--green);color:#fff}
 .fee-filter-chip.active b{background:#ffffff2e}
-.fee-filter-summary{margin:0 0 10px;color:#63727c;font-size:13px}
+.fee-filter-summary{margin:0 0 10px;color:var(--text-muted);font-size:13px}
 .fees-scroll{max-height:60vh}
 .fee-student-cell strong,.fee-student-cell small{display:block}
-.fee-student-cell small{color:#70808b;font-size:11px;margin-top:3px}
+.fee-student-cell small{color:var(--text-muted);font-size:11px;margin-top:3px}
 .fee-row-actions{display:flex;align-items:center;gap:7px}
-.fee-form-trigger{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;padding:0;background:#168a4a;color:#fff;font:900 22px/1 Arial,sans-serif;cursor:pointer;box-shadow:0 2px 6px #168a4a30}
-.fee-form-trigger:hover{background:#10733d;transform:translateY(-1px)}
+.fee-form-trigger{display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:50%;padding:0;background:var(--green);color:#fff;font:900 22px/1 Arial,sans-serif;cursor:pointer;box-shadow:0 2px 6px #168a4a30}
+.fee-form-trigger:hover{background:var(--green-dark);transform:translateY(-1px)}
 .fee-form-trigger:focus-visible{outline:3px solid #168a4a45;outline-offset:2px}
 .fees-scroll+.hint-box{margin-top:10px}
 .fees-scroll~.hint-box.hidden{display:none!important}
 #fees .totals-line{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:9px;margin-bottom:14px}
-#fees .totals-line span{display:flex;flex-direction:column;gap:4px;background:#f5f8fa;border:1px solid #e2e8ec;border-radius:10px;padding:10px 12px}
-#fees .totals-line small{color:#70808b;font-size:11px}
+#fees .totals-line span{display:flex;flex-direction:column;gap:4px;background:var(--surface-soft);border:1px solid var(--border-panel);border-radius:var(--radius-md);padding:10px 12px}
+#fees .totals-line small{color:var(--text-muted);font-size:11px}
 #fees .totals-line b{font-size:18px}
 @media(max-width:1100px){#fees .totals-line{grid-template-columns:repeat(3,1fr)}.fee-toolbar{flex-wrap:wrap}.fee-toolbar label{flex:1 1 190px}}
 @media(max-width:700px){#fees .totals-line{grid-template-columns:repeat(2,1fr)}.fee-reset{width:100%}.fee-quick-filters{margin-top:0}.fee-filter-chip{flex:1;justify-content:center}}
-.app-footer{height:28px;display:flex;align-items:center;justify-content:center;background:#fff;border-top:1px solid #dde5ea;color:#70808b;font-size:12px;font-weight:700}
+.app-footer{height:28px;display:flex;align-items:center;justify-content:center;background:#fff;border-top:1px solid var(--border);color:var(--text-muted);font-size:12px;font-weight:700}
 #app:not(.hidden) .layout{height:calc(100vh - 104px)}
 @media(max-width:700px){.app-footer{height:34px;margin-top:10px}#app:not(.hidden) .layout{height:auto}}
 .fee-column-picker{position:relative}
 .fee-column-picker summary{list-style:none;display:block}
 .fee-column-picker summary::-webkit-details-marker{display:none}
 .fee-column-picker[open] summary{background:#dce6eb}
-.fee-column-options{position:absolute;top:calc(100% + 7px);left:0;z-index:12;width:230px;display:grid;gap:7px;background:#fff;border:1px solid #d5dfe5;border-radius:12px;padding:12px;box-shadow:0 12px 30px #1a283228}
-.fee-column-options label{display:flex;align-items:center;gap:8px;padding:5px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer}
-.fee-column-options label:hover{background:#f1f7f3}
-.fee-column-options input{accent-color:#168a4a;width:17px;height:17px}
+.fee-column-options{position:absolute;top:calc(100% + 7px);left:0;z-index:12;width:230px;display:grid;gap:7px;background:#fff;border:1px solid #d5dfe5;border-radius:var(--radius-lg);padding:12px;box-shadow:0 12px 30px #1a283228}
+.fee-column-options label{display:flex;align-items:center;gap:8px;padding:5px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer}
+.fee-column-options label:hover{background:var(--green-tint-soft)}
+.fee-column-options input{accent-color:var(--green);width:17px;height:17px}
 .fee-column-options button{margin-top:4px;width:100%}
 .fee-column-hidden{display:none!important}
 .fees-scroll [data-fee-column="name"]{position:sticky;right:0;z-index:2;background:#fff;box-shadow:-5px 0 8px #1a283212}
-.fees-scroll th[data-fee-column="name"]{z-index:5;background:#eef3f6}
-.fees-scroll tbody tr:nth-child(even) [data-fee-column="name"]{background:#fafcfd}
-.fees-scroll tbody tr:hover [data-fee-column="name"]{background:#f0f7ff}
-.fees-scroll .overdue-row [data-fee-column="name"]{background:#fff0ef}
+.fees-scroll th[data-fee-column="name"]{z-index:5;background:var(--surface-head)}
+.fees-scroll tbody tr:nth-child(even) [data-fee-column="name"]{background:var(--row-alt)}
+.fees-scroll tbody tr:hover [data-fee-column="name"]{background:var(--row-hover)}
+.fees-scroll .overdue-row [data-fee-column="name"]{background:var(--overdue-row)}
 .fees-scroll [data-fee-column="actions"]{position:sticky;left:0;z-index:2;background:#fff;box-shadow:5px 0 8px #1a283212}
-.fees-scroll th[data-fee-column="actions"]{z-index:5;background:#eef3f6}
-.fees-scroll tbody tr:nth-child(even) [data-fee-column="actions"]{background:#fafcfd}
-.fees-scroll tbody tr:hover [data-fee-column="actions"]{background:#f0f7ff}
-.fees-scroll .overdue-row [data-fee-column="actions"]{background:#fff0ef}
+.fees-scroll th[data-fee-column="actions"]{z-index:5;background:var(--surface-head)}
+.fees-scroll tbody tr:nth-child(even) [data-fee-column="actions"]{background:var(--row-alt)}
+.fees-scroll tbody tr:hover [data-fee-column="actions"]{background:var(--row-hover)}
+.fees-scroll .overdue-row [data-fee-column="actions"]{background:var(--overdue-row)}
 @media(max-width:700px){.fee-column-picker{width:100%}.fee-column-picker summary{text-align:center}.fee-column-options{position:static;width:100%;margin-top:7px}.fees-scroll [data-fee-column="name"],.fees-scroll [data-fee-column="actions"]{position:static;box-shadow:none}}
 
-.input-dialog{width:min(440px,calc(100vw - 32px));border:1px solid #cad5dc;border-radius:14px;padding:24px;color:#263740;box-shadow:0 18px 60px #0003;direction:rtl}
+.input-dialog{width:min(440px,calc(100vw - 32px));border:1px solid var(--border-field);border-radius:var(--radius-lg);padding:24px;color:#263740;box-shadow:0 18px 60px #0003;direction:rtl}
 .input-dialog::backdrop{background:#172b3b80}
 .input-dialog h3{margin:0 0 18px;line-height:1.6}
-.input-dialog input{width:100%;box-sizing:border-box;border:1px solid #aabac5;border-radius:8px;padding:12px;font:inherit}
+.input-dialog input{width:100%;box-sizing:border-box;border:1px solid #aabac5;border-radius:var(--radius-sm);padding:12px;font:inherit}
 .input-dialog .form-actions{margin-top:18px}
 
 .table-tools label{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px}
-.table-tools select{max-width:430px;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
+.table-tools select{max-width:430px;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;color:var(--text)}
 .student-table-tools{justify-content:flex-start;flex-wrap:wrap}
 .student-table-tools label{min-width:220px}
 .student-table-tools label:nth-child(2){flex:1}
@@ -103,56 +173,53 @@
 @media(max-width:700px){.student-table-tools{display:grid;grid-template-columns:1fr}.student-table-tools label{min-width:0}.student-table-tools #studentCount{margin-inline-start:0}}
 
 .editing-record{animation:editing-record-highlight 1.8s ease-out}
-@keyframes editing-record-highlight{0%,35%{border-color:#ef7d16;box-shadow:0 0 0 4px #ef7d1633,0 3px 15px #1a28320c}100%{border-color:#e0e6eb;box-shadow:0 3px 15px #1a28320c}}
-@media(prefers-reduced-motion:reduce){.editing-record{animation:none;outline:3px solid #ef7d16}}
+@keyframes editing-record-highlight{0%,35%{border-color:var(--orange);box-shadow:0 0 0 4px #ef7d1633,0 3px 15px #1a28320c}100%{border-color:var(--border-panel);box-shadow:var(--shadow-panel)}}
+@media(prefers-reduced-motion:reduce){.editing-record{animation:none;outline:3px solid var(--orange)}}
 
-.table-title{margin:0 0 12px;font-size:18px;font-weight:800;line-height:1.6;text-align:right;color:#25323b}
+.table-title{margin:0 0 12px;font-size:18px;font-weight:800;line-height:1.6;text-align:right;color:var(--text)}
 form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .results-sheet caption.table-title{caption-side:top;text-align:center;color:#111}
 
-#studentFeesPanel select{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
+#studentFeesPanel select{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;color:var(--text)}
 #studentFeesPanel .form-actions{flex-wrap:wrap}
 #studentFeesPanel .table-scroll table{min-width:850px}
-.fee-form-dialog{width:min(920px,calc(100vw - 32px));max-width:none;max-height:90vh;margin:auto;border:0;border-top:5px solid #168a4a;border-radius:18px;padding:20px 22px;box-shadow:0 22px 70px #172b3b42;color:#25323b;direction:rtl;overflow:auto}
-.fee-form-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
-.fee-form-dialog[open]{animation:fee-form-dialog-in .16s ease-out}
-.fee-form-dialog-head{position:sticky;top:-20px;z-index:7;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;border-bottom:1px solid #dde5ea;padding:17px 0 12px;margin-top:-18px;margin-bottom:16px}
-.fee-form-dialog-head h3{margin:0}.fee-form-dialog-head p{margin:4px 0 0;color:#63727c;font-weight:700}
-@keyframes fee-form-dialog-in{from{transform:translateY(18px) scale(.985);opacity:.45}to{transform:none;opacity:1}}
-@media(max-width:700px){.fee-form-dialog{width:100vw;max-height:100vh;height:100vh;border-radius:0;padding:15px}.fee-form-dialog-head{top:-15px;margin-top:-13px}.fee-form-dialog-head p{font-size:12px}}
-.export-dialog{width:min(620px,calc(100vw - 32px));max-width:none;max-height:90vh;margin:auto;border:0;border-top:5px solid #168a4a;border-radius:18px;padding:20px 22px;box-shadow:0 22px 70px #172b3b42;color:#25323b;direction:rtl;overflow:auto}
-.export-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
-.export-dialog[open]{animation:fee-form-dialog-in .16s ease-out}
-.export-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-bottom:1px solid #dde5ea;padding-bottom:12px;margin-bottom:16px}
-.export-dialog-head h3{margin:0}.export-dialog-head p{margin:4px 0 0;color:#63727c;font-weight:700;font-size:13px}
-.export-columns{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin:14px 0}
-.export-columns label{display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer}
-.export-columns label:hover{background:#f1f7f3}
-.export-columns input{accent-color:#168a4a;width:17px;height:17px}
-@media(max-width:700px){.export-dialog{width:100vw;max-height:100vh;height:100vh;border-radius:0;padding:15px}.export-columns{grid-template-columns:1fr}}
-.staff-dialog{width:min(900px,calc(100vw - 32px));max-width:none;max-height:90vh;margin:auto;border:0;border-top:5px solid #7b3fb0;border-radius:18px;padding:20px 22px;box-shadow:0 22px 70px #172b3b42;color:#25323b;direction:rtl;overflow:auto}
-.staff-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
-.staff-dialog[open]{animation:fee-form-dialog-in .16s ease-out}
-.staff-dialog-head{position:sticky;top:-20px;z-index:7;display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;border-bottom:1px solid #dde5ea;padding:17px 0 12px;margin-top:-18px;margin-bottom:16px}
-.staff-dialog-head h3{margin:0}
-@media(max-width:700px){.staff-dialog{width:100vw;max-height:100vh;height:100vh;border-radius:0;padding:15px}.staff-dialog-head{top:-15px;margin-top:-13px}}
-#studentLedger{margin-top:12px}
-.ledger-dialog{inset:0 0 0 auto;width:min(1080px,96vw);height:100vh;max-width:none;max-height:none;margin:0;border:0;border-right:4px solid #168a4a;border-radius:18px 0 0 18px;padding:20px 22px;box-shadow:-16px 0 50px #172b3b35;color:#25323b;direction:rtl;overflow:auto}
-.ledger-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
+/* One dialog system. Every modal shares the frame, backdrop, animation and
+   head; a variant only declares what genuinely differs. */
+.app-dialog{width:min(var(--dialog-width,920px),calc(100vw - 32px));max-width:none;max-height:90vh;margin:auto;border:0;border-top:5px solid var(--dialog-accent,var(--green));border-radius:var(--radius-dialog);padding:20px 22px;box-shadow:var(--shadow-dialog);color:var(--text);direction:rtl;overflow:auto}
+.app-dialog::backdrop{background:var(--backdrop);backdrop-filter:blur(2px)}
+.app-dialog[open]{animation:app-dialog-in .16s ease-out}
+@keyframes app-dialog-in{from{transform:translateY(18px) scale(.985);opacity:.45}to{transform:none;opacity:1}}
+.app-dialog-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:16px}
+.app-dialog-head h3,.app-dialog-head .table-title{margin:0}
+.app-dialog-head p{margin:4px 0 0;color:var(--text-muted);font-weight:700;font-size:13px}
+.app-dialog-head.sticky-head{position:sticky;top:-20px;z-index:7;padding-top:17px;margin-top:-18px}
+.fee-form-dialog{--dialog-width:920px}
+.export-dialog{--dialog-width:620px}
+.staff-dialog{--dialog-width:900px;--dialog-accent:var(--nav-staff)}
+.staff-dialog .app-dialog-head{align-items:center}
+/* The ledger is the one side panel: full height, hinged on the page edge. */
+.ledger-dialog{inset:0 0 0 auto;width:min(1080px,96vw);height:100vh;max-height:none;margin:0;border-top:0;border-right:4px solid var(--nav-fees);border-radius:var(--radius-dialog) 0 0 var(--radius-dialog);box-shadow:-16px 0 50px #172b3b35}
 .ledger-dialog[open]{animation:ledger-dialog-in .18s ease-out}
-.ledger-dialog-head{position:sticky;top:-20px;z-index:7;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;border-bottom:1px solid #dde5ea;padding:18px 0 12px;margin-top:-18px}
-.ledger-dialog-head .table-title{margin:0}
-.ledger-dialog-head p{margin:3px 0 0;color:#63727c;font-weight:700}
-.ledger-dialog .table-scroll{max-height:39vh}
 @keyframes ledger-dialog-in{from{transform:translateX(35px);opacity:.4}to{transform:none;opacity:1}}
-@media(max-width:700px){.ledger-dialog{width:100vw;border-radius:0;padding:15px}.ledger-dialog-head{top:-15px;margin-top:-13px}.ledger-dialog-head p{font-size:12px}.ledger-dialog .table-scroll{max-height:36vh}}
+.ledger-dialog .table-scroll{max-height:39vh}
+.export-columns{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;margin:14px 0}
+.export-columns label{display:flex;align-items:center;gap:8px;padding:7px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer}
+.export-columns label:hover{background:var(--green-tint-soft)}
+.export-columns input{accent-color:var(--nav-fees);width:17px;height:17px}
+#studentLedger{margin-top:12px}
+@media(max-width:700px){
+  .app-dialog{width:100vw;max-height:100vh;height:100vh;border-radius:0;padding:15px}
+  .app-dialog-head.sticky-head{top:-15px;margin-top:-13px}
+  .app-dialog-head p{font-size:12px}
+  .export-columns{grid-template-columns:1fr}
+  .ledger-dialog .table-scroll{max-height:36vh}
+}
 
-.nav-item.collections{color:#168a4a}.nav-item.collections.active{background:#168a4a;color:#fff}
 .collection-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px}
 .collection-filters label{display:flex;flex:1 1 180px;flex-direction:column;gap:6px;font-size:13px;font-weight:700;min-width:0}
-.collection-filters input,.collection-filters select{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
+.collection-filters input,.collection-filters select{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;color:var(--text)}
 #collections .table-scroll table{min-width:850px}
 
-.mode-badge{display:inline-block;margin:5px 10px;padding:4px 10px;border-radius:6px;background:#e6f7ee;color:#14532d;font-size:13px;font-weight:900;line-height:1.5;border:1px solid #86cda7}
+.mode-badge{display:inline-block;margin:5px 10px;padding:4px 10px;border-radius:var(--radius-sm);background:var(--green-tint);color:#14532d;font-size:13px;font-weight:900;line-height:1.5;border:1px solid #86cda7}
 .mode-badge.test-mode{background:#fff3cd;color:#713f12;border:2px solid #c07810}
 #applicationModeForm{flex-wrap:wrap}#applicationModeForm label{display:flex;flex-direction:column;gap:6px;font-weight:700}

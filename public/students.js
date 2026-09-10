@@ -37,16 +37,9 @@ function creditFor(student){return ledgerOf(student).credit}
 function paymentLabel(p){return p.month==='رسوم التسجيل'?'رسوم التسجيل':`رسوم شهر ${p.month}`}
 function invoiceNo(p){return p?.invoiceNo||`F-${String(p?.id||0).padStart(6,'0')}`}
 function lateFor(student,month){const row=chargeOf(student,month);return !!row&&row.remaining>0&&today()>row.dueDate}
-function statusFor(student,month){
-  const row=chargeOf(student,month);
-  if(!row)return['خارج فترة القيد','status-exempt'];
-  if(row.amount<=0)return['لا توجد رسوم','status-exempt'];
-  if(row.remaining<=0)return['تم الدفع','status-paid'];
-  if(lateFor(student,month)||row.paid===0)return[row.paid>0?'هناك باقي':'لم يدفع بعد','status-unpaid'];
-  return['هناك باقي','status-partial'];
-}
+function statusFor(student,month){return feeStatusOf(chargeOf(student,month),today())}
 function filteredStudents(){const q=$('studentSearch').value.toLowerCase().trim(),dep=$('studentDepartmentFilter').value;return state.data.students.filter(s=>(!dep||s.className===dep)&&[s.className,s.name,s.schoolNo,s.nni].join(' ').toLowerCase().includes(q))}
-function renderStudents(){const list=filteredStudents();$('studentCount').textContent=`عدد الطلاب: ${list.length}`;$('studentsTable').innerHTML=list.map(s=>`<tr><td>${esc(s.className)}</td><td>${esc(s.callNo)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.name)}</td><td>${esc(s.gender||'')}</td><td>${esc(s.nni)}</td><td class="${(s.status||ACTIVE_STATUS)===ACTIVE_STATUS?'':'status-exempt'}">${esc(s.status||ACTIVE_STATUS)}${s.leaveDate?' — '+esc(s.leaveDate):''}</td><td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">رسوم الطالب</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td></tr>`).join('')}
+function renderStudents(){const list=filteredStudents();$('studentCount').textContent=`عدد الطلاب: ${list.length}`;$('studentsTable').innerHTML=list.map(s=>`<tr><td>${esc(s.className)}</td><td>${esc(s.callNo)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.name)}</td><td>${esc(s.gender||'')}</td><td>${esc(s.nni)}</td><td class="${(s.status||ACTIVE_STATUS)===ACTIVE_STATUS?'':'status-exempt'}">${esc(s.status||ACTIVE_STATUS)}${s.leaveDate?' — '+esc(s.leaveDate):''}</td><td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">رسوم الطالب</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td></tr>`).join('')||'<tr><td colspan="8">لا يوجد طلاب مطابقون للتصفية.</td></tr>'}
 const STUDENT_EXPORT_COLUMNS=[
   {key:'className',label:'القسم',value:s=>s.className||''},
   {key:'callNo',label:'رقم النداء',value:s=>Number(s.callNo)||s.callNo||''},

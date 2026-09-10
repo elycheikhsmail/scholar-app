@@ -40,8 +40,8 @@ function renderExamTemplates(){
 }
 function renderExamRules(){
   const rr=state.examData.settings.remarksRules||[], dr=state.examData.settings.decisionRules||[];
-  $('remarksRulesTable').innerHTML=sortedRules(rr).map((r,i)=>`<tr><td>${money(r.min)}</td><td>${esc(r.remark)}</td><td><button class="btn-delete" onclick="deleteRemarkRule(${i})">حذف</button></td></tr>`).join('');
-  $('decisionRulesTable').innerHTML=sortedRules(dr).map((r,i)=>`<tr><td>${money(r.min)}</td><td>${esc(r.decision)}</td><td><button class="btn-delete" onclick="deleteDecisionRule(${i})">حذف</button></td></tr>`).join('');
+  $('remarksRulesTable').innerHTML=sortedRules(rr).map((r,i)=>`<tr><td>${money(r.min)}</td><td>${esc(r.remark)}</td><td><button class="btn-delete" onclick="deleteRemarkRule(${i})">حذف</button></td></tr>`).join('')||'<tr><td colspan="3">لا توجد قواعد ملاحظات بعد.</td></tr>';
+  $('decisionRulesTable').innerHTML=sortedRules(dr).map((r,i)=>`<tr><td>${money(r.min)}</td><td>${esc(r.decision)}</td><td><button class="btn-delete" onclick="deleteDecisionRule(${i})">حذف</button></td></tr>`).join('')||'<tr><td colspan="3">لا توجد قواعد قرارات بعد.</td></tr>';
 }
 function renderExamHeader(){
   const h=state.examData.settings.header||{};
