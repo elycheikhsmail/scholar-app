@@ -32,7 +32,7 @@ function feeRowFor(student,month){
   const ledger=ledgerOf(student);
   if(month===TOTAL_MODE){
     const oldest=ledger.oldestUnpaid;
-    return {student,ledger,gross:round2(ledger.rows.reduce((sum,row)=>sum+row.gross,0)),discount:ledger.totalDiscount,
+    return {student,ledger,gross:round2(ledger.accruedRows.reduce((sum,row)=>sum+row.gross,0)),discount:ledger.totalDiscount,
       due:ledger.totalDue,paid:ledger.allocated,remaining:ledger.outstanding,
       dueDate:oldest?oldest.dueDate:'',charged:ledger.rows.length>0,unpaidCount:ledger.unpaidCount};
   }
@@ -231,10 +231,10 @@ $('printFees').onclick=()=>{
   openPrintWindow(feeSheetTitle(),`<table><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody><tfoot>${footHtml}</tfoot></table>`);
 };
 $('printReminders').onclick=()=>{
-  const debtors=feeView.rows.filter(row=>row.remaining>0);
+  const debtors=feeView.rows.filter(row=>row.ledger.outstanding>0);
   if(!debtors.length)return toast('لا يوجد طلاب عليهم متبقٍّ ضمن التصفية الحالية.');
   const notices=debtors.map(row=>{
-    const unpaid=row.ledger.rows.filter(charge=>charge.remaining>0);
+    const unpaid=row.ledger.accruedRows.filter(charge=>charge.remaining>0);
     const lines=unpaid.map(charge=>`<tr><td>${esc(charge.month)}</td><td>${esc(charge.dueDate)}</td><td>${money(charge.remaining)}</td></tr>`).join('');
     return `<div class="notice">
       <h3>${esc(row.student.name)} — ${esc(row.student.className)} — رقم النداء ${esc(row.student.callNo)}</h3>

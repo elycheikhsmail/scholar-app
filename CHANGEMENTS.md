@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.9.0 — 2026-09-10
+
+- Le solde exigible d'un élève ne comprend plus les mois futurs : seuls les
+  frais d'inscription, le mois courant et les mois antérieurs alimentent la
+  facture, les totaux, les rapports et les avis aux parents.
+- L'échéancier annuel reste disponible pour permettre le paiement volontaire
+  d'un ou plusieurs mois à l'avance. Ces versements réduisent les mois planifiés
+  sans les présenter comme une dette actuelle.
+- Le moteur distingue maintenant le solde exigible du solde annuel planifié,
+  et des tests couvrent la période avant la rentrée, le mois courant et les
+  paiements anticipés.
+
 ## 1.8.2 — 2026-09-10
 
 - Le tableau des montants dus est désormais exporté dans un vrai classeur Excel

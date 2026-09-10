@@ -1,7 +1,8 @@
 // Student dues engine, shared by the browser UI and the server (db.js).
 //
 // Three rules it exists to enforce:
-//   1. A student is only charged for the months between enrolment and departure.
+//   1. A student's current balance only includes enrolment through the current
+//      month; later months stay scheduled so they can still be paid in advance.
 //   2. A payment is a credit on the account, allocated to the oldest unpaid
 //      charge first, so paying several months at once clears them all.
 //   3. A charge keeps the fee that applied when it fell due, so changing the
@@ -174,7 +175,8 @@ function dueDateFor(student, month, startYear) {
   return monthDate(month, startYear, parseInt(registrationDate.slice(8,10), 10) || 1);
 }
 
-// Every charge the student owes this school year, oldest first.
+// Every scheduled charge for the school year, oldest first. `ledgerFor` decides
+// which of these rows have become currently due.
 function chargesFor(student, settings) {
   const startYear = startYearOf(settings && settings.schoolYear);
   const first = enrolmentIndex(student, startYear);
@@ -225,18 +227,30 @@ function ledgerFor(student, payments, settings) {
   const charges = chargesFor(student, settings);
   const { rows, credit } = allocate(charges, payments);
   const byMonth = new Map(rows.map(row => [row.month, row]));
-  const totalDue = round2(rows.reduce((sum,row) => sum + row.amount, 0));
-  const allocated = round2(rows.reduce((sum,row) => sum + row.paid, 0));
-  const unpaid = rows.filter(row => row.remaining > 0);
+  // A whole calendar month becomes due at once. The exact due day still decides
+  // whether an unpaid current-month fee is late, but never postpones the month
+  // itself into the future balance.
+  const asOf = String((settings && settings.asOf) || new Date().toISOString().slice(0,10));
+  const monthEnd = /^\d{4}-\d{2}/.test(asOf) ? `${asOf.slice(0,7)}-31` : asOf;
+  const accruedRows = rows.filter(row => !row.dueDate || row.dueDate <= monthEnd);
+  const totalDue = round2(accruedRows.reduce((sum,row) => sum + row.amount, 0));
+  const allocated = round2(accruedRows.reduce((sum,row) => sum + row.paid, 0));
+  const unpaid = accruedRows.filter(row => row.remaining > 0);
+  const scheduledTotalDue = round2(rows.reduce((sum,row) => sum + row.amount, 0));
+  const scheduledAllocated = round2(rows.reduce((sum,row) => sum + row.paid, 0));
   return {
-    rows, byMonth, credit,
-    totalDiscount: round2(rows.reduce((sum,row) => sum + (row.discount || 0), 0)),
+    rows, accruedRows, byMonth, credit,
+    totalDiscount: round2(accruedRows.reduce((sum,row) => sum + (row.discount || 0), 0)),
+    scheduledTotalDiscount: round2(rows.reduce((sum,row) => sum + (row.discount || 0), 0)),
     unpaidCount: unpaid.length,
     oldestUnpaid: unpaid[0] || null,
     totalDue,
-    totalPaid: round2(allocated + credit),
+    totalPaid: round2(scheduledAllocated + credit),
     allocated,
-    outstanding: round2(totalDue - allocated)
+    outstanding: round2(totalDue - allocated),
+    scheduledTotalDue,
+    scheduledAllocated,
+    scheduledOutstanding: round2(scheduledTotalDue - scheduledAllocated)
   };
 }
 

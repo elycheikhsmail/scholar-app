@@ -149,7 +149,15 @@ Le moteur de calcul est dans `public/fees.js`, partagé par l'interface et le se
 
 **Remises et exonérations.** Un élève peut porter une remise, en pourcentage ou en montant fixe mensuel, avec un motif (bourse, remise fratrie…). Elle s'applique aux frais mensuels, jamais aux frais d'inscription, et ne peut pas rendre un montant négatif. Le relevé sépare les frais bruts, la remise et le montant dû.
 
-**Plafond des paiements.** Un paiement ne peut pas dépasser ce que le compte doit encore, comme c'était déjà le cas pour les salaires. Le message d'erreur indique le reste exact.
+**Plafond des paiements.** Un paiement ne peut pas dépasser le solde encore
+planifié pour l'année scolaire. Ce plafond empêche un trop-perçu tout en laissant
+les familles régler volontairement les prochains mois à l'avance.
+
+**Exigibilité mensuelle.** Le solde dû, les factures, les rapports et les avis
+aux parents ne comptent que les frais d'inscription, le mois courant et les
+mois antérieurs. Les mois suivants restent visibles dans l'échéancier et peuvent
+être réglés volontairement à l'avance, sans être présentés comme une dette
+actuelle.
 
 **Dates d'échéance.** Chaque mois échoit au jour d'inscription de ce mois, ramené au dernier jour si le mois est plus court.
 

@@ -535,7 +535,9 @@ function deleteStudent(id) {
 // account cannot be paid beyond what it owes.
 function assertWithinOutstanding(student, amount, excludePaymentId = null) {
   const payments = data.studentPayments.filter(x => Number(x.studentId) === Number(student.id) && Number(x.id) !== Number(excludePaymentId));
-  const outstanding = dues.ledgerFor(student, payments, data.settings).outstanding;
+  // Future months are not current debt, but remain payable in advance up to the
+  // balance scheduled for the school year.
+  const outstanding = dues.ledgerFor(student, payments, data.settings).scheduledOutstanding;
   if (outstanding <= 0) throw new Error('لا توجد مستحقات غير مسددة على هذا الطالب.');
   if (amount > outstanding) throw new Error(`المتبقي على الطالب هو ${outstanding} أوقية.`);
 }

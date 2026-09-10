@@ -11,7 +11,9 @@ const dirs = [];
 function temp() { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-fees-')); dirs.push(dir); return dir; }
 afterEach(() => { db.close(); for (const dir of dirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true }); });
 
-const settings = { schoolYear: '2026 / 2027' };
+// Most existing engine tests inspect the completed school year. Individual
+// accrual tests override this date to exercise the current-balance rule.
+const settings = { schoolYear: '2026 / 2027', asOf: '2027-06-30' };
 const base = { name: 'طالب', schoolNo: 'S1', nni: '1234567890', gender: 'ذكر', className: '6AF' };
 const amounts = ledger => ledger.rows.map(row => [row.month, row.amount, row.paid, row.remaining]);
 
@@ -28,6 +30,28 @@ test('charges only cover the months between enrolment and departure', () => {
 
   const early = { registrationDate: '2026-09-01', registrationFee: 0, monthlyFee: 1000 };
   assert.equal(dues.chargesFor(early, settings).length, 1 + dues.MONTHS.length, 'enrolment before October covers the whole year');
+});
+
+test('current balance excludes future months while keeping them available for advance payment', () => {
+  const student = { registrationDate:'2026-09-01', registrationFee:3000, monthlyFee:10000 };
+  const september = dues.ledgerFor(student, [], { ...settings, asOf:'2026-09-10' });
+  assert.equal(september.totalDue, 3000, 'before October only registration is currently due');
+  assert.equal(september.outstanding, 3000);
+  assert.equal(september.scheduledOutstanding, 93000, 'the school-year schedule remains available for prepayment');
+  assert.deepEqual(september.accruedRows.map(row=>row.month), [dues.REGISTRATION]);
+  assert.ok(september.byMonth.has('نوفمبر'), 'a future month can still be selected and paid');
+
+  const november = dues.ledgerFor(student, [], { ...settings, asOf:'2026-11-01' });
+  assert.deepEqual(november.accruedRows.map(row=>row.month), [dues.REGISTRATION,'أكتوبر','نوفمبر']);
+  assert.equal(november.totalDue, 23000, 'the whole current month counts even before its exact due day');
+
+  const prepaid = dues.ledgerFor(student,[
+    {id:1,month:dues.REGISTRATION,amount:3000,date:'2026-09-01'},
+    {id:2,month:'أكتوبر',amount:20000,date:'2026-09-10'}
+  ],{ ...settings, asOf:'2026-09-10' });
+  assert.equal(prepaid.outstanding,0);
+  assert.equal(prepaid.totalPaid,23000);
+  assert.equal(prepaid.scheduledOutstanding,70000);
 });
 
 test('a payment is a credit allocated to the oldest unpaid charge first', () => {
