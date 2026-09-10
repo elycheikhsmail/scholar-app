@@ -181,8 +181,10 @@
 </section>
 
 <section id="staff" class="section">
-  <div class="section-head"><div><h2>الموظفون والرواتب</h2><p>المعلمون والأساتذة والمحاسب والمراقب والعامل اليدوي</p></div></div>
-  <div class="panel"><form id="teacherForm" class="staff-grid">
+  <div class="section-head"><div><h2>الموظفون والرواتب</h2><p>المعلمون والأساتذة والمحاسب والمراقب والعامل اليدوي</p></div><button type="button" class="primary" id="addTeacher">+ إضافة موظف</button></div>
+  <dialog id="teacherDialog" class="staff-dialog" aria-labelledby="teacherDialogTitle">
+    <div class="staff-dialog-head"><h3 id="teacherDialogTitle">إضافة موظف</h3><button type="button" class="secondary" id="closeTeacherDialog" aria-label="إغلاق استمارة الموظف">إغلاق ✕</button></div>
+    <form id="teacherForm" class="staff-grid">
     <input type="hidden" id="teacherId">
     <label>اسم الموظف<input id="teacherName" required></label>
     <label>طبيعة العمل<select id="teacherRole"><option>أستاذ</option><option>معلم</option><option>محاسب</option><option>مراقب</option><option>عامل يدوي</option><option>أخرى</option></select></label>
@@ -193,8 +195,8 @@
     <label id="hourlyRateWrap" class="hidden-field">سعر الساعة<input id="hourlyRate" type="number" min="0"></label>
     <label>تاريخ التوظيف<input id="teacherStart" type="date"></label>
     <label class="notes-field">ملاحظات<textarea id="teacherNotes"></textarea></label>
-    <div class="form-actions"><button class="primary">حفظ الموظف</button><button type="button" class="secondary" id="cancelTeacher">تفريغ النموذج</button></div>
-  </form></div>
+    <div class="form-actions"><button class="primary">حفظ الموظف</button><button type="button" class="secondary" id="cancelTeacher">إلغاء</button></div>
+  </form></dialog>
   <div class="panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3><div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
   <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form">

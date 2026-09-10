@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.2.5 — 2026-09-10
+
+- Ouverture de l’استمارة الموظف dans une fenêtre modale lors d’un clic sur
+  « تعديل » dans le registre des employés.
+- Ajout d’un bouton « إضافة موظف » ouvrant la même fenêtre avec un formulaire
+  vide.
+- Fermeture de la fenêtre par le bouton, l’annulation, `Esc` ou un clic à
+  l’extérieur, avec nettoyage automatique du formulaire.
+- Adaptation de la fenêtre aux écrans mobiles.
+
 ## 1.2.4 — 2026-09-10
 
 - Remplacement du bouton textuel d’ouverture de l’استمارة رسوم الطالب par une

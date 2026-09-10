@@ -11,6 +11,7 @@ test('browser scripts support login, all sections, student fees and session rest
   t.after(() => { db.close(); fs.rmSync(directory, { recursive: true, force: true }); });
   db.init(directory);
   db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر' });
+  db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000 });
   const settings = { ...db.publicSettings(), applicationMode: 'production', version:require('../../package.json').version };
   const responses = {
     '/api/mode': { mode: 'production' },
@@ -57,6 +58,16 @@ test('browser scripts support login, all sections, student fees and session rest
     await expect(page).toHaveURL(new RegExp(`#${section}$`));
   }
   await expect(page.locator('#sStudents')).toHaveText('1');
+  await page.locator('.nav-item[data-section="staff"]').click();
+  await page.locator('#teachersTable .btn-edit').click();
+  await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');
+  await expect(page.locator('#teacherName')).toHaveValue('موظف تجريبي');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#teacherDialog')).not.toHaveAttribute('open', '');
+  await page.locator('#addTeacher').click();
+  await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');
+  await expect(page.locator('#teacherName')).toHaveValue('');
+  await page.keyboard.press('Escape');
   await page.locator('.nav-item[data-section="students"]').click();
   await page.locator('.nav-item[data-section="fees"]').click();
   await page.goBack();

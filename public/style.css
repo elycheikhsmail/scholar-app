@@ -120,6 +120,12 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .fee-form-dialog-head h3{margin:0}.fee-form-dialog-head p{margin:4px 0 0;color:#63727c;font-weight:700}
 @keyframes fee-form-dialog-in{from{transform:translateY(18px) scale(.985);opacity:.45}to{transform:none;opacity:1}}
 @media(max-width:700px){.fee-form-dialog{width:100vw;max-height:100vh;height:100vh;border-radius:0;padding:15px}.fee-form-dialog-head{top:-15px;margin-top:-13px}.fee-form-dialog-head p{font-size:12px}}
+.staff-dialog{width:min(900px,calc(100vw - 32px));max-width:none;max-height:90vh;margin:auto;border:0;border-top:5px solid #7b3fb0;border-radius:18px;padding:20px 22px;box-shadow:0 22px 70px #172b3b42;color:#25323b;direction:rtl;overflow:auto}
+.staff-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
+.staff-dialog[open]{animation:fee-form-dialog-in .16s ease-out}
+.staff-dialog-head{position:sticky;top:-20px;z-index:7;display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;border-bottom:1px solid #dde5ea;padding:17px 0 12px;margin-top:-18px;margin-bottom:16px}
+.staff-dialog-head h3{margin:0}
+@media(max-width:700px){.staff-dialog{width:100vw;max-height:100vh;height:100vh;border-radius:0;padding:15px}.staff-dialog-head{top:-15px;margin-top:-13px}}
 #studentLedger{margin-top:12px}
 .ledger-dialog{inset:0 0 0 auto;width:min(1080px,96vw);height:100vh;max-width:none;max-height:none;margin:0;border:0;border-right:4px solid #168a4a;border-radius:18px 0 0 18px;padding:20px 22px;box-shadow:-16px 0 50px #172b3b35;color:#25323b;direction:rtl;overflow:auto}
 .ledger-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
