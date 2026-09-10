@@ -57,7 +57,7 @@ window.openStudentFees = (id, showLedger = false) => {
   const student = selectedFeeStudent();
   if (!student) return;
   go('fees');
-  if(!showLedger)$('studentFeesPanel').classList.remove('hidden');
+  if(!showLedger&&!$('studentFeesPanel').open)$('studentFeesPanel').showModal();
   $('studentRegistrationFee').value = student.registrationFee || 0;
   $('studentFeeFrom').value = months.includes($('feeMonth').value) ? $('feeMonth').value : currentMonth();
   $('studentDiscountType').value = student.discountType || '';
@@ -81,7 +81,7 @@ function openStudentLedgerDialog(){
 }
 function refreshStudentFeeDetails() {
   const student = selectedFeeStudent();
-  if (!student) { $('studentFeesPanel').classList.add('hidden'); $('studentLedgerDialog').close(); return; }
+  if (!student) { if($('studentFeesPanel').open)$('studentFeesPanel').close(); if($('studentLedgerDialog').open)$('studentLedgerDialog').close(); return; }
   const identity=`${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
   $('studentFeesIdentity').textContent=identity;
   $('studentLedgerIdentity').textContent=identity;
@@ -111,7 +111,8 @@ $('studentFeeFrom').onchange = showFeeForMonth;
 $('showStudentLedger').onclick=openStudentLedgerDialog;
 $('closeStudentLedger').onclick=()=>$('studentLedgerDialog').close();
 $('studentLedgerDialog').onclick=event=>{if(event.target===$('studentLedgerDialog'))$('studentLedgerDialog').close()};
-$('closeStudentFees').onclick = () => { $('studentLedgerDialog').close(); selectedFeeStudentId = null; $('studentFeesPanel').classList.add('hidden'); };
+$('closeStudentFees').onclick = () => { if($('studentLedgerDialog').open)$('studentLedgerDialog').close(); $('studentFeesPanel').close(); selectedFeeStudentId = null; };
+$('studentFeesPanel').onclick=event=>{if(event.target===$('studentFeesPanel'))$('closeStudentFees').click()};
 $('studentFeesForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();

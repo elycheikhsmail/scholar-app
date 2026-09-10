@@ -95,8 +95,11 @@
 
 <section id="fees" class="section">
   <div class="section-head"><div><h2>الرسوم الشهرية</h2><p>اختر الشهر والقسم ثم سجّل الدفعات</p></div></div>
-  <div id="studentFeesPanel" class="panel hidden">
-    <h3>استمارة رسوم الطالب</h3><p id="studentFeesIdentity"></p>
+  <dialog id="studentFeesPanel" class="fee-form-dialog" aria-labelledby="studentFeesTitle">
+    <div class="fee-form-dialog-head">
+      <div><h3 id="studentFeesTitle">استمارة رسوم الطالب</h3><p id="studentFeesIdentity"></p></div>
+      <button type="button" class="secondary" id="closeStudentFees" aria-label="إغلاق استمارة الرسوم">إغلاق ✕</button>
+    </div>
     <form id="studentFeesForm" class="form-grid">
       <label>رسوم التسجيل<input id="studentRegistrationFee" type="number" min="0" step="0.01" required></label>
       <label>الرسوم الشهرية<input id="studentMonthlyFee" type="number" min="0" step="0.01" required></label>
@@ -104,7 +107,7 @@
       <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
       <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
       <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
-      <div class="form-actions"><button class="primary">حفظ الرسوم</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button><button type="button" class="secondary" id="closeStudentFees">إغلاق استمارة الطالب</button></div>
+      <div class="form-actions"><button class="primary">حفظ الرسوم</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button></div>
     </form>
     <p id="studentPaidSummary" class="hint-box"></p>
     <form id="studentFeePaymentForm" class="form-grid">
@@ -113,7 +116,7 @@
       <label>تاريخ الدفع<input id="studentPaymentDate" type="date" required></label>
       <div class="form-actions"><button class="primary">تسجيل الدفعة</button></div>
     </form>
-  </div>
+  </dialog>
   <dialog id="studentLedgerDialog" class="ledger-dialog" aria-labelledby="studentLedgerTitle">
     <div class="ledger-dialog-head">
       <div><h3 class="table-title" id="studentLedgerTitle">كشف مستحقات الطالب حسب الشهر</h3><p id="studentLedgerIdentity"></p></div>

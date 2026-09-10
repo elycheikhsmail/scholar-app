@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.2.2 — 2026-09-10
+
+- Ouverture de l’استمارة رسوم الطالب dans une fenêtre modale depuis les boutons
+  « تم دفع الرسوم » et « استمارة الرسوم » du tableau des frais.
+- Ajout d’un en-tête fixe avec l’identité de l’élève et un bouton de fermeture.
+- Fermeture possible avec `Esc` ou en cliquant à l’extérieur de la fenêtre.
+- Conservation du كشف الحساب comme seconde fenêtre latérale accessible depuis
+  l’استمارة.
+- Adaptation de l’استمارة aux écrans mobiles.
+
 ## 1.2.1 — 2026-09-10
 
 - Affichage du « كشف الحساب » depuis le tableau des frais dans une grande fenêtre
