@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.4.0 — 2026-09-10
+
+- Le bouton « تصدير Excel » du registre des élèves ouvre désormais une fenêtre
+  modale de sélection des colonnes avant de produire le fichier.
+- Sélection colonne par colonne, avec « تحديد الكل » et « إلغاء التحديد », et
+  rappel du nombre d’élèves concernés par la recherche et le département actifs.
+- Le choix des colonnes est mémorisé localement (`localStorage`) et réappliqué
+  aux exports suivants ; les clés inconnues sont ignorées.
+- L’export refuse une sélection vide et n’écrit que les colonnes cochées, en
+  respectant leur ordre d’affichage.
+- Test de fumée Chromium étendu : passage par la fenêtre modale et vérification
+  qu’une colonne décochée est absente du classeur.
+
 ## 1.3.0 — 2026-09-10
 
 - Ajout d’un bouton « تصدير Excel » dans le registre des élèves.

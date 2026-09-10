@@ -47,14 +47,60 @@ function statusFor(student,month){
 }
 function filteredStudents(){const q=$('studentSearch').value.toLowerCase().trim(),dep=$('studentDepartmentFilter').value;return state.data.students.filter(s=>(!dep||s.className===dep)&&[s.className,s.name,s.schoolNo,s.nni].join(' ').toLowerCase().includes(q))}
 function renderStudents(){const list=filteredStudents();$('studentCount').textContent=`عدد الطلاب: ${list.length}`;$('studentsTable').innerHTML=list.map(s=>`<tr><td>${esc(s.className)}</td><td>${esc(s.callNo)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.name)}</td><td>${esc(s.gender||'')}</td><td>${esc(s.nni)}</td><td class="${(s.status||ACTIVE_STATUS)===ACTIVE_STATUS?'':'status-exempt'}">${esc(s.status||ACTIVE_STATUS)}${s.leaveDate?' — '+esc(s.leaveDate):''}</td><td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">رسوم الطالب</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td></tr>`).join('')}
+const STUDENT_EXPORT_COLUMNS=[
+  {key:'className',label:'القسم',value:s=>s.className||''},
+  {key:'callNo',label:'رقم النداء',value:s=>Number(s.callNo)||s.callNo||''},
+  {key:'schoolNo',label:'الرقم المدرسي',value:s=>s.schoolNo||''},
+  {key:'name',label:'اسم الطالب',value:s=>s.name||''},
+  {key:'gender',label:'الجنس',value:s=>s.gender||''},
+  {key:'nni',label:'NNI',value:s=>s.nni||''},
+  {key:'birthPlace',label:'محل الميلاد',value:s=>s.birthPlace||''},
+  {key:'birthDate',label:'تاريخ الميلاد',value:s=>s.birthDate||''},
+  {key:'guardianName',label:'ولي الأمر',value:s=>s.guardianName||''},
+  {key:'guardianPhone',label:'هاتف ولي الأمر',value:s=>s.guardianPhone||''},
+  {key:'registrationDate',label:'تاريخ التسجيل',value:s=>s.registrationDate||''},
+  {key:'status',label:'الحالة',value:s=>s.status||ACTIVE_STATUS},
+  {key:'leaveDate',label:'تاريخ المغادرة',value:s=>s.leaveDate||''},
+  {key:'notes',label:'ملاحظات',value:s=>s.notes||''}
+];
+// The stored choice is reused on the next export; an unknown key is dropped so a
+// removed column cannot resurrect itself.
+let studentExportColumns=STUDENT_EXPORT_COLUMNS.map(column=>column.key);
+try{
+  const saved=JSON.parse(localStorage.getItem('studentExportColumns')||'null');
+  if(Array.isArray(saved))studentExportColumns=saved.filter(key=>STUDENT_EXPORT_COLUMNS.some(column=>column.key===key));
+}catch{}
+function renderStudentExportColumns(){
+  $('studentExportColumns').innerHTML=STUDENT_EXPORT_COLUMNS.map(column=>`<label><input type="checkbox" data-student-export-column="${column.key}" ${studentExportColumns.includes(column.key)?'checked':''}> ${esc(column.label)}</label>`).join('');
+}
+function selectedStudentExportColumns(){
+  const checked=new Set([...document.querySelectorAll('[data-student-export-column]')].filter(input=>input.checked).map(input=>input.dataset.studentExportColumn));
+  return STUDENT_EXPORT_COLUMNS.filter(column=>checked.has(column.key));
+}
+function setAllStudentExportColumns(checked){document.querySelectorAll('[data-student-export-column]').forEach(input=>{input.checked=checked})}
+$('selectAllStudentExport').onclick=()=>setAllStudentExportColumns(true);
+$('clearStudentExport').onclick=()=>setAllStudentExportColumns(false);
+$('closeStudentExport').onclick=()=>$('studentExportDialog').close();
 $('exportStudentsExcel').onclick=()=>{
   const students=filteredStudents();
   if(!students.length)return toast('لا يوجد طلاب مطابقون للتصفية لتصديرهم.');
-  const headers=['القسم','رقم النداء','الرقم المدرسي','اسم الطالب','الجنس','NNI','محل الميلاد','تاريخ الميلاد','ولي الأمر','هاتف ولي الأمر','تاريخ التسجيل','الحالة','تاريخ المغادرة','ملاحظات'];
-  const rows=students.map(s=>[s.className||'',Number(s.callNo)||s.callNo||'',s.schoolNo||'',s.name||'',s.gender||'',s.nni||'',s.birthPlace||'',s.birthDate||'',s.guardianName||'',s.guardianPhone||'',s.registrationDate||'',s.status||ACTIVE_STATUS,s.leaveDate||'',s.notes||'']);
-  downloadXlsx(`سجل الطلاب — ${today()}.xlsx`,'الطلاب',[headers,...rows]);
-  toast(`تم تصدير ${money(students.length)} طالب إلى Excel.`);
+  $('studentExportCount').textContent=`سيتم تصدير ${money(students.length)} طالب حسب التصفية الحالية.`;
+  renderStudentExportColumns();
+  $('studentExportDialog').showModal();
 };
+$('studentExportForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const students=filteredStudents();
+  if(!students.length)return toast('لا يوجد طلاب مطابقون للتصفية لتصديرهم.');
+  const columns=selectedStudentExportColumns();
+  if(!columns.length)return toast('اختر عمودًا واحدًا على الأقل للتصدير.');
+  studentExportColumns=columns.map(column=>column.key);
+  localStorage.setItem('studentExportColumns',JSON.stringify(studentExportColumns));
+  const rows=students.map(s=>columns.map(column=>column.value(s)));
+  downloadXlsx(`سجل الطلاب — ${today()}.xlsx`,'الطلاب',[columns.map(column=>column.label),...rows]);
+  $('studentExportDialog').close();
+  toast(`تم تصدير ${money(students.length)} طالب إلى Excel.`);
+});
 window.editStudent=id=>{const s=state.data.students.find(x=>x.id===id);if(!s)return;for(const [id2,v] of Object.entries({studentId:s.id,className:s.className,callNo:s.callNo,schoolNo:s.schoolNo,studentName:s.name,gender:s.gender||'',nni:s.nni,birthPlace:s.birthPlace,birthDate:s.birthDate,guardianName:s.guardianName,guardianPhone:s.guardianPhone,registrationDate:s.registrationDate,studentStatus:s.status||ACTIVE_STATUS,studentLeaveDate:s.leaveDate||'',studentNotes:s.notes}))$(id2).value=v??'';toggleLeaveField();showEditForm('students','studentForm','studentName')}
 window.removeStudent=async id=>{await deleteWithPassword(`/students/${id}`,'هل تريد حذف الطالب وجميع دفعاته؟','تم حذف الطالب وجميع دفعاته.');};
 

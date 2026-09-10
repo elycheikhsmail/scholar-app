@@ -88,6 +88,21 @@
       <span id="studentCount"></span>
       <button type="button" class="secondary" id="exportStudentsExcel">تصدير Excel</button>
     </div>
+    <dialog id="studentExportDialog" class="export-dialog" aria-labelledby="studentExportTitle">
+      <div class="export-dialog-head">
+        <div><h3 id="studentExportTitle">أعمدة تصدير Excel</h3><p id="studentExportCount"></p></div>
+        <button type="button" class="secondary" id="closeStudentExport" aria-label="إغلاق استمارة التصدير">إغلاق ✕</button>
+      </div>
+      <form id="studentExportForm">
+        <p class="hint-box">اختر الأعمدة التي تريد إظهارها في ملف Excel. يُحفظ اختيارك للمرات القادمة.</p>
+        <div id="studentExportColumns" class="export-columns"></div>
+        <div class="form-actions">
+          <button class="primary">تصدير Excel</button>
+          <button type="button" class="secondary" id="selectAllStudentExport">تحديد الكل</button>
+          <button type="button" class="secondary" id="clearStudentExport">إلغاء التحديد</button>
+        </div>
+      </form>
+    </dialog>
     <h3 class="table-title" id="studentsTableTitle">سجل الطلاب</h3><div class="table-scroll students-scroll"><table aria-labelledby="studentsTableTitle"><thead><tr>
       <th>القسم</th><th>رقم النداء</th><th>الرقم المدرسي</th><th>اسم الطالب</th><th>الجنس</th><th>NNI</th><th>الحالة</th><th>إجراءات</th>
     </tr></thead><tbody id="studentsTable"></tbody></table></div>
