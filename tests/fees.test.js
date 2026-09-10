@@ -52,6 +52,21 @@ test('current balance excludes future months while keeping them available for ad
   assert.equal(prepaid.outstanding,0);
   assert.equal(prepaid.totalPaid,23000);
   assert.equal(prepaid.scheduledOutstanding,70000);
+  assert.equal(dues.outstandingThrough(prepaid,'نوفمبر'),0,'a future receipt includes only the balance through its selected month');
+});
+
+test('a future-month receipt reconciles its fee and stops at the selected month', () => {
+  const student={registrationDate:'2026-09-01',registrationFee:0,monthlyFee:13000};
+  const ledger=dues.ledgerFor(student,[
+    {id:1,month:'أكتوبر',amount:13000,date:'2026-09-01'},
+    {id:2,month:'نوفمبر',amount:3000,date:'2026-09-05'},
+    {id:3,month:'نوفمبر',amount:3000,date:'2026-09-10'}
+  ],{...settings,asOf:'2026-09-10'});
+  const november=ledger.byMonth.get('نوفمبر');
+  assert.deepEqual([november.amount,november.paid,november.remaining],[13000,6000,7000]);
+  assert.equal(ledger.outstanding,0,'future November is not current September debt');
+  assert.equal(dues.outstandingThrough(ledger,'نوفمبر'),7000,'its receipt still reports the unpaid balance through November');
+  assert.equal(dues.outstandingThrough(ledger,'ديسمبر'),20000,'later untouched months are included only when explicitly selected');
 });
 
 test('a payment is a credit allocated to the oldest unpaid charge first', () => {

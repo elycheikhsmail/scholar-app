@@ -292,9 +292,13 @@ function printStudentReceipt(paymentId){
   if(!payment)return;
   const student=state.data.students.find(x=>Number(x.id)===Number(payment.studentId));
   if(!student)return;
-  const charge=chargeOf(student,payment.month);
+  const ledger=ledgerOf(student);
+  const charge=ledger.byMonth.get(payment.month)||null;
   const due=charge?charge.amount:0;
+  const paidForCharge=charge?charge.paid:0;
   const remaining=charge?charge.remaining:0;
+  const receiptOutstanding=outstandingThrough(ledger,payment.month);
+  const futurePayment=charge&&!ledger.accruedRows.includes(charge);
   const credit=creditFor(student);
   const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';
 
@@ -315,9 +319,10 @@ function printStudentReceipt(paymentId){
     +`<div class="line"></div>`
     +line('نوع الرسوم',esc(paymentLabel(payment)))
     +line('إجمالي الرسوم',`${money(due)} أوقية`)
+    +amountLine('amount','إجمالي المدفوع لهذه الرسوم',money(paidForCharge))
     +amountLine('amount','المدفوع الآن',money(payment.amount))
     +amountLine('remaining','المتبقي لهذه الرسوم',money(remaining))
-    +amountLine('remaining','إجمالي المتبقي على الطالب',money(totalOutstandingFor(student)))
+    +amountLine('remaining',futurePayment?`إجمالي المتبقي حتى شهر ${esc(payment.month)}`:'إجمالي المتبقي على الطالب',money(receiptOutstanding))
     +(credit>0?amountLine('remaining','رصيد لصالح الطالب',money(credit)):'')
     +`<div class="line"></div>`
     +`<div class="signature">توقيع المحاسب: __________________</div>`

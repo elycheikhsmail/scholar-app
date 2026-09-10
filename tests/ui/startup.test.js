@@ -152,6 +152,28 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.equal(feesWorkbookBytes.subarray(0,2).toString(),'PK');
   assert.match(feesWorkbookBytes.toString(),/xl\/worksheets\/sheet1\.xml/);
   assert.match(feesWorkbookBytes.toString(),/طالب تجريبي/);
+  const receiptBody=await page.evaluate(()=>{
+    const originalData=state.data;
+    state.data=structuredClone(originalData);
+    const student=state.data.students[0];
+    Object.assign(student,{registrationDate:'2026-09-01',registrationFee:0,monthlyFee:13000,discountType:'',discountValue:0,
+      feeHistory:[{fromMonth:'أكتوبر',monthlyFee:13000,date:'2026-09-01'}]});
+    state.data.studentPayments=[
+      {id:1,invoiceNo:'F-000001',studentId:student.id,month:'أكتوبر',amount:13000,date:'2026-09-01'},
+      {id:2,invoiceNo:'F-000002',studentId:student.id,month:'نوفمبر',amount:3000,date:'2026-09-05'},
+      {id:3,invoiceNo:'F-000003',studentId:student.id,month:'نوفمبر',amount:3000,date:'2026-09-10'}
+    ];
+    let body='';
+    const originalPrintWindow=window.printWindow;
+    window.printWindow=options=>{body=options.body};
+    printStudentReceipt(3);
+    window.printWindow=originalPrintWindow;
+    state.data=originalData;
+    return body;
+  });
+  assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*6,000 أوقية/);
+  assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*7,000 أوقية/);
+  assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*7,000 أوقية/);
   // The filters, the chips and the rows all read from the one dues vocabulary.
   await expect(page.locator('#feeStatus option')).toHaveCount(5);
   await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');

@@ -159,6 +159,10 @@ mois antérieurs. Les mois suivants restent visibles dans l'échéancier et peuv
 être réglés volontairement à l'avance, sans être présentés comme une dette
 actuelle.
 
+Lorsqu'un reçu concerne un mois futur payé volontairement, son total s'étend
+jusqu'au mois choisi seulement. Il affiche aussi le total déjà affecté à ce
+mois, afin que `frais - payé = reste` soit directement vérifiable.
+
 **Dates d'échéance.** Chaque mois échoit au jour d'inscription de ce mois, ramené au dernier jour si le mois est plus court.
 
 Tests : `node --test tests/fees.test.js`.

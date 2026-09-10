@@ -254,10 +254,21 @@ function ledgerFor(student, payments, settings) {
   };
 }
 
+// A normal balance stops at the current month. Once a family deliberately pays
+// a future month, its receipt extends the balance only as far as that selected
+// month, never through the rest of the school year.
+function outstandingThrough(ledger, month) {
+  const selectedIndex = month === REGISTRATION ? 0 : MONTHS.includes(month) ? MONTHS.indexOf(month) + 1 : -1;
+  const accruedIndex = (ledger && ledger.accruedRows ? ledger.accruedRows.length : 0) - 1;
+  const end = Math.max(accruedIndex, selectedIndex);
+  return round2((ledger && ledger.rows ? ledger.rows : []).slice(0,end + 1)
+    .reduce((sum,row) => sum + Math.max(0, Number(row.remaining) || 0), 0));
+}
+
 return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDENT_STATUSES,
   DISCOUNT_TYPES, DISCOUNT_LABELS,
   FEE_STATUS_LABELS, FEE_STATUS_CLASSES, FEE_FILTERS, feeStatusKey, feeStatusOf,
   round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, feePeriodRanges,
   withFeePeriod, withoutFeePeriod, monthlyFeeFor, discountOn,
-  enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor };
+  enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor, outstandingThrough };
 });

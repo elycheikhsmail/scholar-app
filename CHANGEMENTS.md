@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.9.1 — 2026-09-10
+
+- Un reçu de paiement anticipé affiche désormais le solde restant jusqu'au mois
+  futur choisi. Il n'affiche plus zéro simplement parce que ce mois n'est pas
+  encore une dette courante, et n'ajoute pas les mois qui le suivent.
+- Le reçu indique le total payé pour la ligne de frais concernée : le montant
+  des frais, le total payé et le reste peuvent ainsi être rapprochés directement.
+- Un test reproduit le cas comptable `13 000 - 6 000 = 7 000` pour novembre
+  alors que le solde exigible courant de septembre reste nul.
+
 ## 1.9.0 — 2026-09-10
 
 - Le solde exigible d'un élève ne comprend plus les mois futurs : seuls les
