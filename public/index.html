@@ -71,12 +71,12 @@
       <label class="student-label">الجنس<select id="gender" required><option value="">اختر الجنس</option><option value="ذكر">ذكر</option><option value="أنثى">أنثى</option></select></label>
       <label class="student-label">الرقم الوطني NNI<input id="nni" maxlength="10" inputmode="numeric" required></label>
       <label class="student-label">محل الميلاد<input id="birthPlace"></label>
-      <label class="student-label">تاريخ الميلاد<input id="birthDate" type="date"></label>
+      <label class="student-label date-label">تاريخ الميلاد<input id="birthDate" type="date" class="date-dmy"></label>
       <label class="student-label">اسم ولي الأمر<input id="guardianName"></label>
       <label class="student-label">رقم هاتف ولي الأمر<input id="guardianPhone" maxlength="8" inputmode="numeric"></label>
-      <label class="student-label">تاريخ التسجيل<input id="registrationDate" type="date"></label>
+      <label class="student-label date-label">تاريخ التسجيل<input id="registrationDate" type="date" class="date-dmy"></label>
       <label class="student-label">حالة الطالب<select id="studentStatus"><option value="نشط">نشط</option><option value="منقطع">منقطع</option><option value="محوَّل">محوَّل</option><option value="متخرج">متخرج</option></select></label>
-      <label class="student-label hidden-field" id="leaveDateWrap">تاريخ المغادرة<input id="studentLeaveDate" type="date"></label>
+      <label class="student-label date-label hidden-field" id="leaveDateWrap">تاريخ المغادرة<input id="studentLeaveDate" type="date" class="date-dmy"></label>
       <label class="student-label notes-field">ملاحظات<textarea id="studentNotes"></textarea></label>
       <div class="form-actions"><button class="primary">حفظ الطالب</button><button type="button" class="secondary" id="cancelStudent">تفريغ النموذج</button></div>
     </form>
@@ -129,7 +129,7 @@
     <form id="studentFeePaymentForm" class="form-grid">
       <label>الرسوم التي تخصها الدفعة<select id="studentPaymentMonth" required></select></label>
       <label>مبلغ دفعه الطالب ولم يُسجّل بعد<input id="studentPaymentAmount" type="number" min="0.01" step="0.01" required></label>
-      <label>تاريخ الدفع<input id="studentPaymentDate" type="date" required></label>
+      <label>تاريخ الدفع<input id="studentPaymentDate" type="date" class="date-dmy" required></label>
       <div class="form-actions"><button class="primary">تسجيل الدفعة</button></div>
     </form>
   </dialog>

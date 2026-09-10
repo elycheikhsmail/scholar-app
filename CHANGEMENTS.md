@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.6.0 — 2026-09-10
+
+- Les champs de date se saisissent désormais dans l'ordre utilisé par l'école :
+  اليوم puis الشهر puis السنة, au lieu de l'ordre imposé par la locale du
+  navigateur.
+- Passage automatique d'une case à la suivante, chiffres arabes convertis en
+  chiffres occidentaux, et rejet des dates impossibles (31/02 par exemple).
+- Technique : `setupDateFields` dans `public/core.js` masque l'`input[type=date]`
+  d'origine et le pilote depuis trois cases visibles. Le champ conserve sa valeur
+  ISO, donc tout le code qui lit ou écrit `.value` reste inchangé, y compris
+  `form.reset()`.
+
 ## 1.5.0 — 2026-09-10
 
 - Introduction de jetons de design (`:root`) : toutes les couleurs, arrondis et

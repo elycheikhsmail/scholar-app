@@ -64,6 +64,69 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(`${API_BASE}${path}`,{...options,headers}).then(async r=>{const x=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&state.token&&path!=='/login')location.reload();throw Error(x.error||'حدث خطأ.');}return x})}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3200)}
 function setDate(id){if($(id)&&!$(id).value)$(id).value=today()}
+
+// A native date input lays its parts out in the browser locale order, often
+// mm/dd/yyyy. Every `.date-dmy` input is hidden and driven by three visible
+// fields in the order the school writes dates: اليوم ثم الشهر ثم السنة. The
+// original input keeps the ISO value, so code reading or writing `.value`
+// (resetStudent, editStudent, the submit handlers) stays unchanged.
+const DMY_PARTS=[['day','يوم',2],['month','شهر',2],['year','سنة',4]];
+function isoFromDmy(day,month,year){
+  if(!day||!month||year.length!==4)return '';
+  const iso=`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
+  const date=new Date(`${iso}T00:00:00`);
+  // Rejects impossible days such as 31/02 that Date would roll over silently.
+  return Number.isNaN(date.getTime())||date.getDate()!==Number(day)||date.getMonth()+1!==Number(month)?'':iso;
+}
+function setupDateFields(root=document){
+  const valueProperty=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value');
+  for(const native of root.querySelectorAll('input.date-dmy')){
+    if(native.dmyGroup)continue;
+    const group=document.createElement('span');
+    group.className='dmy-group';
+    const fieldName=native.closest('label')?.firstChild?.textContent?.trim()||'';
+    const writeBack=()=>{
+      const iso=isoFromDmy(fields[0].value,fields[1].value,fields[2].value);
+      if(valueProperty.get.call(native)===iso)return;
+      valueProperty.set.call(native,iso);
+      native.dispatchEvent(new Event('change',{bubbles:true}));
+    };
+    const fields=DMY_PARTS.map(([key,label,size],index)=>{
+      const part=document.createElement('input');
+      part.className=`dmy-part dmy-${key}`;
+      part.inputMode='numeric';
+      part.maxLength=size;
+      part.placeholder=label;
+      part.setAttribute('aria-label',fieldName?`${label} - ${fieldName}`:label);
+      part.required=native.required;
+      part.addEventListener('input',()=>{
+        part.value=western(part.value).replace(/\D/g,'').slice(0,size);
+        if(part.value.length===size)fields[index+1]?.focus();
+        writeBack();
+      });
+      part.addEventListener('blur',()=>{if(part.value&&size===2)part.value=part.value.padStart(2,'0');writeBack()});
+      group.append(part);
+      return part;
+    });
+    const paint=()=>{
+      const [year,month,day]=String(valueProperty.get.call(native)||'').split('-');
+      fields[0].value=day||'';fields[1].value=month||'';fields[2].value=year||'';
+    };
+    // The hidden input must not carry `required`: an invisible invalid control
+    // blocks submission without showing a message, so the day field asks instead.
+    native.required=false;
+    native.tabIndex=-1;
+    native.dmyGroup=group;
+    Object.defineProperty(native,'value',{configurable:true,
+      get(){return valueProperty.get.call(native)},
+      set(value){valueProperty.set.call(native,value);paint()}});
+    native.after(group);
+    // form.reset() clears the hidden input without going through the setter.
+    native.form?.addEventListener('reset',()=>setTimeout(paint));
+    paint();
+  }
+}
+setupDateFields();
 function tick(){const d=new Date();$('clock').textContent=western(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d));$('today').textContent=western(new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(d))}
 setInterval(tick,1000);tick();
 document.addEventListener('input',e=>{if(e.target.matches('input[type=number],input[inputmode="numeric"]'))e.target.value=western(e.target.value)});
