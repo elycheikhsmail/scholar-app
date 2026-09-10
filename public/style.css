@@ -110,7 +110,16 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 #studentFeesPanel select{width:100%;border:1px solid #cad5dc;border-radius:9px;padding:10px;background:#fff;font:inherit;color:#25323b}
 #studentFeesPanel .form-actions{flex-wrap:wrap}
 #studentFeesPanel .table-scroll table{min-width:850px}
-#studentLedger{margin-top:20px}
+#studentLedger{margin-top:12px}
+.ledger-dialog{inset:0 0 0 auto;width:min(1080px,96vw);height:100vh;max-width:none;max-height:none;margin:0;border:0;border-right:4px solid #168a4a;border-radius:18px 0 0 18px;padding:20px 22px;box-shadow:-16px 0 50px #172b3b35;color:#25323b;direction:rtl;overflow:auto}
+.ledger-dialog::backdrop{background:#172b3b73;backdrop-filter:blur(2px)}
+.ledger-dialog[open]{animation:ledger-dialog-in .18s ease-out}
+.ledger-dialog-head{position:sticky;top:-20px;z-index:7;display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;border-bottom:1px solid #dde5ea;padding:18px 0 12px;margin-top:-18px}
+.ledger-dialog-head .table-title{margin:0}
+.ledger-dialog-head p{margin:3px 0 0;color:#63727c;font-weight:700}
+.ledger-dialog .table-scroll{max-height:39vh}
+@keyframes ledger-dialog-in{from{transform:translateX(35px);opacity:.4}to{transform:none;opacity:1}}
+@media(max-width:700px){.ledger-dialog{width:100vw;border-radius:0;padding:15px}.ledger-dialog-head{top:-15px;margin-top:-13px}.ledger-dialog-head p{font-size:12px}.ledger-dialog .table-scroll{max-height:36vh}}
 
 .nav-item.collections{color:#168a4a}.nav-item.collections.active{background:#168a4a;color:#fff}
 .collection-filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end;margin-bottom:18px}

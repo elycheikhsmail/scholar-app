@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.2.1 — 2026-09-10
+
+- Affichage du « كشف الحساب » depuis le tableau des frais dans une grande fenêtre
+  latérale, sans déplacer l’utilisateur en haut de la page.
+- Ajout du nom et des références de l’élève dans l’en-tête fixe de la fenêtre.
+- Ajout d’un bouton de fermeture, de la fermeture par `Esc` et de la fermeture en
+  cliquant à l’extérieur.
+- Adaptation de la fenêtre aux écrans mobiles avec un défilement indépendant.
+
 ## 1.2.0 — 2026-09-10
 
 - Ajout d’un lien direct stable pour chaque écran à l’aide des fragments

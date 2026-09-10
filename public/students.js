@@ -57,8 +57,7 @@ window.openStudentFees = (id, showLedger = false) => {
   const student = selectedFeeStudent();
   if (!student) return;
   go('fees');
-  $('studentFeesPanel').classList.remove('hidden');
-  $('studentLedger').classList.toggle('hidden', !showLedger);
+  if(!showLedger)$('studentFeesPanel').classList.remove('hidden');
   $('studentRegistrationFee').value = student.registrationFee || 0;
   $('studentFeeFrom').value = months.includes($('feeMonth').value) ? $('feeMonth').value : currentMonth();
   $('studentDiscountType').value = student.discountType || '';
@@ -71,14 +70,21 @@ window.openStudentFees = (id, showLedger = false) => {
   $('studentPaymentMonth').value = selectedMonth===TOTAL_MODE ? (ledgerOf(student).oldestUnpaid?.month || REGISTRATION) : selectedMonth;
   $('studentPaymentDate').value = today();
   refreshStudentFeeDetails();
-  if (showLedger) {
-    requestAnimationFrame(() => $('studentLedger').scrollIntoView({behavior:'smooth',block:'start'}));
-  } else showEditForm('fees','studentFeesForm','studentRegistrationFee');
+  if(showLedger)openStudentLedgerDialog();
+  else showEditForm('fees','studentFeesForm','studentRegistrationFee');
 };
+function openStudentLedgerDialog(){
+  refreshStudentFeeDetails();
+  const dialog=$('studentLedgerDialog');
+  if(!dialog.open)dialog.showModal();
+  $('closeStudentLedger').focus();
+}
 function refreshStudentFeeDetails() {
   const student = selectedFeeStudent();
-  if (!student) { $('studentFeesPanel').classList.add('hidden'); return; }
-  $('studentFeesIdentity').textContent = `${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
+  if (!student) { $('studentFeesPanel').classList.add('hidden'); $('studentLedgerDialog').close(); return; }
+  const identity=`${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
+  $('studentFeesIdentity').textContent=identity;
+  $('studentLedgerIdentity').textContent=identity;
   const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
   const ledger = ledgerOf(student);
   $('studentPaidSummary').textContent = `إجمالي المستحق: ${money(ledger.totalDue)} — المدفوع: ${money(ledger.totalPaid)} — المتبقي: ${money(ledger.outstanding)}${ledger.totalDiscount > 0 ? ` — الخصم: ${money(ledger.totalDiscount)}` : ''}${ledger.credit > 0 ? ` — رصيد دائن: ${money(ledger.credit)}` : ''} أوقية${student.discountReason ? ` (${student.discountReason})` : ''}. أدخل دفعة غير مسجلة فقط؛ تُوزَّع تلقائيًا على أقدم استحقاق غير مسدَّد.`;
@@ -102,8 +108,10 @@ $('studentDiscountType').onchange=toggleDiscountFields;
 function showFeeForMonth(){const student=selectedFeeStudent();if(student)$('studentMonthlyFee').value=monthlyFeeFor(student,$('studentFeeFrom').value)}
 $('studentFeeFrom').innerHTML = months.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
 $('studentFeeFrom').onchange = showFeeForMonth;
-$('showStudentLedger').onclick = () => { refreshStudentFeeDetails(); $('studentLedger').classList.toggle('hidden'); if (!$('studentLedger').classList.contains('hidden')) $('studentLedger').scrollIntoView({behavior:'smooth',block:'start'}); };
-$('closeStudentFees').onclick = () => { selectedFeeStudentId = null; $('studentFeesPanel').classList.add('hidden'); };
+$('showStudentLedger').onclick=openStudentLedgerDialog;
+$('closeStudentLedger').onclick=()=>$('studentLedgerDialog').close();
+$('studentLedgerDialog').onclick=event=>{if(event.target===$('studentLedgerDialog'))$('studentLedgerDialog').close()};
+$('closeStudentFees').onclick = () => { $('studentLedgerDialog').close(); selectedFeeStudentId = null; $('studentFeesPanel').classList.add('hidden'); };
 $('studentFeesForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();

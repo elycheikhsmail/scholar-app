@@ -84,7 +84,10 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentsTable .btn-pay').click();
   await expect(page.locator('#studentFeesPanel')).toBeVisible();
   await page.locator('#showStudentLedger').click();
+  await expect(page.locator('#studentLedgerDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#studentLedger')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#studentLedgerDialog')).not.toHaveAttribute('open', '');
   await page.evaluate(() => sessionStorage.setItem('modeSwitchToken', 'replacement-token'));
   await page.reload();
   await expect(page.locator('#app')).toBeVisible();
