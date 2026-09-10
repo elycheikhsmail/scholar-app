@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.9.2 — 2026-09-10
+
+- La photo `ecole.jpg` devient l'icône visible de l'application dans l'en-tête
+  principal, à côté du nom de l'école.
+- L'icône est recadrée en cercle, conserve ses proportions et s'adapte à
+  l'en-tête mobile sans déformer l'image.
+
 ## 1.9.1 — 2026-09-10
 
 - Un reçu de paiement anticipé affiche désormais le solde restant jusqu'au mois

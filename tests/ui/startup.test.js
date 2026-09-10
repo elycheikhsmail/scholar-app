@@ -47,11 +47,11 @@ test('browser scripts support login, all sections, student fees and session rest
     }
     if (Object.hasOwn(responses, pathname)) return route.fulfill({ json: responses[pathname] });
     const name = pathname === '/' ? 'index.html' : pathname.slice(1);
-    if (!/^[a-z-]+\.(html|js|css)$/.test(name) || !fs.existsSync(path.join(publicDir, name))) {
+    if (!/^[a-z-]+\.(html|js|css|jpg)$/.test(name) || !fs.existsSync(path.join(publicDir, name))) {
       errors.push(`Unexpected request: ${pathname}`);
       return route.fulfill({ status: 404, body: 'Not found' });
     }
-    const contentType = name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : 'text/html';
+    const contentType = name.endsWith('.js') ? 'text/javascript' : name.endsWith('.css') ? 'text/css' : name.endsWith('.jpg') ? 'image/jpeg' : 'text/html';
     return route.fulfill({ path: path.join(publicDir, name), contentType });
   });
   await page.goto('http://school.test/#students');
@@ -59,6 +59,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#loginPassword').fill('test');
   await page.locator('#loginForm button').click();
   await expect(page.locator('#app')).toBeVisible();
+  await expect(page.locator('.topbar .app-icon')).toBeVisible();
+  assert.ok(await page.locator('.topbar .app-icon').evaluate(image=>image.complete&&image.naturalWidth===1080));
   await expect(page.locator('#appVersion')).toHaveText(require('../../package.json').version);
   await expect(page.locator('#students')).toHaveClass(/active-section/);
   await expect(page).toHaveURL(/#students$/);
