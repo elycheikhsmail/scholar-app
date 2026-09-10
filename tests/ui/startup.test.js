@@ -11,7 +11,7 @@ test('browser scripts support login, all sections, student fees and session rest
   t.after(() => { db.close(); fs.rmSync(directory, { recursive: true, force: true }); });
   db.init(directory);
   db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر' });
-  const settings = { ...db.publicSettings(), applicationMode: 'production' };
+  const settings = { ...db.publicSettings(), applicationMode: 'production', version:require('../../package.json').version };
   const responses = {
     '/api/mode': { mode: 'production' },
     '/api/settings': settings,
@@ -48,6 +48,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#loginPassword').fill('test');
   await page.locator('#loginForm button').click();
   await expect(page.locator('#app')).toBeVisible();
+  await expect(page.locator('#appVersion')).toHaveText(require('../../package.json').version);
   await expect(page.locator('#sStudents')).toHaveText('1');
   for (const section of ['students', 'fees', 'collections', 'staff', 'expenses', 'exams', 'reports', 'settings', 'dashboard']) {
     await page.locator(`.nav-item[data-section="${section}"]`).click();

@@ -4,6 +4,13 @@ const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
 const db = require("./db");
+const APP_VERSION = (() => {
+  try { return require("./package.json").version; }
+  catch(error) {
+    if (error.code !== "MODULE_NOT_FOUND") throw error;
+    return process.env.npm_package_version || "development";
+  }
+})();
 
 const DEFAULT_PORT = Number(process.env.SCHOOL_PORT || 3780);
 const HOST = process.env.SCHOOL_HOST || "127.0.0.1";
@@ -17,8 +24,8 @@ let server = null;
 let actualPort = DEFAULT_PORT;
 let applicationMode = 'production';
 let modeGeneration = 0;
-function modeInfo() { return { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج' }; }
-function publicSettings() { return { ...db.publicSettings(), applicationMode }; }
+function modeInfo() { return { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج', version:APP_VERSION }; }
+function publicSettings() { return { ...db.publicSettings(), applicationMode, version:APP_VERSION }; }
 function modeFile() { return path.join(baseDir(), 'database', 'application-mode.json'); }
 function readMode() {
   if (!fs.existsSync(modeFile())) return 'production';

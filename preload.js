@@ -1,7 +1,8 @@
 const { contextBridge } = require("electron");
+const { version } = require("./package.json");
 
 contextBridge.exposeInMainWorld("schoolAPI", {
-  version: "1.0.0",
+  version,
   isElectron: true,
   apiBase: "http://127.0.0.1:3780"
 });

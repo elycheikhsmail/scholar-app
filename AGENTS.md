@@ -3,6 +3,12 @@
 - After implementing each feature, run the relevant tests or validation checks.
 - Commit each completed feature with a clear, focused commit message.
 - Push the commit to the configured GitHub repository on the `main` branch.
+- Version every completed change using semantic versioning. Keep the version in
+  `package.json` and `package-lock.json` synchronized.
+- Document every version in `CHANGEMENTS.md` with its date and a concise list of
+  user-visible and technical changes. Update this file in the same commit.
+- Keep the application version visible in the footer and verify that the value
+  shown to users comes from the package version.
 - Before pushing, verify `git status`, review the diff, and make sure no secrets, local databases, backups, build output, or test artifacts are included.
 - Keep commits focused and do not include unrelated changes.
 
