@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.6.2 — 2026-09-10
+
+- Refactorisation : `public/staff.js` passe de 69 lignes compactées (jusqu'à 1080
+  caractères par ligne) à une forme lisible, sans changement de comportement.
+- Le test du rôle est partout `roleNeedsFixed`, au lieu de comparaisons
+  `role==='أستاذ'` répétées et parfois inversées.
+- `sumAmount` remonte dans `public/core.js` et sert aussi aux totaux des
+  salaires et des avances.
+- Suppression d'un gestionnaire `onchange` vide sur le sélecteur d'employé du
+  formulaire d'avance.
+
 ## 1.6.1 — 2026-09-10
 
 - Refactorisation : `public/reports.js` était écrit en style compacté (27 lignes,

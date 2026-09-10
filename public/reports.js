@@ -1,7 +1,6 @@
 // Écran « المصروفات » (dépenses), tableau de bord et rapports financiers.
 // Les trois partagent la même source : `state.data`, rechargée par `load()`.
-
-const sumAmount=rows=>rows.reduce((total,row)=>total+Number(row.amount||0),0);
+// `sumAmount` vient de core.js.
 
 // --- Dépenses ---------------------------------------------------------------
 

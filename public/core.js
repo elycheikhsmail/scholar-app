@@ -5,6 +5,8 @@ const $=id=>document.getElementById(id);
 const API_BASE=window.location.protocol==='file:'?'http://127.0.0.1:3780/api':'/api';
 const money=n=>Number(n||0).toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
 const western=v=>String(v??'').replace(/[٠-٩۰-۹]/g,d=>String(Math.max('٠١٢٣٤٥٦٧٨٩'.indexOf(d),'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))));
+// Totalise le champ `amount` d'une liste d'enregistrements (paiements, avances, dépenses).
+const sumAmount=rows=>rows.reduce((total,row)=>total+Number(row.amount||0),0);
 
 // Native prompt() is unavailable in Electron and some embedded browsers.
 function showInputDialog(message, defaultValue = '', confirmation = false) {
