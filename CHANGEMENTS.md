@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.7.0 — 2026-09-10
+
+- Nouveau module `public/print.js` : ouverture des fenêtres d'impression,
+  feuilles de style A4 et 80 mm, intitulés officiels par défaut et en-tête des
+  relevés de notes. Les écrans qui impriment ne dupliquent plus ce document.
+- Refactorisation : `public/exams.js` passe de 119 lignes compactées (vingt
+  lignes au-dessus de 300 caractères, la plus longue 1185) à une forme lisible,
+  sans changement de comportement.
+- Les deux suppressions de règles (ملاحظات et قرارات), qui étaient copiées mot
+  pour mot, passent par une seule fonction.
+- Suppression de code mort : une fonction vide `renderTemplateSubjectInputs` et
+  un gestionnaire `onchange` sans effet sur le sélecteur d'élève.
+
 ## 1.6.3 — 2026-09-10
 
 - Refactorisation : `public/settings.js` passe de six lignes compactées (jusqu'à

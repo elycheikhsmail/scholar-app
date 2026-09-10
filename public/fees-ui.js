@@ -160,14 +160,7 @@ function feeSheetRows(){
     r.charged&&r.dueDate?r.dueDate:'',overdueDays(r)||'',rowStatus(r,month)[0]])];
 }
 function feeSheetTitle(){return feeView.month===TOTAL_MODE?'إجمالي مستحقات الطلاب':`مستحقات الطلاب — ${feeView.month}`}
-const PRINT_STYLE='*{box-sizing:border-box}body{font-family:Arial,Tahoma,sans-serif;color:#111;margin:14px}h1{font-size:18px;margin:0 0 4px}h2{font-size:14px;margin:0 0 10px;font-weight:400;color:#444}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #999;padding:4px 5px;text-align:right}th{background:#eee}.notice{border:1px solid #999;border-radius:6px;padding:10px 12px;margin-bottom:10px;page-break-inside:avoid}.notice h3{margin:0 0 6px;font-size:14px}.total{font-weight:900}.print{margin:10px 0;padding:8px 14px;border:0;background:#111;color:#fff;border-radius:5px;font-weight:700;cursor:pointer}@media print{.print{display:none}}';
-function openPrintWindow(title,bodyHtml){
-  const w=window.open('','_blank','width=1000,height=760');
-  if(!w){toast('اسمح للنوافذ المنبثقة حتى تتم الطباعة.');return}
-  const banner=state.settings?.applicationMode==='test'?'<h2>نسخة للتجريب فقط</h2>':'';
-  w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${PRINT_STYLE}</style></head><body><h1>${esc(state.settings?.schoolName||'')}</h1><h2>${esc(title)} — السنة الدراسية ${esc(state.settings?.schoolYear||'')} — ${western(today())}</h2>${banner}<button class="print" onclick="window.print()">طباعة</button>${bodyHtml}</body></html>`);
-  w.document.close();
-}
+// `openPrintWindow` et les feuilles de style d'impression vivent dans print.js.
 $('exportFees').onclick=()=>{
   if(!feeView.rows.length)return toast('لا توجد صفوف للتصدير.');
   const cell=value=>{const text=String(value??'');return /[";\n]/.test(text)?`"${text.replace(/"/g,'""')}"`:text};
@@ -228,5 +221,37 @@ function renderPaymentHistory() {
 }
 
 function printStudentReceipt(paymentId){const p=state.data.studentPayments.find(x=>Number(x.id)===Number(paymentId));if(!p)return;const s=state.data.students.find(x=>Number(x.id)===Number(p.studentId));if(!s)return;const row=chargeOf(s,p.month),due=row?row.amount:0,remaining=row?row.remaining:0,totalOutstanding=totalOutstandingFor(s),credit=creditFor(s);const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';const date=western(p.date||today());const w=window.open('','_blank','width=420,height=700');if(!w){toast('اسمح للنوافذ المنبثقة حتى يتم فتح الفاتورة.');return;}w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(invoiceNo(p))}</title><style>@page{size:80mm auto;margin:0}*{box-sizing:border-box}body{margin:0;background:#fff;font-family:Arial,Tahoma,sans-serif;color:#111}.receipt{width:72mm;margin:0 auto;padding:4mm 3mm;font-size:12px}.center{text-align:center}.school{font-size:15px;font-weight:900}.title{font-size:14px;font-weight:900;margin:4px 0}.line{border-top:1px dashed #555;margin:5px 0}.row{display:flex;justify-content:space-between;gap:8px;margin:3px 0}.label{font-weight:700}.amount{font-size:14px;font-weight:900}.remaining{font-weight:900}.signature{margin-top:20px;text-align:left}.small{font-size:10px;color:#444}.print{margin-top:10px;width:100%;padding:8px;border:0;background:#111;color:#fff;border-radius:5px;font-weight:700}@media print{.print{display:none}} </style></head><body><div class="receipt">${state.settings.applicationMode==='test'?'<div class="center title">نسخة للتجريب فقط</div>':''}<div class="center school">${esc(school)}</div><div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div><div class="line"></div><div class="center title">إيصال دفع</div><div class="row"><span class="label">رقم الفاتورة</span><span>${esc(invoiceNo(p))}</span></div><div class="row"><span class="label">التاريخ</span><span>${date}</span></div><div class="line"></div><div class="row"><span class="label">الطالب</span><span>${esc(s.name)}</span></div><div class="row"><span class="label">القسم</span><span>${esc(s.className)}</span></div><div class="row"><span class="label">رقم النداء</span><span>${esc(s.callNo)}</span></div><div class="line"></div><div class="row"><span class="label">نوع الرسوم</span><span>${esc(paymentLabel(p))}</span></div><div class="row"><span class="label">إجمالي الرسوم</span><span>${money(due)} أوقية</span></div><div class="row amount"><span>المدفوع الآن</span><span>${money(p.amount)} أوقية</span></div><div class="row remaining"><span>المتبقي لهذه الرسوم</span><span>${money(remaining)} أوقية</span></div><div class="row remaining"><span>إجمالي المتبقي على الطالب</span><span>${money(totalOutstanding)} أوقية</span></div>${credit>0?`<div class="row remaining"><span>رصيد لصالح الطالب</span><span>${money(credit)} أوقية</span></div>`:''}<div class="line"></div><div class="signature">توقيع المحاسب: __________________</div><div class="center small" style="margin-top:10px">شكراً لكم</div><button class="print" onclick="window.print()">طباعة الفاتورة</button></div><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`);w.document.close()}
-window.editStudentPayment=async id=>{if(!(await requirePassword()))return;const p=state.data.studentPayments.find(x=>x.id===id);if(!p)return;const amount=await askInput('المبلغ الجديد',p.amount);if(amount===null)return;const date=await askInput('تاريخ الدفعة بصيغة YYYY-MM-DD',p.date);if(date===null)return;try{await api(`/student-payments/${id}`,{method:'PUT',body:JSON.stringify({month:p.month,amount:western(amount),date})});await load();renderFees();renderPaymentHistory();renderStudents();toast('تم تعديل الدفعة.')}catch(e){toast(e.message)}};
+// One form for both places a payment is listed: the collections table and the
+// student ledger. It edits the fee the payment settles too, so a payment entered
+// against the wrong month is corrected without deleting and re-entering it.
+window.editStudentPayment=async id=>{
+  const payment=state.data.studentPayments.find(x=>Number(x.id)===Number(id));
+  if(!payment)return;
+  if(!(await requirePassword()))return;
+  const student=state.data.students.find(x=>Number(x.id)===Number(payment.studentId));
+  $('paymentEditId').value=payment.id;
+  $('paymentEditIdentity').textContent=`${invoiceNo(payment)} — ${student?`${student.name} — القسم: ${student.className}`:'طالب محذوف'}`;
+  $('paymentEditMonth').innerHTML=monthOptionsHtml();
+  $('paymentEditMonth').value=payment.month;
+  $('paymentEditAmount').value=payment.amount;
+  $('paymentEditDate').value=payment.date||today();
+  $('paymentEditNotes').value=payment.notes||'';
+  const dialog=$('paymentEditDialog');
+  if(!dialog.open)dialog.showModal();
+  $('paymentEditAmount').focus();
+};
+$('paymentEditForm').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const id=$('paymentEditId').value;
+  const body={month:$('paymentEditMonth').value,amount:western($('paymentEditAmount').value),date:$('paymentEditDate').value,notes:$('paymentEditNotes').value};
+  try{
+    await api(`/student-payments/${id}`,{method:'PUT',body:JSON.stringify(body)});
+    $('paymentEditDialog').close();
+    // Refreshes the ledger too: load() ends with refreshStudentFeeDetails().
+    await refreshAll();
+    toast('تم تعديل الدفعة.');
+  }catch(error){toast(error.message)}
+});
+$('closePaymentEdit').onclick=()=>$('paymentEditDialog').close();
+$('cancelPaymentEdit').onclick=()=>$('paymentEditDialog').close();
 window.deleteStudentPayment=async id=>{await deleteWithPassword(`/student-payments/${id}`,'هل تريد حذف دفعة الطالب؟','تم حذف دفعة الطالب.');};
