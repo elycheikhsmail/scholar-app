@@ -9,6 +9,21 @@ $('feeDepartment').onchange=renderFees;
 $('feeStatus').onchange=renderFees;
 $('feeMinRemaining').oninput=debounce(renderFees);
 $('feeSearch').oninput=debounce(renderFees);
+$('resetFeeFilters').onclick=()=>{
+  $('feeDepartment').value='';
+  $('feeStatus').value='';
+  $('feeMinRemaining').value='';
+  $('feeSearch').value='';
+  feeShowAll=false;
+  renderFees();
+};
+$('feeQuickFilters').onclick=event=>{
+  const button=event.target.closest('[data-fee-status]');
+  if(!button)return;
+  $('feeStatus').value=button.dataset.feeStatus;
+  feeShowAll=false;
+  renderFees();
+};
 function registrationFeesPaid(student){const row=chargeOf(student,REGISTRATION);return !!row&&row.amount>0&&row.remaining<=0}
 
 // One table row per student: a single month, or the whole year in the total view.
@@ -75,7 +90,8 @@ function ageCell(days){
 }
 function feeRowHtml(row,month){
   const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month),blocked=row.ledger.outstanding<=0;
-  return `<tr class="${days>0?'overdue-row':''}"><td>${esc(s.className)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.callNo)}</td><td>${esc(s.name)}</td><td>${money(row.gross)}</td><td class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td>${money(row.due)}</td><td>${money(row.paid)}</td><td class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td>${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td class="${cls}">${esc(label)}</td><td><input id="fp-${s.id}" class="payment-input" type="number" min="1" max="${row.ledger.outstanding}" ${blocked?'disabled':''}></td><td><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">تفاصيل حساب الطالب</button><button class="btn-pay" onclick="payFee(${s.id})" ${blocked?'disabled':''}>حفظ وطباعة</button></td></tr>`;
+  const paymentLabel=blocked?'لا يوجد متبقٍّ':`دفعة ${s.name}`;
+  return `<tr class="${days>0?'overdue-row':''}"><td>${esc(s.className)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.callNo)}</td><td class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td>${money(row.gross)}</td><td class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td>${money(row.due)}</td><td>${money(row.paid)}</td><td class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td>${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td class="${cls}">${esc(label)}</td><td><input id="fp-${s.id}" class="payment-input" type="number" min="1" max="${row.ledger.outstanding}" placeholder="المبلغ" aria-label="${esc(paymentLabel)}" ${blocked?'disabled':''}></td><td class="fee-row-actions"><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button><button class="btn-pay" onclick="payFee(${s.id})" ${blocked?'disabled':''}>حفظ وطباعة</button></td></tr>`;
 }
 function renderFees(){
   const month=$('feeMonth').value,dep=$('feeDepartment').value,query=$('feeSearch').value.toLowerCase().trim();
@@ -84,6 +100,15 @@ function renderFees(){
     .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(query))
     .map(s=>feeRowFor(s,month))
     .filter(row=>passesFeeFilter(row,status,minRemaining)));
+  const candidates=state.data.students
+    .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(query))
+    .map(s=>feeRowFor(s,month));
+  const statusCounts={due:0,late:0,paid:0};
+  candidates.forEach(row=>{
+    if(row.remaining>0)statusCounts.due++;
+    if(overdueDays(row)>0)statusCounts.late++;
+    if(row.due>0&&row.remaining<=0)statusCounts.paid++;
+  });
   feeView={month,rows};
   $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th>الحالة</th><th>دفعة جديدة</th><th>إجراء</th>';
   const totals=rows.reduce((a,r)=>({gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit}),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
@@ -93,7 +118,11 @@ function renderFees(){
   $('feesRowNotice').classList.toggle('hidden',!capped);
   $('feesRowNotice').innerHTML=capped?`يُعرض ${money(shown.length)} من ${money(rows.length)} صفًّا. <button type="button" class="secondary" id="showAllFees">${feeShowAll?'الاكتفاء بأول '+FEE_ROW_LIMIT:'عرض كل الصفوف'}</button>`:'';
   if($('showAllFees'))$('showAllFees').onclick=()=>{feeShowAll=!feeShowAll;renderFees()};
-  $('feeTotals').innerHTML=`<span>الطلاب: ${money(rows.length)}</span><span>الرسوم: ${money(totals.gross)}</span><span class="status-exempt">الخصم: ${money(totals.discount)}</span><span>المستحق: ${money(totals.due)}</span><span class="status-paid">المدفوع: ${money(totals.paid)}</span><span class="overdue-soft">المتبقي: ${money(totals.remaining)}</span><span class="status-overpaid">رصيد دائن: ${money(totals.credit)}</span>`;
+  const quickFilters=[['','الكل',candidates.length],['due','عليه متبقٍّ',statusCounts.due],['late','متأخر',statusCounts.late],['paid','مسدَّد',statusCounts.paid]];
+  $('feeQuickFilters').innerHTML=quickFilters.map(([value,label,count])=>`<button type="button" data-fee-status="${value}" class="fee-filter-chip ${status===value?'active':''}" aria-pressed="${status===value}">${label}<b>${money(count)}</b></button>`).join('');
+  const activeFilters=[dep&&`القسم: ${dep}`,status&&`الحالة: ${$('feeStatus').selectedOptions[0].textContent}`,minRemaining>0&&`المتبقي من ${money(minRemaining)}`,query&&`البحث: ${$('feeSearch').value.trim()}`].filter(Boolean);
+  $('feesFilterSummary').innerHTML=`عرض <strong>${money(rows.length)}</strong> طالب${activeFilters.length?` · ${activeFilters.map(esc).join(' · ')}`:' · دون تصفية إضافية'}`;
+  $('feeTotals').innerHTML=`<span><small>الطلاب</small><b>${money(rows.length)}</b></span><span><small>إجمالي المستحق</small><b>${money(totals.due)}</b></span><span class="status-paid"><small>المدفوع</small><b>${money(totals.paid)}</b></span><span class="overdue-soft"><small>المتبقي</small><b>${money(totals.remaining)}</b></span><span class="status-exempt"><small>الخصم</small><b>${money(totals.discount)}</b></span><span class="status-overpaid"><small>رصيد دائن</small><b>${money(totals.credit)}</b></span>`;
 }
 
 // --- export and printing ----------------------------------------------------

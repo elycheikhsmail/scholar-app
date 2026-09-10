@@ -37,6 +37,38 @@
 @media(max-width:1100px){.exam-template-form{grid-template-columns:repeat(3,1fr)}.exam-toolbar{grid-template-columns:repeat(3,1fr)}.results-footer{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.exam-template-form,.exam-toolbar{grid-template-columns:1fr}.results-student-meta{grid-template-columns:1fr}.results-footer{grid-template-columns:1fr}}
 
+/* Student dues workspace */
+.fee-reset{white-space:nowrap}
+.fee-quick-filters{display:flex;gap:8px;flex-wrap:wrap;margin:-7px 0 12px}
+.fee-filter-chip{display:flex;align-items:center;gap:8px;border:1px solid #d7e0e5;background:#fff;color:#52626d;border-radius:999px;padding:8px 13px;font:inherit;font-weight:800;cursor:pointer}
+.fee-filter-chip b{background:#edf2f5;border-radius:999px;padding:2px 7px;font-size:12px}
+.fee-filter-chip:hover{border-color:#168a4a;color:#168a4a}
+.fee-filter-chip.active{background:#168a4a;border-color:#168a4a;color:#fff}
+.fee-filter-chip.active b{background:#ffffff2e}
+.fee-filter-summary{margin:0 0 10px;color:#63727c;font-size:13px}
+.fees-scroll{max-height:60vh}
+.fees-scroll th:nth-child(4),.fees-scroll td:nth-child(4){position:sticky;right:0;z-index:2;background:#fff;box-shadow:-5px 0 8px #1a283212}
+.fees-scroll th:nth-child(4){z-index:5;background:#eef3f6}
+.fees-scroll tbody tr:nth-child(even) td:nth-child(4){background:#fafcfd}
+.fees-scroll tbody tr:hover td:nth-child(4){background:#f0f7ff}
+.fees-scroll .overdue-row td:nth-child(4){background:#fff0ef}
+.fees-scroll th:last-child,.fees-scroll td:last-child{position:sticky;left:0;z-index:2;background:#fff;box-shadow:5px 0 8px #1a283212}
+.fees-scroll th:last-child{z-index:5;background:#eef3f6}
+.fees-scroll tbody tr:nth-child(even) td:last-child{background:#fafcfd}
+.fees-scroll tbody tr:hover td:last-child{background:#f0f7ff}
+.fees-scroll .overdue-row td:last-child{background:#fff0ef}
+.fee-student-cell strong,.fee-student-cell small{display:block}
+.fee-student-cell small{color:#70808b;font-size:11px;margin-top:3px}
+.fee-row-actions{display:flex;gap:5px}
+.fees-scroll+.hint-box{margin-top:10px}
+.fees-scroll~.hint-box.hidden{display:none!important}
+#fees .totals-line{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:9px;margin-bottom:14px}
+#fees .totals-line span{display:flex;flex-direction:column;gap:4px;background:#f5f8fa;border:1px solid #e2e8ec;border-radius:10px;padding:10px 12px}
+#fees .totals-line small{color:#70808b;font-size:11px}
+#fees .totals-line b{font-size:18px}
+@media(max-width:1100px){#fees .totals-line{grid-template-columns:repeat(3,1fr)}.fee-toolbar{flex-wrap:wrap}.fee-toolbar label{flex:1 1 190px}}
+@media(max-width:700px){#fees .totals-line{grid-template-columns:repeat(2,1fr)}.fee-reset{width:100%}.fee-quick-filters{margin-top:0}.fee-filter-chip{flex:1;justify-content:center}.fees-scroll th:nth-child(4),.fees-scroll td:nth-child(4){position:static;box-shadow:none}.fees-scroll th:last-child,.fees-scroll td:last-child{position:static;box-shadow:none}}
+
 .input-dialog{width:min(440px,calc(100vw - 32px));border:1px solid #cad5dc;border-radius:14px;padding:24px;color:#263740;box-shadow:0 18px 60px #0003;direction:rtl}
 .input-dialog::backdrop{background:#172b3b80}
 .input-dialog h3{margin:0 0 18px;line-height:1.6}

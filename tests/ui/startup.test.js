@@ -53,6 +53,13 @@ test('browser scripts support login, all sections, student fees and session rest
     await page.locator(`.nav-item[data-section="${section}"]`).click();
     await expect(page.locator(`#${section}`)).toHaveClass(/active-section/);
   }
+  await page.locator('.nav-item[data-section="fees"]').click();
+  await expect(page.locator('#feeQuickFilters button')).toHaveCount(4);
+  await page.locator('#feeSearch').fill('غير موجود');
+  await expect(page.locator('#feesFilterSummary')).toContainText('0');
+  await page.locator('#resetFeeFilters').click();
+  await expect(page.locator('#feeSearch')).toHaveValue('');
+  await expect(page.locator('#feesTable')).toContainText('طالب تجريبي');
   await page.locator('.nav-item[data-section="students"]').click();
   await page.locator('#studentsTable .btn-edit').click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');

@@ -133,7 +133,9 @@
     </select></label>
     <label>أدنى متبقٍّ<input id="feeMinRemaining" type="number" min="0" step="1" placeholder="0"></label>
     <label>بحث<input id="feeSearch" placeholder="اسم الطالب أو الرقم المدرسي"></label>
+    <button type="button" class="secondary fee-reset" id="resetFeeFilters">مسح التصفية</button>
   </div>
+  <div class="fee-quick-filters" id="feeQuickFilters" aria-label="تصفية سريعة حسب حالة الاستحقاق"></div>
   <div class="panel"><div id="feeTotals" class="totals-line"></div>
     <div class="table-tools">
       <h3 class="table-title" id="feesTableTitle">جدول مستحقات الطلاب</h3>
@@ -143,7 +145,8 @@
         <button type="button" class="secondary" id="printReminders">إشعارات أولياء الأمور</button>
       </div>
     </div>
-    <div class="table-scroll"><table aria-labelledby="feesTableTitle"><thead><tr id="feesHead"></tr></thead><tbody id="feesTable"></tbody></table></div>
+    <p id="feesFilterSummary" class="fee-filter-summary" role="status" aria-live="polite"></p>
+    <div class="table-scroll fees-scroll"><table aria-labelledby="feesTableTitle"><thead><tr id="feesHead"></tr></thead><tbody id="feesTable"></tbody></table></div>
     <p id="feesRowNotice" class="hint-box hidden"></p>
   </div>
 </section>
