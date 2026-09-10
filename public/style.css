@@ -47,16 +47,6 @@
 .fee-filter-chip.active b{background:#ffffff2e}
 .fee-filter-summary{margin:0 0 10px;color:#63727c;font-size:13px}
 .fees-scroll{max-height:60vh}
-.fees-scroll th:nth-child(4),.fees-scroll td:nth-child(4){position:sticky;right:0;z-index:2;background:#fff;box-shadow:-5px 0 8px #1a283212}
-.fees-scroll th:nth-child(4){z-index:5;background:#eef3f6}
-.fees-scroll tbody tr:nth-child(even) td:nth-child(4){background:#fafcfd}
-.fees-scroll tbody tr:hover td:nth-child(4){background:#f0f7ff}
-.fees-scroll .overdue-row td:nth-child(4){background:#fff0ef}
-.fees-scroll th:last-child,.fees-scroll td:last-child{position:sticky;left:0;z-index:2;background:#fff;box-shadow:5px 0 8px #1a283212}
-.fees-scroll th:last-child{z-index:5;background:#eef3f6}
-.fees-scroll tbody tr:nth-child(even) td:last-child{background:#fafcfd}
-.fees-scroll tbody tr:hover td:last-child{background:#f0f7ff}
-.fees-scroll .overdue-row td:last-child{background:#fff0ef}
 .fee-student-cell strong,.fee-student-cell small{display:block}
 .fee-student-cell small{color:#70808b;font-size:11px;margin-top:3px}
 .fee-row-actions{display:flex;gap:5px}
@@ -67,10 +57,31 @@
 #fees .totals-line small{color:#70808b;font-size:11px}
 #fees .totals-line b{font-size:18px}
 @media(max-width:1100px){#fees .totals-line{grid-template-columns:repeat(3,1fr)}.fee-toolbar{flex-wrap:wrap}.fee-toolbar label{flex:1 1 190px}}
-@media(max-width:700px){#fees .totals-line{grid-template-columns:repeat(2,1fr)}.fee-reset{width:100%}.fee-quick-filters{margin-top:0}.fee-filter-chip{flex:1;justify-content:center}.fees-scroll th:nth-child(4),.fees-scroll td:nth-child(4){position:static;box-shadow:none}.fees-scroll th:last-child,.fees-scroll td:last-child{position:static;box-shadow:none}}
+@media(max-width:700px){#fees .totals-line{grid-template-columns:repeat(2,1fr)}.fee-reset{width:100%}.fee-quick-filters{margin-top:0}.fee-filter-chip{flex:1;justify-content:center}}
 .app-footer{height:28px;display:flex;align-items:center;justify-content:center;background:#fff;border-top:1px solid #dde5ea;color:#70808b;font-size:12px;font-weight:700}
 #app:not(.hidden) .layout{height:calc(100vh - 104px)}
 @media(max-width:700px){.app-footer{height:34px;margin-top:10px}#app:not(.hidden) .layout{height:auto}}
+.fee-column-picker{position:relative}
+.fee-column-picker summary{list-style:none;display:block}
+.fee-column-picker summary::-webkit-details-marker{display:none}
+.fee-column-picker[open] summary{background:#dce6eb}
+.fee-column-options{position:absolute;top:calc(100% + 7px);left:0;z-index:12;width:230px;display:grid;gap:7px;background:#fff;border:1px solid #d5dfe5;border-radius:12px;padding:12px;box-shadow:0 12px 30px #1a283228}
+.fee-column-options label{display:flex;align-items:center;gap:8px;padding:5px;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer}
+.fee-column-options label:hover{background:#f1f7f3}
+.fee-column-options input{accent-color:#168a4a;width:17px;height:17px}
+.fee-column-options button{margin-top:4px;width:100%}
+.fee-column-hidden{display:none!important}
+.fees-scroll [data-fee-column="name"]{position:sticky;right:0;z-index:2;background:#fff;box-shadow:-5px 0 8px #1a283212}
+.fees-scroll th[data-fee-column="name"]{z-index:5;background:#eef3f6}
+.fees-scroll tbody tr:nth-child(even) [data-fee-column="name"]{background:#fafcfd}
+.fees-scroll tbody tr:hover [data-fee-column="name"]{background:#f0f7ff}
+.fees-scroll .overdue-row [data-fee-column="name"]{background:#fff0ef}
+.fees-scroll [data-fee-column="actions"]{position:sticky;left:0;z-index:2;background:#fff;box-shadow:5px 0 8px #1a283212}
+.fees-scroll th[data-fee-column="actions"]{z-index:5;background:#eef3f6}
+.fees-scroll tbody tr:nth-child(even) [data-fee-column="actions"]{background:#fafcfd}
+.fees-scroll tbody tr:hover [data-fee-column="actions"]{background:#f0f7ff}
+.fees-scroll .overdue-row [data-fee-column="actions"]{background:#fff0ef}
+@media(max-width:700px){.fee-column-picker{width:100%}.fee-column-picker summary{text-align:center}.fee-column-options{position:static;width:100%;margin-top:7px}.fees-scroll [data-fee-column="name"],.fees-scroll [data-fee-column="actions"]{position:static;box-shadow:none}}
 
 .input-dialog{width:min(440px,calc(100vw - 32px));border:1px solid #cad5dc;border-radius:14px;padding:24px;color:#263740;box-shadow:0 18px 60px #0003;direction:rtl}
 .input-dialog::backdrop{background:#172b3b80}

@@ -1,6 +1,8 @@
 const TOTAL_MODE='__total__';
 const FEE_ROW_LIMIT=300;
 let feeSort={key:'name',dir:1},feeShowAll=false,feeView={month:'',rows:[]};
+let feeHiddenColumns=new Set();
+try{feeHiddenColumns=new Set(JSON.parse(localStorage.getItem('feeHiddenColumns')||'[]'))}catch{}
 const daysBetween=(from,to)=>Math.round((new Date(to+'T00:00:00')-new Date(from+'T00:00:00'))/86400000);
 
 $('feeMonth').insertAdjacentHTML('afterbegin',`<option value="${TOTAL_MODE}">إجمالي المستحقات (كل الأشهر)</option>`);
@@ -69,6 +71,30 @@ const FEE_COLUMNS=[
   {key:'dueDate',label:'تاريخ الاستحقاق',value:r=>r.dueDate||''},
   {key:'age',label:'عمر الدَّين',value:r=>overdueDays(r)}
 ];
+const FEE_OPTIONAL_COLUMNS=[...FEE_COLUMNS.filter(column=>column.key!=='name'),
+  {key:'status',label:'الحالة'},{key:'payment',label:'دفعة جديدة'}];
+feeHiddenColumns=new Set([...feeHiddenColumns].filter(key=>FEE_OPTIONAL_COLUMNS.some(column=>column.key===key)));
+function renderFeeColumnOptions(){
+  $('feeColumnOptions').innerHTML=FEE_OPTIONAL_COLUMNS.map(column=>`<label><input type="checkbox" data-fee-column-toggle="${column.key}" ${feeHiddenColumns.has(column.key)?'':'checked'}> ${esc(column.label)}</label>`).join('')+'<button type="button" class="secondary" id="showAllFeeColumns">إظهار الكل</button>';
+}
+function applyFeeColumnVisibility(){
+  document.querySelectorAll('#fees [data-fee-column]').forEach(cell=>cell.classList.toggle('fee-column-hidden',feeHiddenColumns.has(cell.dataset.feeColumn)));
+}
+$('feeColumnOptions').onchange=event=>{
+  const key=event.target.dataset.feeColumnToggle;
+  if(!key)return;
+  event.target.checked?feeHiddenColumns.delete(key):feeHiddenColumns.add(key);
+  localStorage.setItem('feeHiddenColumns',JSON.stringify([...feeHiddenColumns]));
+  applyFeeColumnVisibility();
+};
+$('feeColumnOptions').onclick=event=>{
+  if(event.target.id!=='showAllFeeColumns')return;
+  feeHiddenColumns.clear();
+  localStorage.removeItem('feeHiddenColumns');
+  renderFeeColumnOptions();
+  applyFeeColumnVisibility();
+};
+renderFeeColumnOptions();
 function feeColumnLabel(column,month){return column.key==='dueDate'&&month===TOTAL_MODE?'أقدم استحقاق غير مسدَّد':column.label}
 function sortFeeRows(rows){
   const column=FEE_COLUMNS.find(c=>c.key===feeSort.key)||FEE_COLUMNS[3];
@@ -85,13 +111,13 @@ $('feesHead').onclick=event=>{
   renderFees();
 };
 function ageCell(days){
-  if(!days)return '<td>—</td>';
-  return `<td class="${days>60?'overdue-strong':days>30?'status-partial':'overdue-soft'}">${money(days)} يومًا</td>`;
+  if(!days)return '<td data-fee-column="age">—</td>';
+  return `<td data-fee-column="age" class="${days>60?'overdue-strong':days>30?'status-partial':'overdue-soft'}">${money(days)} يومًا</td>`;
 }
 function feeRowHtml(row,month){
   const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month),blocked=row.ledger.outstanding<=0;
   const paymentLabel=blocked?'لا يوجد متبقٍّ':`دفعة ${s.name}`;
-  return `<tr class="${days>0?'overdue-row':''}"><td>${esc(s.className)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.callNo)}</td><td class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td>${money(row.gross)}</td><td class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td>${money(row.due)}</td><td>${money(row.paid)}</td><td class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td>${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td class="${cls}">${esc(label)}</td><td><input id="fp-${s.id}" class="payment-input" type="number" min="1" max="${row.ledger.outstanding}" placeholder="المبلغ" aria-label="${esc(paymentLabel)}" ${blocked?'disabled':''}></td><td class="fee-row-actions"><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button><button class="btn-pay" onclick="payFee(${s.id})" ${blocked?'disabled':''}>حفظ وطباعة</button></td></tr>`;
+  return `<tr class="${days>0?'overdue-row':''}"><td data-fee-column="className">${esc(s.className)}</td><td data-fee-column="schoolNo">${esc(s.schoolNo)}</td><td data-fee-column="callNo">${esc(s.callNo)}</td><td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td data-fee-column="gross">${money(row.gross)}</td><td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td data-fee-column="due">${money(row.due)}</td><td data-fee-column="paid">${money(row.paid)}</td><td data-fee-column="remaining" class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td data-fee-column="status" class="${cls}">${esc(label)}</td><td data-fee-column="payment"><input id="fp-${s.id}" class="payment-input" type="number" min="1" max="${row.ledger.outstanding}" placeholder="المبلغ" aria-label="${esc(paymentLabel)}" ${blocked?'disabled':''}></td><td data-fee-column="actions" class="fee-row-actions"><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button><button class="btn-pay" onclick="payFee(${s.id})" ${blocked?'disabled':''}>حفظ وطباعة</button></td></tr>`;
 }
 function renderFees(){
   const month=$('feeMonth').value,dep=$('feeDepartment').value,query=$('feeSearch').value.toLowerCase().trim();
@@ -110,10 +136,11 @@ function renderFees(){
     if(row.due>0&&row.remaining<=0)statusCounts.paid++;
   });
   feeView={month,rows};
-  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th>الحالة</th><th>دفعة جديدة</th><th>إجراء</th>';
+  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th data-fee-column="status">الحالة</th><th data-fee-column="payment">دفعة جديدة</th><th data-fee-column="actions">إجراء</th>';
   const totals=rows.reduce((a,r)=>({gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit}),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
   const shown=feeShowAll?rows:rows.slice(0,FEE_ROW_LIMIT);
   $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')||`<tr><td colspan="14">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
+  applyFeeColumnVisibility();
   const capped=rows.length>FEE_ROW_LIMIT;
   $('feesRowNotice').classList.toggle('hidden',!capped);
   $('feesRowNotice').innerHTML=capped?`يُعرض ${money(shown.length)} من ${money(rows.length)} صفًّا. <button type="button" class="secondary" id="showAllFees">${feeShowAll?'الاكتفاء بأول '+FEE_ROW_LIMIT:'عرض كل الصفوف'}</button>`:'';

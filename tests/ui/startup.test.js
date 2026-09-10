@@ -56,6 +56,12 @@ test('browser scripts support login, all sections, student fees and session rest
   }
   await page.locator('.nav-item[data-section="fees"]').click();
   await expect(page.locator('#feeQuickFilters button')).toHaveCount(4);
+  await page.locator('.fee-column-picker summary').click();
+  await page.locator('[data-fee-column-toggle="discount"]').uncheck();
+  await expect(page.locator('#feesHead [data-fee-column="discount"]')).toBeHidden();
+  assert.match(await page.evaluate(() => localStorage.getItem('feeHiddenColumns')), /discount/);
+  await page.locator('#showAllFeeColumns').click();
+  await expect(page.locator('#feesHead [data-fee-column="discount"]')).toBeVisible();
   await page.locator('#feeSearch').fill('غير موجود');
   await expect(page.locator('#feesFilterSummary')).toContainText('0');
   await page.locator('#resetFeeFilters').click();

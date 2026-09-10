@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.1.1 — 2026-09-10
+
+- Ajout d’un bouton permettant de choisir les colonnes visibles dans le tableau
+  des créances des élèves.
+- Mémorisation du choix des colonnes sur l’appareil et commande pour les afficher
+  toutes en un clic.
+- Maintien permanent des colonnes essentielles « Élève » et « Actions ».
+
 ## 1.1.0 — 2026-09-10
 
 - Amélioration de l’ergonomie du tableau des créances des élèves : filtres
