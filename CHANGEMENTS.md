@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.2.4 — 2026-09-10
+
+- Remplacement du bouton textuel d’ouverture de l’استمارة رسوم الطالب par une
+  icône `+` compacte dans le tableau des frais.
+- Ajout d’une infobulle et d’un libellé accessible indiquant que l’icône ouvre
+  l’استمارة رسوم الطالب sélectionné.
+
 ## 1.2.3 — 2026-09-10
 
 - Suppression de la colonne « دفعة جديدة » du tableau des frais.

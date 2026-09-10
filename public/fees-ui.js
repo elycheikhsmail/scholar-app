@@ -26,8 +26,6 @@ $('feeQuickFilters').onclick=event=>{
   feeShowAll=false;
   renderFees();
 };
-function registrationFeesPaid(student){const row=chargeOf(student,REGISTRATION);return !!row&&row.amount>0&&row.remaining<=0}
-
 // One table row per student: a single month, or the whole year in the total view.
 function feeRowFor(student,month){
   const ledger=ledgerOf(student);
@@ -116,7 +114,7 @@ function ageCell(days){
 }
 function feeRowHtml(row,month){
   const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month);
-  return `<tr class="${days>0?'overdue-row':''}"><td data-fee-column="className">${esc(s.className)}</td><td data-fee-column="schoolNo">${esc(s.schoolNo)}</td><td data-fee-column="callNo">${esc(s.callNo)}</td><td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td data-fee-column="gross">${money(row.gross)}</td><td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td data-fee-column="due">${money(row.due)}</td><td data-fee-column="paid">${money(row.paid)}</td><td data-fee-column="remaining" class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td data-fee-column="status" class="${cls}">${esc(label)}</td><td data-fee-column="actions" class="fee-row-actions"><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button></td></tr>`;
+  return `<tr class="${days>0?'overdue-row':''}"><td data-fee-column="className">${esc(s.className)}</td><td data-fee-column="schoolNo">${esc(s.schoolNo)}</td><td data-fee-column="callNo">${esc(s.callNo)}</td><td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td data-fee-column="gross">${money(row.gross)}</td><td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td data-fee-column="due">${money(row.due)}</td><td data-fee-column="paid">${money(row.paid)}</td><td data-fee-column="remaining" class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td data-fee-column="status" class="${cls}">${esc(label)}</td><td data-fee-column="actions" class="fee-row-actions"><button class="fee-form-trigger" onclick="openStudentFees(${s.id})" title="فتح استمارة الرسوم" aria-label="فتح استمارة الرسوم للطالب ${esc(s.name)}">+</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button></td></tr>`;
 }
 function renderFees(){
   const month=$('feeMonth').value,dep=$('feeDepartment').value,query=$('feeSearch').value.toLowerCase().trim();
