@@ -67,6 +67,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page).toHaveURL(/#dashboard$/);
   await page.locator('.nav-item[data-section="fees"]').click();
   await expect(page.locator('#feeQuickFilters button')).toHaveCount(4);
+  await expect(page.locator('#feesHead')).not.toContainText('دفعة جديدة');
+  await expect(page.locator('#feesTable [data-fee-column="payment"]')).toHaveCount(0);
   await page.locator('.fee-column-picker summary').click();
   await page.locator('[data-fee-column-toggle="discount"]').uncheck();
   await expect(page.locator('#feesHead [data-fee-column="discount"]')).toBeHidden();

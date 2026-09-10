@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.2.3 — 2026-09-10
+
+- Suppression de la colonne « دفعة جديدة » du tableau des frais.
+- Suppression de la saisie et du bouton « حفظ وطباعة » associés à cette colonne.
+- Les paiements restent disponibles dans l’استمارة رسوم الطالب المنبثقة، avec le
+  choix du type de frais, du montant et de la date.
+
 ## 1.2.2 — 2026-09-10
 
 - Ouverture de l’استمارة رسوم الطالب dans une fenêtre modale depuis les boutons

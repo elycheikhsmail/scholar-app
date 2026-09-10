@@ -72,7 +72,7 @@ const FEE_COLUMNS=[
   {key:'age',label:'عمر الدَّين',value:r=>overdueDays(r)}
 ];
 const FEE_OPTIONAL_COLUMNS=[...FEE_COLUMNS.filter(column=>column.key!=='name'),
-  {key:'status',label:'الحالة'},{key:'payment',label:'دفعة جديدة'}];
+  {key:'status',label:'الحالة'}];
 feeHiddenColumns=new Set([...feeHiddenColumns].filter(key=>FEE_OPTIONAL_COLUMNS.some(column=>column.key===key)));
 function renderFeeColumnOptions(){
   $('feeColumnOptions').innerHTML=FEE_OPTIONAL_COLUMNS.map(column=>`<label><input type="checkbox" data-fee-column-toggle="${column.key}" ${feeHiddenColumns.has(column.key)?'':'checked'}> ${esc(column.label)}</label>`).join('')+'<button type="button" class="secondary" id="showAllFeeColumns">إظهار الكل</button>';
@@ -115,9 +115,8 @@ function ageCell(days){
   return `<td data-fee-column="age" class="${days>60?'overdue-strong':days>30?'status-partial':'overdue-soft'}">${money(days)} يومًا</td>`;
 }
 function feeRowHtml(row,month){
-  const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month),blocked=row.ledger.outstanding<=0;
-  const paymentLabel=blocked?'لا يوجد متبقٍّ':`دفعة ${s.name}`;
-  return `<tr class="${days>0?'overdue-row':''}"><td data-fee-column="className">${esc(s.className)}</td><td data-fee-column="schoolNo">${esc(s.schoolNo)}</td><td data-fee-column="callNo">${esc(s.callNo)}</td><td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td data-fee-column="gross">${money(row.gross)}</td><td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td data-fee-column="due">${money(row.due)}</td><td data-fee-column="paid">${money(row.paid)}</td><td data-fee-column="remaining" class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td data-fee-column="status" class="${cls}">${esc(label)}</td><td data-fee-column="payment"><input id="fp-${s.id}" class="payment-input" type="number" min="1" max="${row.ledger.outstanding}" placeholder="المبلغ" aria-label="${esc(paymentLabel)}" ${blocked?'disabled':''}></td><td data-fee-column="actions" class="fee-row-actions"><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button><button class="btn-pay" onclick="payFee(${s.id})" ${blocked?'disabled':''}>حفظ وطباعة</button></td></tr>`;
+  const s=row.student,days=overdueDays(row),[label,cls]=rowStatus(row,month);
+  return `<tr class="${days>0?'overdue-row':''}"><td data-fee-column="className">${esc(s.className)}</td><td data-fee-column="schoolNo">${esc(s.schoolNo)}</td><td data-fee-column="callNo">${esc(s.callNo)}</td><td data-fee-column="name" class="fee-student-cell"><strong>${esc(s.name)}</strong><small>${esc(s.className)} · ${esc(s.schoolNo)}</small></td><td data-fee-column="gross">${money(row.gross)}</td><td data-fee-column="discount" class="${row.discount>0?'status-exempt':''}">${row.discount>0?money(row.discount):'—'}</td><td data-fee-column="due">${money(row.due)}</td><td data-fee-column="paid">${money(row.paid)}</td><td data-fee-column="remaining" class="${row.remaining>0?(days>0?'overdue-strong':'overdue-soft'):'status-paid'}">${money(row.remaining)}</td><td data-fee-column="dueDate">${row.charged&&row.dueDate?western(row.dueDate):'—'}</td>${ageCell(days)}<td data-fee-column="status" class="${cls}">${esc(label)}</td><td data-fee-column="actions" class="fee-row-actions"><button class="${registrationFeesPaid(s)?'btn-pay':'btn-edit'}" onclick="openStudentFees(${s.id})">${registrationFeesPaid(s)?'تم دفع الرسوم':'استمارة الرسوم'}</button><button class="btn-edit" onclick="openStudentFees(${s.id},true)">كشف الحساب</button></td></tr>`;
 }
 function renderFees(){
   const month=$('feeMonth').value,dep=$('feeDepartment').value,query=$('feeSearch').value.toLowerCase().trim();
@@ -136,10 +135,10 @@ function renderFees(){
     if(row.due>0&&row.remaining<=0)statusCounts.paid++;
   });
   feeView={month,rows};
-  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th data-fee-column="status">الحالة</th><th data-fee-column="payment">دفعة جديدة</th><th data-fee-column="actions">إجراء</th>';
+  $('feesHead').innerHTML=FEE_COLUMNS.map(column=>`<th class="sortable" data-fee-column="${column.key}" data-sort="${column.key}" title="اضغط للفرز">${esc(feeColumnLabel(column,month))}${feeSort.key===column.key?(feeSort.dir>0?' ▲':' ▼'):''}</th>`).join('')+'<th data-fee-column="status">الحالة</th><th data-fee-column="actions">إجراء</th>';
   const totals=rows.reduce((a,r)=>({gross:a.gross+r.gross,discount:a.discount+r.discount,due:a.due+r.due,paid:a.paid+r.paid,remaining:a.remaining+r.remaining,credit:a.credit+r.ledger.credit}),{gross:0,discount:0,due:0,paid:0,remaining:0,credit:0});
   const shown=feeShowAll?rows:rows.slice(0,FEE_ROW_LIMIT);
-  $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')||`<tr><td colspan="14">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
+  $('feesTable').innerHTML=shown.map(row=>feeRowHtml(row,month)).join('')||`<tr><td colspan="13">لا توجد نتائج مطابقة للتصفية.</td></tr>`;
   applyFeeColumnVisibility();
   const capped=rows.length>FEE_ROW_LIMIT;
   $('feesRowNotice').classList.toggle('hidden',!capped);
@@ -200,7 +199,6 @@ $('printReminders').onclick=()=>{
   openPrintWindow(`إشعارات أولياء الأمور (${money(debtors.length)})`,notices);
 };
 
-window.payFee=async id=>{const input=$(`fp-${id}`),amount=Number(input.value)||0;if(!amount)return toast('أدخل مبلغ الدفعة.');const selected=$('feeMonth').value;const month=selected===TOTAL_MODE?(ledgerOf(studentById(id))?.oldestUnpaid?.month||REGISTRATION):selected;try{const payment=await api('/student-payments',{method:'POST',body:JSON.stringify({studentId:id,month,amount,date:today()})});await load();renderFees();renderPaymentHistory();renderStudents();renderDashboard();input.value='';toast('تم تسجيل الدفعة.');printStudentReceipt(payment.id)}catch(e){toast(e.message)}};
 $('collectionMonth').innerHTML += monthOptionsHtml();
 $('collectionFilters').onsubmit = event => event.preventDefault();
 $('collectionSearch').oninput = debounce(renderPaymentHistory);
