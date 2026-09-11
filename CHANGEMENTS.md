@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.10.1 — 2026-09-11
+
+- **إعدادات الرسوم** ouvre désormais l'écran des réglages, suivi du tableau des
+  niveaux. Le bloc se trouvait sous le panneau rouge de vidage des données, tout
+  en bas de la page, là où personne ne va chercher un réglage.
+- Le formulaire des frais de l'élève range les montants dus en une seule
+  colonne : chaque mois sous le précédent, avec ses trois réponses sur la même
+  ligne, au lieu d'une grille de cartes côte à côte.
+- Vérification : `npm run check`, `npm test` (34 tests) et `npm run test:ui`
+  passent ; écrans des réglages et du formulaire des frais relus dans Chromium.
+
 ## 1.10.0 — 2026-09-11
 
 - Les frais ne sont plus saisis élève par élève. L'écran **الإعدادات** contient
