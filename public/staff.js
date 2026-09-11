@@ -19,7 +19,11 @@ function renderStaffRoleOptions(selected){
 // --- Fiche employé ----------------------------------------------------------
 
 function toggleRoleFields(){
-  const isTeacher=$('teacherRole').value==='أستاذ';
+  const role=$('teacherRole').value,isTeacher=role==='أستاذ';
+  // La matière n'a de sens que pour le personnel enseignant (أستاذ ou معلم).
+  const teaches=isTeacher||role==='معلم';
+  $('subjectWrap').classList.toggle('hidden-field',!teaches);
+  if(!teaches)$('teacherSubject').value='';
   $('stageWrap').classList.toggle('hidden-field',!isTeacher);
   $('hourlyRateWrap').classList.toggle('hidden-field',!isTeacher);
   $('fixedSalaryWrap').classList.toggle('hidden-field',isTeacher);

@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.25.1 — 2026-09-11
+
+- Formulaire employé : le champ **المادة** n'apparaît que lorsque la
+  « طبيعة العمل » est **معلم** ou **أستاذ** ; il est vidé pour les autres.
+- Technique : `toggleRoleFields` (`public/staff.js`) et `#subjectWrap`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.25.0 — 2026-09-11
 
 - Nouvel onglet **طبيعة العمل** dans **الإعدادات** : ajout, renommage et
