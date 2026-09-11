@@ -221,7 +221,12 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .charge-detail-summary small{color:var(--text-muted);font-weight:700}
 .charge-detail-summary b{font-size:15px}
 .charge-details-dialog .table-scroll table{min-width:820px}
-.ledger-page .table-scroll table{min-width:1100px}
+.ledger-page .table-scroll table{min-width:1250px}
+.ledger-actions-cell{min-width:210px}
+.ledger-invoice-actions{display:grid;gap:5px;padding:6px 0;border-bottom:1px solid var(--border)}
+.ledger-invoice-actions:last-child{border-bottom:0}
+.ledger-invoice-actions small{font-weight:800;color:var(--text-muted)}
+.ledger-invoice-actions span{display:flex;gap:5px;flex-wrap:wrap}
 @media(max-width:700px){.detail-page-head{align-items:stretch;flex-direction:column}.detail-page-head .secondary{width:100%}}
 /* One dialog system. Every modal shares the frame, backdrop, animation and
    head; a variant only declares what genuinely differs. */

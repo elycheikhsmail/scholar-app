@@ -378,7 +378,7 @@ function openStudentChargeDetails(index){
   $('studentChargeDetailsDialog').showModal();
 }
 window.runChargeInvoiceAction=(action,id)=>{
-  $('studentChargeDetailsDialog').close();
+  if($('studentChargeDetailsDialog').open)$('studentChargeDetailsDialog').close();
   if(action==='print')return printStudentReceipt(id);
   if(action==='edit')return editStudentPayment(id);
   if(action==='delete')return deleteStudentPayment(id);
@@ -421,7 +421,6 @@ function refreshStudentFeeDetails() {
   }
   const identity=`${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
   $('studentFeesIdentity').textContent=identity;
-  const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
   const ledger = ledgerOf(student);
   // Remise et rصيد dائn ne s'affichent que lorsqu'ils existent.
   $('studentPaidSummary').textContent = `إجمالي المستحق: ${money(ledger.totalDue)} — المدفوع: ${money(ledger.totalPaid)} — المتبقي: ${money(ledger.outstanding)}`
@@ -432,13 +431,18 @@ function refreshStudentFeeDetails() {
     + `.`;
   $('studentLedgerRows').innerHTML = [REGISTRATION,...months].map(month => {
     const row = ledger.byMonth.get(month);
-    if (!row) return `<tr data-ledger-period="outside"><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
+    if (!row) return `<tr data-ledger-period="outside"><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
     const periodKey=ledgerPeriodFor(row);
     const period={past:'سابقة',current:'جارية',future:'قادمة'}[periodKey];
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
+    const invoiceDates=[...new Set(row.allocations.map(a=>western(a.date)).filter(Boolean))].map(esc).join('<br>')||'—';
+    const invoiceActions=[...new Map(row.allocations.map(a=>[Number(a.paymentId),a])).values()].map(a=>{
+      const number=esc(a.invoiceNo||`F-${String(a.paymentId||0).padStart(6,'0')}`);
+      return `<div class="ledger-invoice-actions"><small>${number}</small><span><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${Number(a.paymentId)})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${Number(a.paymentId)})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${Number(a.paymentId)})">حذف</button></span></div>`;
+    }).join('')||'—';
     return `<tr data-ledger-period="${periodKey}">
       <td>${esc(month)}</td>
-      <td>${esc(row.dueDate)}</td>
+      <td>${invoiceDates}</td>
       <td>${period}</td>
       <td>${money(row.gross)}</td>
       <td class="${row.discount > 0 ? 'status-exempt' : ''}">${row.discount > 0 ? money(row.discount) : '—'}</td>
@@ -446,21 +450,11 @@ function refreshStudentFeeDetails() {
       <td>${money(row.paid)}</td>
       <td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td>
       <td class="paid-months">${covered}</td>
+      <td class="actions ledger-actions-cell">${invoiceActions}</td>
     </tr>`;
   }).join('');
   applyStudentLedgerPeriodFilter();
   renderStudentFeeEntries();
-  // The ledger is where a wrong payment is noticed, so it edits and deletes in place.
-  const paymentRows = payments.slice()
-    .sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id)
-    .map(p=>`<tr>
-      <td>${esc(invoiceNo(p))}</td>
-      <td>${esc(paymentLabel(p))}</td>
-      <td>${money(p.amount)}</td>
-      <td>${esc(western(p.date))}</td>
-      <td class="actions"><button type="button" class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button type="button" class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button type="button" class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td>
-    </tr>`).join('');
-  $('studentLedgerPayments').innerHTML = paymentRows || '<tr><td colspan="5">لا توجد دفعات مسجلة لهذا الطالب.</td></tr>';
 }
 function toggleDiscountFields(){
   const on=Boolean($('studentDiscountType').value);

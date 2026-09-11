@@ -307,7 +307,13 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#studentChargeDetailsDialog')).not.toHaveAttribute('open','');
   await page.locator('#studentAccountDetails summary').click();
   await expect(page.locator('#studentLedger')).toBeVisible();
-  await expect(page.locator('#studentLedgerPayments')).toContainText('F-000091');
+  await expect(page.locator('#studentLedgerTitle')).toHaveText('الفواتير');
+  await expect(page.locator('#studentLedgerRows')).toContainText('F-000091');
+  await expect(page.locator('#studentLedgerRows')).toContainText('2026-09-11');
+  await expect(page.locator('#studentLedgerRows .ledger-invoice-actions').getByText('طباعة')).toBeVisible();
+  await expect(page.locator('#studentLedgerRows .ledger-invoice-actions').getByText('تعديل')).toBeVisible();
+  await expect(page.locator('#studentLedgerRows .ledger-invoice-actions').getByText('حذف')).toBeVisible();
+  await expect(page.locator('#studentLedgerPayments')).toHaveCount(0);
   await expect(page.locator('.ledger-period-filters [data-ledger-period]')).toHaveCount(5);
   await expect(page.locator('.ledger-period-filters [data-ledger-period="current"]')).toHaveAttribute('aria-pressed','true');
   assert.deepEqual(await page.locator('#studentLedgerRows tr:visible').evaluateAll(rows=>[...new Set(rows.map(row=>row.dataset.ledgerPeriod))]),['current']);

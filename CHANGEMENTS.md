@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.20.0 — 2026-09-11
+
+- Le tableau **المستحقات حسب الشهر** devient **الفواتير** et sa colonne
+  **تاريخ الاستحقاق** devient **تاريخ الفاتورة**. Elle affiche les dates des
+  factures réellement affectées à chaque frais.
+- Ajout d'une colonne **إجراء** donnant accès à l'impression, la modification
+  et la suppression de chaque facture depuis la ligne du mois concerné. Quand
+  plusieurs factures couvrent un mois, chacune conserve ses propres actions.
+- Suppression du tableau séparé **سجل دفعات الطالب**, devenu redondant.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.19.1 — 2026-09-11
 
 - Les boutons **تسجيل الدفعة** et **مسح المبلغ** sont maintenant placés
