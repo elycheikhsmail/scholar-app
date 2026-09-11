@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.36.0 — 2026-09-11
+
+- التقارير : l'إجمالي الخارج est détaillé en deux cartes — « الخارج: الرواتب
+  والسلف » et « الخارج: المصروفات » — avant le total et le net ; le rapport
+  imprimé reprend les deux sous-totaux.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.35.1 — 2026-09-11
 
 - التقارير : bouton « 🖨️ طباعة التقرير ». Imprime sur A4 le rapport du mois

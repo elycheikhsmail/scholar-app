@@ -196,6 +196,8 @@ function renderReports(){
   const expenses=sumAmount(d.expenses.filter(within));
   const out=salaries+advances+expenses;
   $('rIncome').textContent=money(fees);
+  $('rOutSalaries').textContent=money(salaries+advances);
+  $('rOutExpenses').textContent=money(expenses);
   $('rOut').textContent=money(out);
   $('rNet').textContent=money(fees-out);
   $('rFees').textContent=money(fees);
@@ -227,7 +229,8 @@ $('printReport').onclick=()=>{
   const line=(label,value,cls='')=>`<tr class="${cls}"><td>${label}</td><td>${money(value)}</td></tr>`;
   const summary=`<h3>${esc(periodLabel)} — ${range}</h3><table><thead><tr><th>البند</th><th>المبلغ (أوقية)</th></tr></thead><tbody>`
     +line('رسوم الطلاب المحصَّلة (الدخل)',r.fees,'total')
-    +line('الرواتب المدفوعة',r.salaries)+line('السلف المصروفة',r.advances)+line('المصروفات',r.expenses)
+    +line('الرواتب المدفوعة',r.salaries)+line('السلف المصروفة',r.advances)+line('الخارج: الرواتب والسلف',r.salaries+r.advances,'total')
+    +line('الخارج: المصروفات',r.expenses,'total')
     +line('إجمالي الخارج',r.out,'total')+line('الصافي',r.fees-r.out,'total')+'</tbody></table>';
   const categories=r.expensesByCategory.length
     ?`<h3>المصروفات حسب النوع</h3><table><thead><tr><th>نوع المصروف</th><th>المبلغ</th></tr></thead><tbody>${r.expensesByCategory.map(([c,v])=>line(esc(c),v)).join('')}</tbody></table>`

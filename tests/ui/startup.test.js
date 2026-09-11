@@ -140,6 +140,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#rOut')).toHaveText('0');
   await page.locator('#reportMonth').selectOption('أكتوبر');
   await expect(page.locator('#rOut')).toHaveText('3,000');
+  await expect(page.locator('#rOutSalaries')).toHaveText('3,000');
+  await expect(page.locator('#rOutExpenses')).toHaveText('0');
   await expect(page.locator('#rSalaries')).toHaveText('3,000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-10-31');
   await expect(page.locator('#departmentDuesInfo')).toContainText('2026-10-31');
@@ -153,6 +155,8 @@ test('browser scripts support login, all sections, student fees and session rest
   });
   assert.equal(printedReport.title,'التقرير المالي — شهر أكتوبر');
   assert.match(printedReport.body,/الرواتب المدفوعة<\/td><td>3,000/);
+  assert.match(printedReport.body,/الخارج: الرواتب والسلف<\/td><td>3,000/);
+  assert.match(printedReport.body,/الخارج: المصروفات<\/td><td>0/);
   assert.match(printedReport.body,/إجمالي الخارج<\/td><td>3,000/);
   assert.match(printedReport.body,/ملخص المستحقات حسب القسم/);
   await page.locator('#reportMonth').selectOption('__year__');
