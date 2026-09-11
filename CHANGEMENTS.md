@@ -3,6 +3,20 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.39.0 — 2026-09-11
+
+- Fiche élève (الطلاب) : les erreurs de saisie sont signalées champ par champ
+  avant l'envoi — libellé et bordure rouges, message sous le champ, focus sur le
+  premier champ fautif, bulle récapitulative. Contrôles : département, numéro
+  scolaire, nom, sexe, NNI (10 chiffres), téléphone du parent (8 chiffres),
+  dates incomplètes, date de naissance future, date d'inscription, date de
+  départ requise et postérieure à l'inscription. Corriger un champ efface son
+  signalement ; un refus du serveur (NNI ou numéro déjà pris…) est rattaché au
+  champ concerné.
+- Technique : `novalidate` sur `#studentForm`, `studentFieldErrors()` /
+  `showStudentErrors()` dans `students.js`, classes `.field-invalid` / `.field-error`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.38.0 — 2026-09-11
 
 - Recherche par téléphone : dans الطلاب et الرسوم, le nom ou le téléphone du

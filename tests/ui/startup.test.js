@@ -424,6 +424,19 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentSearch').fill('ولي الأمر');
   await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(1);
   await page.locator('#studentSearch').fill('');
+  // Invalid entries are flagged on their own fields (red border, message below,
+  // focus on the first) before anything is sent; correcting a field clears it.
+  await page.locator('#nni').fill('123');
+  await page.locator('#studentForm button.primary').click();
+  await expect(page.locator('#studentForm .field-invalid')).toHaveCount(5);
+  await expect(page.locator('#studentForm .field-error').first()).toHaveText('اختر القسم.');
+  await expect(page.locator('#nni').locator('xpath=..')).toContainText('10 أرقام بالضبط');
+  await expect(page.locator('#className')).toBeFocused();
+  await page.locator('#nni').fill('1234567890');
+  await expect(page.locator('#nni').locator('xpath=..')).not.toHaveClass(/field-invalid/);
+  await expect(page.locator('#studentForm .field-invalid')).toHaveCount(4);
+  await page.locator('#cancelStudent').click();
+  await expect(page.locator('#studentForm .field-invalid')).toHaveCount(0);
   await page.locator('#studentsTable .btn-edit').click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');
   await expect(page.locator('#studentsTable .btn-pay')).toHaveText('المالية');
