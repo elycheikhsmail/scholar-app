@@ -138,11 +138,13 @@ function applySettings(){applyApplicationMode(state.settings.applicationMode);$(
 function setupMonths(id){$(id).innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}
 $('feeMonth').innerHTML=monthOptionsHtml();setupMonths('salaryMonth');setupMonths('advanceMonth');$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
 
-async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();const requested=sectionFromLocation();go(requested||'dashboard',{historyMode:requested?'none':'replace'})}
+async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();const requested=sectionFromLocation();go(requested||'dashboard',{historyMode:'replace'})}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const x=await api('/login',{method:'POST',body:JSON.stringify({username:western($('loginUsername').value),password:western($('loginPassword').value)})});await enterApplication(x)}catch(err){toast(err.message)}});
 $('logoutBtn').onclick=async()=>{try{await api('/logout',{method:'POST'})}catch{}location.reload()};
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.section));
 const APP_SECTIONS=new Set([...document.querySelectorAll('.nav-item[data-section]')].map(item=>item.dataset.section));
+const NAVIGATION_INDEX_KEY='schoolNavigationIndex';
+let navigationIndex=Number.isInteger(history.state?.[NAVIGATION_INDEX_KEY])?history.state[NAVIGATION_INDEX_KEY]:0;
 function sectionFromLocation(){
   try{
     const section=decodeURIComponent(location.hash.slice(1));
@@ -152,8 +154,11 @@ function sectionFromLocation(){
 function go(id,{historyMode='push'}={}){
   if(!APP_SECTIONS.has(id))id='dashboard';
   const targetHash=`#${id}`;
-  if(historyMode!=='none'&&location.hash!==targetHash){
-    history[historyMode==='replace'?'replaceState':'pushState'](null,'',targetHash);
+  if(historyMode==='replace'){
+    history.replaceState({[NAVIGATION_INDEX_KEY]:navigationIndex},'',targetHash);
+  }else if(historyMode==='push'&&location.hash!==targetHash){
+    navigationIndex+=1;
+    history.pushState({[NAVIGATION_INDEX_KEY]:navigationIndex},'',targetHash);
   }
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.section===id));
   document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active-section',x.id===id));
@@ -166,9 +171,16 @@ function go(id,{historyMode='push'}={}){
   if(id==='exams')renderExamSection();
   if(id==='reports')renderReports();
   if(id==='settings'){renderSettings();renderDepartments()}
+  updatePageBackButtons();
 }
+function updatePageBackButtons(){
+  document.querySelectorAll('[data-page-back]').forEach(button=>{button.disabled=navigationIndex<=0});
+}
+function goToPreviousPage(){if(navigationIndex>0)history.back()}
+document.querySelectorAll('[data-page-back]').forEach(button=>button.addEventListener('click',goToPreviousPage));
 function followLocation(){
   if($('app').classList.contains('hidden'))return;
+  navigationIndex=Number.isInteger(history.state?.[NAVIGATION_INDEX_KEY])?history.state[NAVIGATION_INDEX_KEY]:0;
   const requested=sectionFromLocation();
   if(requested)go(requested,{historyMode:'none'});
   else go('dashboard',{historyMode:'replace'});

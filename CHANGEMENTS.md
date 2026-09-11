@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.12.0 — 2026-09-11
+
+- Ajout de deux boutons **الصفحة السابقة**, en haut à droite et en bas à
+  gauche du contenu, pour revenir facilement à l'écran précédent.
+- Les boutons suivent l'historique interne de l'application, restent
+  synchronisés avec les commandes précédent/suivant du navigateur et sont
+  désactivés quand aucun écran interne précédent n'existe afin d'éviter de
+  quitter l'application par erreur.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.11.0 — 2026-09-11
 
 - L'écran **الإعدادات** réunissait cinq formulaires sur une seule page à faire

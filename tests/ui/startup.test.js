@@ -64,6 +64,24 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#appVersion')).toHaveText(require('../../package.json').version);
   await expect(page.locator('#students')).toHaveClass(/active-section/);
   await expect(page).toHaveURL(/#students$/);
+  await expect(page.locator('[data-page-back]')).toHaveCount(2);
+  await expect(page.locator('[data-page-back]').first()).toBeDisabled();
+  const [topBackBox,bottomBackBox]=await Promise.all([
+    page.locator('[data-page-back]').first().boundingBox(),
+    page.locator('[data-page-back]').last().boundingBox()
+  ]);
+  assert.ok(topBackBox.x>640,'the upper back button stays on the right');
+  assert.ok(bottomBackBox.x<640,'the lower back button stays on the left');
+  assert.ok(bottomBackBox.y>topBackBox.y,'the lower back button follows the page content');
+  await page.locator('.nav-item[data-section="fees"]').click();
+  await expect(page.locator('[data-page-back]').first()).toBeEnabled();
+  await page.locator('[data-page-back]').first().click();
+  await expect(page.locator('#students')).toHaveClass(/active-section/);
+  await expect(page).toHaveURL(/#students$/);
+  await expect(page.locator('[data-page-back]').first()).toBeDisabled();
+  await page.locator('.nav-item[data-section="fees"]').click();
+  await page.locator('[data-page-back]').last().click();
+  await expect(page.locator('#students')).toHaveClass(/active-section/);
   for (const section of ['students', 'fees', 'collections', 'staff', 'expenses', 'exams', 'reports', 'settings', 'dashboard']) {
     await page.locator(`.nav-item[data-section="${section}"]`).click();
     await expect(page.locator(`#${section}`)).toHaveClass(/active-section/);
