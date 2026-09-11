@@ -101,13 +101,13 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#departmentsTable')).toBeVisible();
   await expect(page.locator('#setRegistrationFee')).toBeHidden();
   assert.equal(await page.evaluate(() => localStorage.getItem('settingsTab')), 'departments');
-  await page.locator('.settings-tab.active').press('ArrowLeft');
+  await page.locator('#settings .settings-tab.active').press('ArrowLeft');
   // The « طبيعة العمل » list feeds the employee form's role field.
   await expect(page.locator('#staffRolesTable')).toBeVisible();
   await expect(page.locator('#staffRolesTable tr')).toHaveCount(6);
   await expect(page.locator('#staffRolesTable')).toContainText('معلم');
   assert.deepEqual(await page.locator('#teacherRole option').allTextContents(),['أستاذ','معلم','محاسب','مراقب','عامل يدوي','أخرى']);
-  await page.locator('.settings-tab.active').press('ArrowLeft');
+  await page.locator('#settings .settings-tab.active').press('ArrowLeft');
   await expect(page.locator('#setSchoolName')).toBeVisible();
   await page.locator('.nav-item[data-section="dashboard"]').click();
   await expect(page.locator('#sStudents')).toHaveText('1');
@@ -131,6 +131,16 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.match(workbookBytes.toString(),/طالب تجريبي/);
   assert.ok(!workbookBytes.toString().includes('ولي الأمر'),'العمود غير المحدد لا يُصدَّر');
   await page.locator('.nav-item[data-section="staff"]').click();
+  // The staff page shows one screen at a time: payroll sheet first, then the
+  // registry, salaries and advances behind tabs; the last opened tab is kept.
+  await expect(page.locator('#payrollPanel')).toBeVisible();
+  await expect(page.locator('#staffPanel-registry')).toBeHidden();
+  await expect(page.locator('#staffPanel-salaries')).toBeHidden();
+  await expect(page.locator('#staffPanel-advances')).toBeHidden();
+  await page.locator('[data-staff-tab="registry"]').click();
+  await expect(page.locator('#staffPanel-registry')).toBeVisible();
+  await expect(page.locator('#payrollPanel')).toBeHidden();
+  assert.equal(await page.evaluate(() => localStorage.getItem('staffTab')), 'registry');
   await page.locator('#teachersTable .btn-edit').click();
   await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#teacherName')).toHaveValue('موظف تجريبي');
@@ -154,6 +164,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#teacherSearch').fill('');
   // The monthly payroll sheet lists every employee with the state of the month
   // and pre-fills the payment form with the remaining amount.
+  await page.locator('[data-staff-tab="payroll"]').click();
   await page.locator('#payrollMonth').selectOption('أكتوبر');
   const payrollRow=page.locator('#payrollTable tr[data-teacher-id]');
   await expect(payrollRow).toHaveCount(1);
@@ -164,6 +175,9 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#payrollTable tr[data-teacher-id]')).toHaveCount(0);
   await page.locator('#payrollPanel [data-payroll-status="all"]').click();
   await payrollRow.getByText('صرف المتبقي').click();
+  // « صرف المتبقي » jumps to the salaries screen with the form pre-filled.
+  await expect(page.locator('#staffPanel-salaries')).toBeVisible();
+  await expect(page.locator('#payrollPanel')).toBeHidden();
   await expect(page.locator('#salaryMonth')).toHaveValue('أكتوبر');
   await expect(page.locator('#salaryAmount')).toHaveValue('2000');
   await page.locator('#salaryTeacherSearch').fill('غير موجود');

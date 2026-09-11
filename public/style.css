@@ -283,6 +283,10 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .settings-tab:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 [data-settings-panel]:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 @media(max-width:700px){.settings-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.settings-tab{white-space:nowrap}}
+/* Onglets de l'écran الموظفون : mêmes composants, couleur de la rubrique. */
+.staff-tabs .settings-tab:hover{border-color:var(--nav-staff);color:var(--nav-staff)}
+.staff-tabs .settings-tab.active{background:var(--nav-staff);border-color:var(--nav-staff);color:#fff}
+[data-staff-panel]:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 
 /* The fee form: one line per due, three answers each, and what a save records. */
 .fee-preview{grid-column:1/-1;margin:0;padding:12px 14px;border:1px solid var(--border-panel);border-left:4px solid var(--nav-fees);border-radius:var(--radius-md);background:var(--surface-soft);color:var(--text-soft);font-size:13px;line-height:1.7}

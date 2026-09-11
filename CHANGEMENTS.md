@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.30.0 — 2026-09-11
+
+- Écran « الموظفون والرواتب » : les quatre blocs (كشف رواتب الشهر, سجل
+  الموظفين, الرواتب الشهرية, السلف) sont présentés un à la fois derrière une
+  liste d'onglets, comme dans الإعدادات ; le dernier onglet ouvert est retenu
+  sur l'appareil, la liste se parcourt aux flèches.
+- « صرف المتبقي » et « سلفة » depuis le كشف du mois ouvrent automatiquement
+  l'onglet correspondant avec le formulaire pré-rempli.
+- Technique : `createTabs()` partagé dans `public/core.js`, utilisé par
+  `settings.js` et `staff.js` ; panneaux `[data-staff-panel]`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.29.2 — 2026-09-11
 
 - Les rappels de montants sous les formulaires de paie et de سلفة (استحقاق,

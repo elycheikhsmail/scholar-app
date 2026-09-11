@@ -228,6 +228,48 @@ function followLocation(){
 window.addEventListener('hashchange',followLocation);
 window.addEventListener('popstate',followLocation);
 
+// Onglets internes à un écran (الإعدادات, الموظفون) : un seul panneau visible à
+// la fois, dernier onglet retenu sur l'appareil, parcours aux flèches.
+function createTabs({nav,tabAttr,panelAttr,storageKey}){
+  const list=document.querySelector(nav);
+  const names=[...list.querySelectorAll(`[data-${tabAttr}]`)].map(tab=>tab.getAttribute(`data-${tabAttr}`));
+  let current=names[0];
+  try{
+    const saved=localStorage.getItem(storageKey);
+    if(names.includes(saved))current=saved;
+  }catch{}
+  function show(name=current,{focus=false}={}){
+    if(!names.includes(name))name=names[0];
+    current=name;
+    try{localStorage.setItem(storageKey,name)}catch{}
+    for(const button of list.querySelectorAll(`[data-${tabAttr}]`)){
+      const active=button.getAttribute(`data-${tabAttr}`)===name;
+      button.classList.toggle('active',active);
+      button.setAttribute('aria-selected',String(active));
+      // Roving tabindex: la liste d'onglets se parcourt aux flèches, pas au Tab.
+      button.tabIndex=active?0:-1;
+      if(active&&focus)button.focus();
+    }
+    for(const panel of document.querySelectorAll(`[data-${panelAttr}]`)){
+      panel.classList.toggle('hidden',panel.getAttribute(`data-${panelAttr}`)!==name);
+    }
+  }
+  list.addEventListener('click',event=>{
+    const button=event.target.closest(`[data-${tabAttr}]`);
+    if(button)show(button.getAttribute(`data-${tabAttr}`));
+  });
+  list.addEventListener('keydown',event=>{
+    const step={ArrowLeft:1,ArrowRight:-1,Home:'first',End:'last'}[event.key];
+    if(step===undefined)return;
+    event.preventDefault();
+    const index=names.indexOf(current);
+    const next=step==='first'?0:step==='last'?names.length-1
+      :(index+step+names.length)%names.length;
+    show(names[next],{focus:true});
+  });
+  return {show,get current(){return current}};
+}
+
 function showEditForm(sectionId,formId,focusId){
   if(!$(sectionId)?.classList.contains('active-section'))go(sectionId);
   requestAnimationFrame(()=>{

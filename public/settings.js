@@ -4,41 +4,7 @@
 // Cinq formulaires sur un même écran devenaient une page à faire défiler, où le
 // bloc des frais se lisait à peine. Ils sont maintenant présentés un à la fois,
 // derrière une liste d'onglets ; le dernier onglet ouvert est retenu.
-const SETTINGS_TABS=[...document.querySelectorAll('[data-settings-tab]')].map(tab=>tab.dataset.settingsTab);
-let settingsTab=SETTINGS_TABS[0];
-try{
-  const saved=localStorage.getItem('settingsTab');
-  if(SETTINGS_TABS.includes(saved))settingsTab=saved;
-}catch{}
-function showSettingsTab(name,{focus=false}={}){
-  if(!SETTINGS_TABS.includes(name))name=SETTINGS_TABS[0];
-  settingsTab=name;
-  try{localStorage.setItem('settingsTab',name)}catch{}
-  for(const button of document.querySelectorAll('[data-settings-tab]')){
-    const active=button.dataset.settingsTab===name;
-    button.classList.toggle('active',active);
-    button.setAttribute('aria-selected',String(active));
-    // Roving tabindex: la liste d'onglets se parcourt aux flèches, pas au Tab.
-    button.tabIndex=active?0:-1;
-    if(active&&focus)button.focus();
-  }
-  for(const panel of document.querySelectorAll('[data-settings-panel]')){
-    panel.classList.toggle('hidden',panel.dataset.settingsPanel!==name);
-  }
-}
-document.querySelector('.settings-tabs').addEventListener('click',event=>{
-  const button=event.target.closest('[data-settings-tab]');
-  if(button)showSettingsTab(button.dataset.settingsTab);
-});
-document.querySelector('.settings-tabs').addEventListener('keydown',event=>{
-  const step={ArrowLeft:1,ArrowRight:-1,Home:'first',End:'last'}[event.key];
-  if(step===undefined)return;
-  event.preventDefault();
-  const index=SETTINGS_TABS.indexOf(settingsTab);
-  const next=step==='first'?0:step==='last'?SETTINGS_TABS.length-1
-    :(index+step+SETTINGS_TABS.length)%SETTINGS_TABS.length;
-  showSettingsTab(SETTINGS_TABS[next],{focus:true});
-});
+const settingsTabs=createTabs({nav:'#settings .settings-tabs',tabAttr:'settings-tab',panelAttr:'settings-panel',storageKey:'settingsTab'});
 
 $('settingsForm').onsubmit=async e=>{
   e.preventDefault();
@@ -72,7 +38,7 @@ $('settingsForm').onsubmit=async e=>{
 // Les intitulés officiels ont une valeur par défaut : une base vide doit tout de
 // même imprimer un en-tête complet.
 function renderSettings(){
-  showSettingsTab(settingsTab);
+  settingsTabs.show();
   const fields={
     applicationMode:state.settings.applicationMode||'production',
     setSchoolName:state.settings.schoolName,

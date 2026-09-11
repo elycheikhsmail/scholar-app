@@ -245,7 +245,13 @@
     <label class="notes-field">ملاحظات<textarea id="teacherNotes"></textarea></label>
     <div class="form-actions"><button class="primary">حفظ الموظف</button><button type="button" class="secondary" id="cancelTeacher">إلغاء</button></div>
   </form></dialog>
-  <div class="panel" id="payrollPanel">
+  <nav class="settings-tabs staff-tabs" role="tablist" aria-label="شاشات الموظفين والرواتب">
+    <button type="button" class="settings-tab" role="tab" id="staffTab-payroll" data-staff-tab="payroll" aria-controls="payrollPanel" aria-selected="false" tabindex="-1">كشف رواتب الشهر</button>
+    <button type="button" class="settings-tab" role="tab" id="staffTab-registry" data-staff-tab="registry" aria-controls="staffPanel-registry" aria-selected="false" tabindex="-1">سجل الموظفين</button>
+    <button type="button" class="settings-tab" role="tab" id="staffTab-salaries" data-staff-tab="salaries" aria-controls="staffPanel-salaries" aria-selected="false" tabindex="-1">الرواتب الشهرية</button>
+    <button type="button" class="settings-tab" role="tab" id="staffTab-advances" data-staff-tab="advances" aria-controls="staffPanel-advances" aria-selected="false" tabindex="-1">السلف</button>
+  </nav>
+  <div role="tabpanel" tabindex="0" id="payrollPanel" data-staff-panel="payroll" aria-labelledby="staffTab-payroll" class="hidden panel">
     <div class="ledger-period-tools payroll-tools">
       <label class="payroll-month">الشهر<select id="payrollMonth"></select></label>
       <div class="ledger-period-filters" role="group" aria-label="تصفية كشف الرواتب حسب الحالة">
@@ -260,7 +266,7 @@
     <h3 class="table-title" id="payrollTitle">كشف رواتب الشهر</h3>
     <div class="table-scroll"><table aria-labelledby="payrollTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="payrollTable"></tbody></table></div>
   </div>
-  <div class="panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3>
+  <div role="tabpanel" tabindex="0" id="staffPanel-registry" data-staff-panel="registry" aria-labelledby="staffTab-registry" class="hidden panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3>
     <div class="fee-toolbar staff-toolbar">
       <label>بحث<input id="teacherSearch" type="search" placeholder="الاسم أو الهاتف"></label>
       <label>طبيعة العمل<select id="teacherRoleFilter"><option value="">الكل</option></select></label>
@@ -269,7 +275,7 @@
     <p id="teacherCount" class="totals-line" role="status" aria-live="polite"></p>
     <div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الحالة</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>الهاتف</th><th>آخر دفعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
-  <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form">
+  <div role="tabpanel" tabindex="0" id="staffPanel-salaries" data-staff-panel="salaries" aria-labelledby="staffTab-salaries" class="hidden panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form">
     <input id="salaryTeacherSearch" type="search" placeholder="ابحث عن موظف بالاسم" aria-label="بحث عن موظف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>
   </form><div id="salaryDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3>
   <div class="fee-toolbar staff-toolbar">
@@ -299,7 +305,7 @@
     </form>
   </dialog>
 
-  <div class="panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required aria-label="الموظف"></select><select id="advanceMonth" required aria-label="الشهر"></select><span id="advanceHoursWrap" class="hidden-field"><input id="advanceHours" type="number" min="0" placeholder="عدد ساعات الشهر" class="hours-field"></span><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date" aria-label="تاريخ السلفة"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div id="advanceDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3>
+  <div role="tabpanel" tabindex="0" id="staffPanel-advances" data-staff-panel="advances" aria-labelledby="staffTab-advances" class="hidden panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required aria-label="الموظف"></select><select id="advanceMonth" required aria-label="الشهر"></select><span id="advanceHoursWrap" class="hidden-field"><input id="advanceHours" type="number" min="0" placeholder="عدد ساعات الشهر" class="hours-field"></span><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date" aria-label="تاريخ السلفة"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div id="advanceDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3>
   <div class="fee-toolbar staff-toolbar">
     <label>الموظف<select id="advanceLogTeacher"><option value="">الكل</option></select></label>
     <label>الشهر<select id="advanceLogMonth"><option value="">كل الأشهر</option></select></label>

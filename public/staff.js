@@ -7,6 +7,11 @@
 function roleNeedsFixed(role){return role!=='أستاذ'}
 // Le champ « طبيعة العمل » relit la liste des réglages ; la valeur en cours
 // (ou le rôle d'une fiche ancienne absent de la liste) est conservée.
+// L'écran regroupait كشف الشهر, le registre, la paie et les avances à la suite :
+// ils sont présentés un à la fois derrière des onglets, le dernier ouvert retenu.
+const staffTabs=createTabs({nav:'#staff .staff-tabs',tabAttr:'staff-tab',panelAttr:'staff-panel',storageKey:'staffTab'});
+function showStaffTab(name){staffTabs.show(name)}
+
 function renderStaffRoleOptions(selected){
   const select=$('teacherRole');
   const current=selected??select.value;
@@ -173,6 +178,7 @@ $('teacherSearch').oninput=debounce(renderTeachers,150);
 $('teacherRoleFilter').onchange=renderTeachers;
 $('teacherStatusFilter').onchange=renderTeachers;
 function renderTeachers(){
+  staffTabs.show();
   if(!state.data)return;
   renderTeacherRoleFilter();
   const list=filteredTeachers();
@@ -415,6 +421,7 @@ window.prefillSalaryForm=(teacherId,focusHours=false)=>{
   updateSalaryHoursVisibility();
   if(t.role==='أستاذ')$('salaryHours').value=latestHours(t.id,$('salaryMonth').value)||'';
   updateSalaryHint();
+  showStaffTab('salaries');
   $('salaryForm').scrollIntoView({behavior:'smooth',block:'center'});
   (focusHours&&t.role==='أستاذ'?$('salaryHours'):$('salaryAmount')).focus();
 };
@@ -424,6 +431,7 @@ window.prefillAdvanceForm=teacherId=>{
   $('advanceTeacher').value=String(t.id);
   $('advanceMonth').value=$('payrollMonth').value;
   updateAdvanceHint();
+  showStaffTab('advances');
   $('advanceForm').scrollIntoView({behavior:'smooth',block:'center'});
   $('advanceAmount').focus();
 };
