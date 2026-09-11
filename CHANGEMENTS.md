@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.29.2 — 2026-09-11
+
+- Les rappels de montants sous les formulaires de paie et de سلفة (استحقاق,
+  سلف, المتبقي قبل الدفعة, المتاح) s'affichent en gras et en grand, dans un
+  encadré mis en évidence ; masqués quand ils sont vides.
+- Technique : classe `.due-info` (`public/style.css`) sur `#salaryDueInfo`
+  et `#advanceDueInfo`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.29.1 — 2026-09-11
 
 - Formulaire de paie : la touche `Esc` vide le formulaire et remet le mois et

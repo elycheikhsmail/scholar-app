@@ -342,3 +342,6 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .staff-toolbar{margin-bottom:10px;flex-wrap:wrap}
 .staff-toolbar label{width:220px}
 .staff-status-stopped{color:var(--status-exempt);font-weight:700}
+/* Montants du mois sous les formulaires de paie et d'avance : lus à chaque saisie. */
+.due-info{font-size:18px;font-weight:900;line-height:1.8;color:var(--text);background:#fff7e6;border:1px solid #f3d9a4;border-right:5px solid var(--orange)}
+.due-info:empty{display:none}
