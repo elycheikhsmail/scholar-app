@@ -32,7 +32,8 @@ No bundler or framework. UI text is Arabic (RTL); preserve existing wording.
 | Startup, replacement session | `public/app.js` |
 | Markup / styles | `public/index.html` / `public/style.css` |
 | Desktop lifecycle / bridge | `main.js` / `preload.js` |
-| Demo data | `scripts/seed-demo.js`, `tests/seed-demo.test.js` |
+| Demo data (production) | `scripts/seed-demo.js`, `tests/seed-demo.test.js` |
+| Test database, February in progress | `scripts/seed-testing.js`, `tests/seed-testing.test.js` |
 
 Browser files are classic scripts sharing global bindings. Preserve the explicit
 order in `index.html`: fees engine, core, feature scripts, app startup last.

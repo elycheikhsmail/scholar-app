@@ -24,7 +24,15 @@ let server = null;
 let actualPort = DEFAULT_PORT;
 let applicationMode = 'production';
 let modeGeneration = 0;
-function modeInfo() { return { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج', version:APP_VERSION }; }
+function modeInfo() {
+  const info = { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج', version:APP_VERSION };
+  // Only a test database proposes a test date; production always runs on the real day.
+  if (applicationMode === 'test') {
+    const { testDate, testDateIssued } = db.publicSettings();
+    if (testDate) Object.assign(info, { testDate, testDateIssued });
+  }
+  return info;
+}
 function publicSettings() { return { ...db.publicSettings(), applicationMode, version:APP_VERSION }; }
 function modeFile() { return path.join(baseDir(), 'database', 'application-mode.json'); }
 function readMode() {

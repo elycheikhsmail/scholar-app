@@ -209,8 +209,22 @@ async function checkApplicationMode() {
   try {
     const info = await api('/mode');
     if (state.token && state.settings?.applicationMode && state.settings.applicationMode !== info.mode) return location.reload();
+    if (adoptTestDate(info)) return location.reload();
     applyApplicationMode(info.mode);
   } catch { /* Keep the last confirmed label while disconnected. */ }
+}
+// La base de test peut proposer sa propre date (scripts/seed-testing.js) :
+// adoptée une fois par émission sur cet appareil, puis modifiable ou effaçable
+// comme une date saisie à la main.
+function adoptTestDate(info) {
+  if (info.mode !== 'test' || !/^\d{4}-\d{2}-\d{2}$/.test(info.testDate || '')) return false;
+  try {
+    const issued = `${info.testDate}@${info.testDateIssued || ''}`;
+    if (localStorage.getItem('testDateAdopted') === issued) return false;
+    localStorage.setItem('testDateAdopted', issued);
+    localStorage.setItem(SIMULATED_DATE_KEY, info.testDate);
+    return true;
+  } catch { return false; }
 }
 // Date de test : mémorisée sur l'appareil, l'écran se recharge pour que tout
 // (mois par défaut, échéances, bandeau) reparte de cette date.

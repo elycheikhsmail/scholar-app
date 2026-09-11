@@ -295,6 +295,26 @@ test('testing database, settings and reset backups stay separate from production
   assert.throws(()=>db.init(dir,{mode:'invalid'}));
 });
 
+test('batch writes many operations in one transaction and rolls all of them back on error', () => {
+  const dir = temp(); db.init(dir);
+  const result = db.batch(() => {
+    const s = db.addStudent(student);
+    db.addStudentPayment({ studentId: s.id, amount: 200, month: 'أكتوبر' });
+    return db.setTestDate('2027-02-28').testDate;
+  });
+  assert.equal(result, '2027-02-28');
+  db.close(); db.init(dir);
+  assert.equal(db.getData().studentPayments.length, 1);
+  assert.equal(db.publicSettings().testDate, '2027-02-28');
+  assert.throws(() => db.batch(() => {
+    db.addExpense({ category: 'إيجار', amount: 500 });
+    db.addStudent(student); // duplicate NNI
+  }), /مسجل مسبقًا/);
+  assert.equal(db.getData().expenses.length, 0);
+  assert.throws(() => db.setTestDate('28/02/2027'), /YYYY-MM-DD/);
+  assert.equal(db.setTestDate('').testDate, '');
+});
+
 test('mode API persists selection, rejects stale sessions and delayed writes, and preserves both databases', async () => {
   const dir = temp();
   copySources(dir);

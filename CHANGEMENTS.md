@@ -3,6 +3,23 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.34.0 — 2026-09-11
+
+- Nouveau générateur `npm run seed:testing` (`scripts/seed-testing.js`) : reconstruit
+  la base de test (`database/testing`) comme une année scolaire en cours au dernier
+  jour de février — les 18 niveaux avec les frais de l'école, 20 à 50 élèves par
+  niveau, reçus des mois écoulés (majorité à jour, retards, paiements partiels,
+  impayés), معلمون à 6 000/mois, أساتذة à 150/heure, employés d'appui, salaires,
+  avances, dépenses et deux examens. Sauvegarde préalable, paramètres et
+  identifiants conservés, production intouchée.
+- La base de test porte sa date de test : ouverte en وضع التجريب, l'application
+  adopte cette date une fois sur l'appareil (bandeau ⚠️ تاريخ تجريبي), puis elle se
+  modifie ou s'efface comme avant.
+- Technique : `db.batch(fn)` regroupe des milliers d'opérations dans une seule
+  transaction (1 s au lieu de 2 min) ; `db.setTestDate`, `testDate` dans
+  `GET /api/mode` en mode test, adoption dans `public/settings.js`.
+- Vérification : `npm run check`, `npm test`, `npm run test:ui`.
+
 ## 1.33.1 — 2026-09-11
 
 - Formulaire de paie : quand la recherche d'employé ne trouve personne (ou

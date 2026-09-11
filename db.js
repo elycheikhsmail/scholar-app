@@ -43,6 +43,9 @@ function dropLegacyStudentFees(student) {
 }
 
 let touched;
+// While a batch runs, every operation shares one transaction and one in-memory
+// state; the writes go out once, when the batch ends.
+let batching = false;
 function readData() {
   const result = {};
   touched = new Set();
@@ -168,6 +171,7 @@ function verifyPassword(password, stored) {
 }
 
 function save(connection = sqlite, only = touched) {
+  if (batching && connection === sqlite) return;
   // The caller holds BEGIN IMMEDIATE: only changed rows are written.
   // Object.keys avoids the collection getters, which would defeat lazy loading.
   for (const key of Object.keys(data)) {
@@ -322,8 +326,22 @@ function publicSettings() {
     republic: data.settings.republic || 'الجمهورية الإسلامية الموريتانية',
     ministry: data.settings.ministry || 'وزارة التعليم',
     regional: data.settings.regional || 'الإدارة الجهوية للتعليم',
-    staffRoles: staffRoles()
+    staffRoles: staffRoles(),
+    testDate: clean(data.settings.testDate),
+    testDateIssued: clean(data.settings.testDateIssued)
   };
+}
+
+// A test database can carry the day it was prepared for (scripts/seed-testing.js
+// dates every record up to it). The browser adopts it once per issue on each
+// device, so the balances and dues open on the day the data was made for.
+function setTestDate(date) {
+  const value = clean(date);
+  if (value && !/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error('تاريخ الاختبار يجب أن يكون بصيغة YYYY-MM-DD.');
+  data.settings.testDate = value;
+  data.settings.testDateIssued = value ? new Date().toISOString() : '';
+  save();
+  return publicSettings();
 }
 
 function getData() { return clone(data); }
@@ -795,20 +813,24 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,checkLogin,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.
 const readOperations = new Set(['getData', 'getCoreData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData']);
 for (const [name, operation] of Object.entries(module.exports)) {
   if (name === 'init') continue;
+  const run = args => {
+    const backupPath = name === 'clearOperationalData' ? createBackup() : null;
+    return operation(...(backupPath ? [backupPath] : args));
+  };
   module.exports[name] = (...args) => {
     if (!sqlite) throw new Error('La base de données doit être initialisée.');
+    if (batching) return run(args);
     sqlite.exec(readOperations.has(name) ? 'BEGIN' : 'BEGIN IMMEDIATE');
     try {
       data = readData();
-      const backupPath = name === 'clearOperationalData' ? createBackup() : null;
-      const result = operation(...(backupPath ? [backupPath] : args));
+      const result = run(args);
       sqlite.exec('COMMIT');
       return result;
     } catch (error) {
@@ -818,4 +840,26 @@ for (const [name, operation] of Object.entries(module.exports)) {
     }
   };
 }
+// Many operations in one transaction: one read, one write, one fsync instead
+// of one of each per record. An error anywhere rolls the whole batch back.
+// Meant for the seeding scripts, which record thousands of receipts in a row.
+function batch(fn) {
+  if (!sqlite) throw new Error('La base de données doit être initialisée.');
+  if (batching) return fn();
+  sqlite.exec('BEGIN IMMEDIATE');
+  try {
+    data = readData();
+    batching = true;
+    let result;
+    try { result = fn(); } finally { batching = false; }
+    save();
+    sqlite.exec('COMMIT');
+    return result;
+  } catch (error) {
+    sqlite.exec('ROLLBACK');
+    data = undefined;
+    throw error;
+  }
+}
+module.exports.batch = batch;
 module.exports.close = close;

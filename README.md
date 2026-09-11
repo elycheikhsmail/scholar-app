@@ -229,6 +229,31 @@ Pour préparer un autre répertoire local : `node scripts/seed-demo.js /chemin/d
 
 Test du générateur et de la sauvegarde : `node tests/seed-demo.test.js`.
 
+### Base de test : une année en cours (fin février)
+
+```bash
+npm run seed:testing          # ou : node scripts/seed-testing.js [répertoire]
+```
+
+À lancer **application fermée**. Le script reconstruit `database/testing/school-data.sqlite`
+(sauvegarde préalable dans `database/testing/backups/`, paramètres et identifiants conservés,
+base de production intouchée) :
+
+- les 18 niveaux avec leurs frais mensuels : الحضانة 400, التهجي 700, التحضيري et 2AF–6AF 800,
+  1AS–2AS 1000, 3AS–4AS 1400, 5C/5D/6C/6D 2000, 7C/7D 2500 ;
+- 20 à 50 élèves par niveau (environ 600), quelques inscriptions tardives, départs et remises ;
+- les reçus des mois écoulés jusqu'à février : la majorité des familles est à jour jusqu'en
+  janvier, les autres ont des mois en retard, des paiements partiels ou rien du tout ;
+- un معلم par classe de maternelle/primaire (6 000 par mois), des أساتذة au collège/lycée
+  (150 l'heure), trois employés d'appui ; salaires d'octobre à janvier, quelques avances et
+  paiements partiels, une partie de février déjà payée le 28 ;
+- des dépenses mensuelles et deux examens (décembre, février).
+
+La base de test enregistre sa **date de test** (dernier jour de février de l'année scolaire) :
+à l'ouverture en وضع التجريب, l'application adopte cette date une fois sur l'appareil,
+comme si elle avait été saisie dans الإعدادات ← وضع الاستخدام ; elle reste modifiable ou
+effaçable. Même graine aléatoire, même base à chaque exécution.
+
 ## Modes production et test
 
 Dans **الإعدادات → onglet وضع الاستخدام**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.

@@ -138,6 +138,22 @@ test('browser scripts support login, all sections, student fees and session rest
   await login();
   await expect(page.locator('#today')).not.toContainText('تاريخ تجريبي');
   assert.equal(await page.evaluate(() => localStorage.getItem('simulatedDate')), null);
+  // A test database prepared by scripts/seed-testing.js proposes its own date:
+  // adopted once on this device, still clearable, and not proposed again.
+  responses['/api/mode'] = { mode: 'test', testDate: '2027-02-28', testDateIssued: '2026-09-11T00:00:00.000Z' };
+  await page.reload();
+  await expect(page.locator('#loginModeBadge')).toHaveText('نسخة للتجريب فقط');
+  await login();
+  await expect(page.locator('#today')).toHaveText('⚠️ تاريخ تجريبي: الأحد، 28 فبراير 2027');
+  await expect(page.locator('#feeMonth')).toHaveValue('فبراير');
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await page.locator('[data-settings-tab="mode"]').click();
+  await page.locator('#clearSimulatedDate').click();
+  await login();
+  await expect(page.locator('#today')).not.toContainText('تاريخ تجريبي');
+  responses['/api/mode'] = { mode: 'production' };
+  await page.reload();
+  await login();
   await page.locator('.nav-item[data-section="dashboard"]').click();
   await expect(page.locator('#sStudents')).toHaveText('1');
   await page.locator('.nav-item[data-section="students"]').click();
