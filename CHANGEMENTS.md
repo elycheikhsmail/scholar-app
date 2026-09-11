@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.42.0 — 2026-09-11
+
+- Nouveau `npm run fees:apply` (`scripts/apply-fees.js`) : charge les frais
+  mensuels officiels des 18 niveaux dans la base de production — niveau présent
+  mis à jour (élèves conservés), niveau absent ajouté, autres niveaux laissés
+  et listés ; sauvegarde préalable ; `--dry-run` pour l'aperçu.
+- La liste officielle vit dans `scripts/official-fees.js`, partagée avec le
+  générateur de la base de test.
+- Vérification : `npm run check`, `npm test`.
+
 ## 1.41.0 — 2026-09-11
 
 - Formulaire des dépenses (المصروفات) : même signalement visuel des erreurs —

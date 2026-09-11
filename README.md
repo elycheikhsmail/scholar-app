@@ -229,13 +229,28 @@ Pour préparer un autre répertoire local : `node scripts/seed-demo.js /chemin/d
 
 Test du générateur et de la sauvegarde : `node tests/seed-demo.test.js`.
 
+### Frais officiels dans la base de production
+
+```bash
+npm run fees:apply -- --dry-run   # aperçu, rien n'est écrit
+npm run fees:apply                # ou : node scripts/apply-fees.js [répertoire] [--dry-run]
+```
+
+Charge dans `database/school-data.sqlite` les frais mensuels officiels des 18 niveaux
+(`scripts/official-fees.js` : الحضانة 400, التهجي 700, التحضيري et 2AF–6AF 800, 1AS–2AS 1000,
+3AS–4AS 1400, 5C/5D/6C/6D 2000, 7C/7D 2500). Un niveau déjà présent garde sa fiche et ses
+élèves et prend le frais officiel ; un niveau absent est ajouté ; les autres niveaux sont
+laissés tels quels et listés dans le rapport (`kept`). Sauvegarde préalable dans
+`database/backups/before-fees-….sqlite`. L'application peut rester ouverte ; recharger la
+page ensuite. Le générateur de test réutilise la même liste.
+
 ### Base de test : une année en cours (fin février)
 
 ```bash
 npm run seed:testing          # ou : node scripts/seed-testing.js [répertoire]
 ```
 
-À lancer **application fermée**. Le script reconstruit `database/testing/school-data.sqlite`
+Le script reconstruit `database/testing/school-data.sqlite` (l'application peut rester ouverte ; recharger la page ensuite)
 (sauvegarde préalable dans `database/testing/backups/`, paramètres et identifiants conservés,
 base de production intouchée) :
 

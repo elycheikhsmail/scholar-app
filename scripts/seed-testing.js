@@ -4,8 +4,8 @@
 // (some families still owing), staff with their salaries and advances,
 // expenses and two exams. Production data is never touched.
 //
-// Run it with the application closed: the server keeps the open database in
-// memory and would overwrite what this script writes.
+// The application may stay open (every server operation re-reads the database
+// inside its own transaction); reload the page afterwards.
 //   node scripts/seed-testing.js            → database/testing of this folder
 //   node scripts/seed-testing.js <dossier>  → another base directory (Electron: userData)
 const fs = require('node:fs');
@@ -13,27 +13,11 @@ const path = require('node:path');
 const db = require('../db');
 const dues = require('../public/fees.js');
 
-// Fees are per level; the stage decides the pupils' ages and which staff teach it.
-const LEVELS = [
-  { name: 'الحضانة', fee: 400, stage: 'روضة', age: 3 },
-  { name: 'التهجي', fee: 700, stage: 'روضة', age: 4 },
-  { name: 'التحضيري', fee: 800, stage: 'ابتدائي', age: 5 },
-  { name: '2AF', fee: 800, stage: 'ابتدائي', age: 7 },
-  { name: '3AF', fee: 800, stage: 'ابتدائي', age: 8 },
-  { name: '4AF', fee: 800, stage: 'ابتدائي', age: 9 },
-  { name: '5AF', fee: 800, stage: 'ابتدائي', age: 10 },
-  { name: '6AF', fee: 800, stage: 'ابتدائي', age: 11 },
-  { name: '1AS', fee: 1000, stage: 'إعدادي', age: 12 },
-  { name: '2AS', fee: 1000, stage: 'إعدادي', age: 13 },
-  { name: '3AS', fee: 1400, stage: 'إعدادي', age: 14 },
-  { name: '4AS', fee: 1400, stage: 'إعدادي', age: 15 },
-  { name: '5C', fee: 2000, stage: 'ثانوي', age: 16 },
-  { name: '5D', fee: 2000, stage: 'ثانوي', age: 16 },
-  { name: '6C', fee: 2000, stage: 'ثانوي', age: 17 },
-  { name: '6D', fee: 2000, stage: 'ثانوي', age: 17 },
-  { name: '7C', fee: 2500, stage: 'ثانوي', age: 18 },
-  { name: '7D', fee: 2500, stage: 'ثانوي', age: 18 }
-];
+// Official levels and fees (scripts/official-fees.js); the age decides the
+// pupils' birth years.
+const { OFFICIAL_LEVELS } = require('./official-fees');
+const AGES = { 'الحضانة': 3, 'التهجي': 4, 'التحضيري': 5, '2AF': 7, '3AF': 8, '4AF': 9, '5AF': 10, '6AF': 11, '1AS': 12, '2AS': 13, '3AS': 14, '4AS': 15, '5C': 16, '5D': 16, '6C': 17, '6D': 17, '7C': 18, '7D': 18 };
+const LEVELS = OFFICIAL_LEVELS.map(level => ({ ...level, age: AGES[level.name] ?? 12 }));
 const PRIMARY_STAGES = ['روضة', 'ابتدائي'];
 const TEACHER_HOURLY_RATE = 150;   // أستاذ : paid by the hour
 const INSTRUCTOR_SALARY = 6000;    // معلم : fixed monthly salary
