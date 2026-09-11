@@ -143,6 +143,18 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#rSalaries')).toHaveText('3,000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-10-31');
   await expect(page.locator('#departmentDuesInfo')).toContainText('2026-10-31');
+  // The print button reproduces the displayed period in the shared A4 window.
+  const printedReport=await page.evaluate(()=>{
+    let printed={};const original=window.printWindow;
+    window.printWindow=options=>{printed=options};
+    document.getElementById('printReport').click();
+    window.printWindow=original;
+    return printed;
+  });
+  assert.equal(printedReport.title,'التقرير المالي — شهر أكتوبر');
+  assert.match(printedReport.body,/الرواتب المدفوعة<\/td><td>3,000/);
+  assert.match(printedReport.body,/إجمالي الخارج<\/td><td>3,000/);
+  assert.match(printedReport.body,/ملخص المستحقات حسب القسم/);
   await page.locator('#reportMonth').selectOption('__year__');
   await expect(page.locator('#rOut')).toHaveText('3,000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-12-15');

@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.35.1 — 2026-09-11
+
+- التقارير : bouton « 🖨️ طباعة التقرير ». Imprime sur A4 le rapport du mois
+  affiché (ou de l'année) : synthèse dépôt / salaires / avances / dépenses /
+  sortie / net, dépenses par nature, créances par classe et principaux débiteurs.
+- Technique : `currentReport` dans `public/reports.js`, `openPrintWindow` de
+  `print.js` ; `h3` ajouté au style d'impression partagé.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.35.0 — 2026-09-11
 
 - التقارير : rapports mensuels. Un sélecteur « الشهر » propose chaque mois

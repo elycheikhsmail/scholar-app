@@ -167,7 +167,8 @@ function renderDuesReports(period){
     <td>${money(grand.late)}</td>
   </tr>`:'<tr><td colspan="6">لا يوجد طلاب.</td></tr>';
   $('departmentDuesTable').innerHTML=departmentRows+grandRow;
-  $('departmentDuesInfo').textContent=`المستحقات كما كانت بتاريخ ${western(period.end)}: الرسوم المستحقة حتى ذلك اليوم والدفعات المسجلة قبله.`;
+  const duesInfo=`المستحقات كما كانت بتاريخ ${western(period.end)}: الرسوم المستحقة حتى ذلك اليوم والدفعات المسجلة قبله.`;
+  $('departmentDuesInfo').textContent=duesInfo;
   // Les vingt comptes qui doivent le plus, du plus lourd au plus léger.
   const debtors=accounts.filter(a=>a.ledger.outstanding>0)
     .sort((a,b)=>b.ledger.outstanding-a.ledger.outstanding)
@@ -182,6 +183,7 @@ function renderDuesReports(period){
     <td class="overdue-strong">${money(ledger.outstanding)}</td>
   </tr>`).join('');
   $('topDebtorsTable').innerHTML=debtorRows||'<tr><td colspan="7">لا توجد مستحقات غير مسددة.</td></tr>';
+  return {duesInfo,departmentTable:$('departmentDuesTable').innerHTML,debtorTable:$('topDebtorsTable').innerHTML};
 }
 
 function renderReports(){
@@ -203,5 +205,34 @@ function renderReports(){
   const isYear=period.value===YEAR_PERIOD;
   $('reportBreakdownTitle').textContent=isYear?'تفصيل السنة الدراسية':`تفصيل شهر ${period.label}`;
   $('reportPeriodInfo').textContent=`${isYear?'السنة الدراسية':`شهر ${period.label}`}: ${period.start?`من ${western(period.start)} `:'من بداية السنة '}إلى ${western(period.end)} — الدخل والخارج بحسب تاريخ التسجيل الفعلي للدفعات والمصروفات.`;
-  renderDuesReports(period);
+  const dues=renderDuesReports(period);
+  // Ce que le bouton d'impression reproduit : la période affichée, ni plus ni moins.
+  currentReport={period,isYear,fees,salaries,advances,expenses,out,expensesByCategory:expensesByCategory(d.expenses.filter(within)),...dues};
 }
+
+let currentReport=null;
+function expensesByCategory(expenses){
+  const totals=new Map();
+  for(const e of expenses)totals.set(e.category,(totals.get(e.category)||0)+Number(e.amount||0));
+  return [...totals.entries()].sort((a,b)=>b[1]-a[1]);
+}
+
+// Rapport imprimé (A4) : la synthèse du mois, les dépenses par nature, puis
+// les créances par classe et les principaux débiteurs, tels qu'affichés.
+$('printReport').onclick=()=>{
+  if(!currentReport)renderReports();
+  const r=currentReport;
+  const periodLabel=r.isYear?'السنة الدراسية كاملة':`شهر ${r.period.label}`;
+  const range=`${r.period.start?`من ${western(r.period.start)} `:'من بداية السنة '}إلى ${western(r.period.end)}`;
+  const line=(label,value,cls='')=>`<tr class="${cls}"><td>${label}</td><td>${money(value)}</td></tr>`;
+  const summary=`<h3>${esc(periodLabel)} — ${range}</h3><table><thead><tr><th>البند</th><th>المبلغ (أوقية)</th></tr></thead><tbody>`
+    +line('رسوم الطلاب المحصَّلة (الدخل)',r.fees,'total')
+    +line('الرواتب المدفوعة',r.salaries)+line('السلف المصروفة',r.advances)+line('المصروفات',r.expenses)
+    +line('إجمالي الخارج',r.out,'total')+line('الصافي',r.fees-r.out,'total')+'</tbody></table>';
+  const categories=r.expensesByCategory.length
+    ?`<h3>المصروفات حسب النوع</h3><table><thead><tr><th>نوع المصروف</th><th>المبلغ</th></tr></thead><tbody>${r.expensesByCategory.map(([c,v])=>line(esc(c),v)).join('')}</tbody></table>`
+    :'';
+  const dues=`<h3>ملخص المستحقات حسب القسم</h3><p>${esc(r.duesInfo)}</p><table><thead><tr><th>القسم</th><th>عدد الطلاب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>عدد المتأخرين</th></tr></thead><tbody>${r.departmentTable}</tbody></table>`
+    +`<h3>أعلى المديونين</h3><table><thead><tr><th>الطالب</th><th>القسم</th><th>ولي الأمر</th><th>الهاتف</th><th>أشهر غير مسدَّدة</th><th>أقدم استحقاق</th><th>المتبقي</th></tr></thead><tbody>${r.debtorTable}</tbody></table>`;
+  openPrintWindow(`التقرير المالي — ${periodLabel}`,`${summary}${categories}${dues}`);
+};
