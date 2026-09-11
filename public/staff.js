@@ -16,6 +16,11 @@ function renderStaffRoleOptions(selected){
   select.value=roles.includes(current)?current:(roles.includes('معلم')?'معلم':roles[0]);
 }
 
+// Un mois postérieur au mois en cours de l'année scolaire se saisit après confirmation.
+async function confirmFutureMonth(month,what){
+  if(months.indexOf(month)<=months.indexOf(currentMonth()))return true;
+  return askConfirm(`شهر ${month} لم يحل بعد. هل تريد تسجيل ${what} له مسبقًا؟`);
+}
 const salaryReceiptNo=p=>p?.receiptNo||`S-${String(p?.id||0).padStart(6,'0')}`;
 const advanceReceiptNo=a=>a?.receiptNo||`A-${String(a?.id||0).padStart(6,'0')}`;
 
@@ -84,6 +89,12 @@ $('teacherForm').onsubmit=async e=>{
     endDate:$('teacherEndDate').value,
     notes:$('teacherNotes').value
   };
+  // Un salaire ou un taux à zéro donne une estimation nulle : on le signale avant d'enregistrer.
+  if(payload.role==='أستاذ'&&!(Number(payload.hourlyRate)>0)){
+    if(!(await askConfirm('سعر الساعة غير محدد (0). سيكون استحقاق الأستاذ صفرًا حتى يُضبط. هل تريد الحفظ على هذا النحو؟')))return;
+  }else if(payload.role!=='أستاذ'&&!(Number(payload.fixedSalary)>0)){
+    if(!(await askConfirm('الراتب الشهري الثابت غير محدد (0). لن يُحسب استحقاق شهري لهذا الموظف. هل تريد الحفظ على هذا النحو؟')))return;
+  }
   try{
     const id=$('teacherId').value;
     if(id){
@@ -295,6 +306,7 @@ $('salaryForm').onsubmit=async e=>{
   const amount=Number($('salaryAmount').value)||0;
   if(amount<=0)return toast('أدخل المبلغ المدفوع.');
   // Une estimation nulle (heures non encore saisies) ne bloque pas la saisie.
+  if(!(await confirmFutureMonth(month,'دفعة راتب')))return;
   if(due>0&&available<=0){
     // Mois déjà soldé : un versement supplémentaire (prime, rappel) reste possible après confirmation.
     if(!(await askConfirm(`راتب ${t.name} لشهر ${month} مسدَّد بالكامل. هل تريد تسجيل دفعة إضافية؟`)))return;
@@ -482,20 +494,44 @@ $('printPayroll').onclick=()=>{
   openPrintWindow(`كشف رواتب شهر ${month}`,body);
 };
 
+// --- Filtres des journaux (rواتب et سلف) ----------------------------------------
+// Employé, mois et plage de dates ; les listes gardent leur sélection au rendu.
+function renderLogFilters(prefix){
+  const teacherSelect=$(`${prefix}Teacher`),monthSelect=$(`${prefix}Month`);
+  const teacherValue=teacherSelect.value,monthValue=monthSelect.value;
+  teacherSelect.innerHTML='<option value="">الكل</option>'+state.data.teachers.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  teacherSelect.value=[...teacherSelect.options].some(o=>o.value===teacherValue)?teacherValue:'';
+  if(monthSelect.options.length<=1)monthSelect.innerHTML='<option value="">كل الأشهر</option>'+months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
+  monthSelect.value=monthValue;
+}
+function logFilterMatches(prefix,record){
+  const teacher=$(`${prefix}Teacher`).value,month=$(`${prefix}Month`).value,from=$(`${prefix}From`).value,to=$(`${prefix}To`).value;
+  return (!teacher||Number(record.teacherId)===Number(teacher))
+    &&(!month||record.month===month)
+    &&(!from||String(record.date||'')>=from)&&(!to||String(record.date||'')<=to);
+}
+for(const prefix of ['salaryLog','advanceLog']){
+  const rerender=prefix==='salaryLog'?()=>renderSalary():()=>renderAdvances();
+  for(const suffix of ['Teacher','Month','From','To'])$(`${prefix}${suffix}`).onchange=rerender;
+}
+
 // --- Tableau des versements de salaire ------------------------------------------
 
+let salaryLogRows=[];
 function renderSalary(){
-  const payments=state.data.teacherPayments.map(p=>{
+  if(!state.data)return;
+  renderLogFilters('salaryLog');
+  const payments=state.data.teacherPayments.filter(p=>logFilterMatches('salaryLog',p)).map(p=>{
     const t=state.data.teachers.find(q=>q.id===p.teacherId);
     // Un versement enregistré garde son estimation ; sinon on la recalcule.
     const due=Number(p.salaryDue||salaryDue(t,p.month,p.hours,p.hourlyRate));
     return {p,t,due,adv:teacherAdvance(p.teacherId,p.month)};
   }).sort((a,b)=>b.p.id-a.p.id);
 
-  const rows=payments.map(({p,t,due,adv})=>{
+  salaryLogRows=payments.map(({p,t,due,adv})=>({p,t,due,adv,allPaid:teacherPaid(p.teacherId,p.month),rem:Math.max(0,due-adv-teacherPaid(p.teacherId,p.month))}));
+  $('salaryLogTotals').innerHTML=`<span>عدد الدفعات المعروضة: ${money(payments.length)}</span><span>إجمالي المدفوع المعروض: ${money(sumAmount(payments.map(x=>x.p)))} أوقية</span>`;
+  const rows=salaryLogRows.map(({p,t,due,adv,allPaid,rem})=>{
     // Le reste du mois tient compte de tous les versements, pas seulement celui-ci.
-    const allPaid=teacherPaid(p.teacherId,p.month);
-    const rem=Math.max(0,due-adv-allPaid);
     return `<tr>
       <td>${esc(salaryReceiptNo(p))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
@@ -508,9 +544,15 @@ function renderSalary(){
       <td class="actions"><button class="btn-pay" onclick="printSalaryReceipt(${p.id})">إيصال</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
     </tr>`;
   }).join('');
-  $('salaryTable').innerHTML=rows||'<tr><td colspan="9">لا توجد دفعات رواتب.</td></tr>';
+  $('salaryTable').innerHTML=rows||`<tr><td colspan="9">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
   renderPayroll();
 }
+$('exportSalaryLog').onclick=()=>{
+  const header=['رقم الإيصال','الموظف','طبيعة العمل','الشهر','الاستحقاق','السلف','المدفوع (هذه الدفعة)','إجمالي المدفوع للشهر','المتبقي','التاريخ','الساعة','الساعات','سعر الساعة','ملاحظات'];
+  const rows=salaryLogRows.map(({p,t,due,adv,allPaid,rem})=>[salaryReceiptNo(p),t?.name||'محذوف',t?.role||'',p.month,due,adv,Number(p.amount||0),allPaid,rem,p.date||'',p.time||'',Number(p.hours||0),Number(p.hourlyRate||0),p.notes||'']);
+  if(!rows.length)return toast('لا توجد دفعات لتصديرها.');
+  downloadXlsx(`دفعات الرواتب — ${today()}.xlsx`,'دفعات الرواتب',[header,...rows]);
+};
 
 window.editSalaryPayment=id=>{
   const p=state.data.teacherPayments.find(x=>Number(x.id)===Number(id));
@@ -623,6 +665,7 @@ $('advanceForm').onsubmit=async e=>{
   const amount=Number($('advanceAmount').value)||0;
   const available=Math.max(0,due-teacherAdvance(t.id,month)-teacherPaid(t.id,month));
   if(amount<=0)return toast('أدخل مبلغ السلفة.');
+  if(!(await confirmFutureMonth(month,'سلفة')))return;
   if(due>0&&amount>available){
     $('advanceAmount').value=available>0?String(available):'';
     $('advanceAmount').focus();
@@ -648,9 +691,13 @@ $('advanceForm').onsubmit=async e=>{
   }
 };
 
+let advanceLogRows=[];
 function renderAdvances(){
-  const rows=state.data.teacherAdvances.map(a=>{
-    const t=state.data.teachers.find(x=>x.id===a.teacherId);
+  if(!state.data)return;
+  renderLogFilters('advanceLog');
+  advanceLogRows=state.data.teacherAdvances.filter(a=>logFilterMatches('advanceLog',a)).map(a=>({a,t:state.data.teachers.find(x=>x.id===a.teacherId)}));
+  $('advanceLogTotals').innerHTML=`<span>عدد السلف المعروضة: ${money(advanceLogRows.length)}</span><span>إجمالي السلف المعروضة: ${money(sumAmount(advanceLogRows.map(x=>x.a)))} أوقية</span>`;
+  const rows=advanceLogRows.map(({a,t})=>{
     return `<tr>
       <td>${esc(advanceReceiptNo(a))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
@@ -661,9 +708,15 @@ function renderAdvances(){
       <td class="actions"><button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">إيصال</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
     </tr>`;
   }).join('');
-  $('advanceTable').innerHTML=rows||'<tr><td colspan="7">لا توجد سلف.</td></tr>';
+  $('advanceTable').innerHTML=rows||`<tr><td colspan="7">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
   renderPayroll();
 }
+$('exportAdvanceLog').onclick=()=>{
+  const header=['رقم الإيصال','الموظف','طبيعة العمل','الشهر','السلفة','التاريخ','الساعة','ملاحظات'];
+  const rows=advanceLogRows.map(({a,t})=>[advanceReceiptNo(a),t?.name||'محذوف',t?.role||'',a.month,Number(a.amount||0),a.date||'',a.time||'',a.notes||'']);
+  if(!rows.length)return toast('لا توجد سلف لتصديرها.');
+  downloadXlsx(`سلف الموظفين — ${today()}.xlsx`,'سلف الموظفين',[header,...rows]);
+};
 
 window.editAdvance=async id=>{
   if(!(await requirePassword()))return;

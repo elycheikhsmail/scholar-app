@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.29.0 — 2026-09-11
+
+- سجل دفعات الرواتب et سجل السلف : filtres par employé, mois et plage de
+  dates, totaux des lignes affichées, bouton **تصدير Excel** (numéro
+  d'إيصال, employé, mois, montants, date, heure, heures, taux, notes).
+- Garde-fous : confirmation avant d'enregistrer une paie ou une سلفة pour un
+  mois à venir ; avertissement à l'enregistrement d'un employé sans salaire
+  fixe (ou d'un أستاذ sans سعر الساعة).
+- Technique : `renderLogFilters`, `logFilterMatches`, `confirmFutureMonth`,
+  exports via `downloadXlsx` dans `public/staff.js`.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.28.0 — 2026-09-11
 
 - **سجل الموظفين** : recherche par nom/téléphone, filtre par طبيعة العمل et

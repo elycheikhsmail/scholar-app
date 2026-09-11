@@ -183,6 +183,25 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.match(salaryReceipt,/موظف تجريبي/);
   assert.match(salaryReceipt,/المتبقي بعد هذه الدفعة[\s\S]*2,000 أوقية/);
   await expect(page.locator('#salaryTable')).toContainText('S-000001');
+  // The salary log filters by employee, month and dates, and totals what it shows.
+  await expect(page.locator('#salaryLogTotals')).toContainText('عدد الدفعات المعروضة: 1');
+  await page.locator('#salaryLogMonth').selectOption('نوفمبر');
+  await expect(page.locator('#salaryTable')).toContainText('لا توجد دفعات مطابقة للتصفية.');
+  await page.locator('#salaryLogMonth').selectOption('');
+  await page.locator('#salaryLogFrom').fill('2026-09-11');
+  await expect(page.locator('#salaryLogTotals')).toContainText('عدد الدفعات المعروضة: 0');
+  await page.locator('#salaryLogFrom').fill('');
+  await expect(page.locator('#salaryTable tr')).toHaveCount(1);
+  const salaryWorkbook=await page.evaluate(async()=>{
+    const original=window.downloadXlsx;let captured=null;
+    window.downloadXlsx=(name,sheet,rows)=>{captured={name,sheet,rows}};
+    document.getElementById('exportSalaryLog').click();
+    window.downloadXlsx=original;
+    return captured;
+  });
+  assert.equal(salaryWorkbook.sheet,'دفعات الرواتب');
+  assert.equal(salaryWorkbook.rows.length,2);
+  assert.equal(salaryWorkbook.rows[1][0],'S-000001');
   await page.locator('#salaryTable .btn-edit').click();
   await expect(page.locator('#salaryEditDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#salaryEditIdentity')).toContainText('موظف تجريبي');
