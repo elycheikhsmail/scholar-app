@@ -46,10 +46,9 @@ test('creates SQLite and persists CRUD, linked payments, staff, and nested exams
 
 test('splits the amount paid during registration between registration and monthly fees', () => {
   const dir = temp(); db.init(dir);
+  db.updateFeeSettings({ registrationFee: 2000, defaultMonthlyFee: 0 });
   const s = db.addStudent({
     ...student,
-    registrationFee: 2000,
-    monthlyFee: 13000,
     initialPaid: 9750,
     initialPaymentMonth: 'أكتوبر',
     initialPaymentDate: '2026-09-09'
@@ -161,9 +160,12 @@ test('HTTP server supports login and CRUD using SQLite', async () => {
     assert.equal(added.status, 200);
     const studentResponse = await fetch(`${server.url}/api/students`, {method:'POST',headers,body:JSON.stringify(student)});
     const created = await studentResponse.json();
-    const feeResponse = await fetch(`${server.url}/api/students/${created.id}/fees`, {method:'PUT',headers,body:JSON.stringify({registrationFee:250,monthlyFee:1200})});
+    const feeResponse = await fetch(`${server.url}/api/fee-settings`, {method:'PUT',headers,body:JSON.stringify({registrationFee:250,defaultMonthlyFee:1200})});
     assert.equal(feeResponse.status,200);
-    assert.equal((await feeResponse.json()).monthlyFee,1200);
+    assert.equal((await feeResponse.json()).registrationFee,250);
+    const discountResponse = await fetch(`${server.url}/api/students/${created.id}/discount`, {method:'PUT',headers,body:JSON.stringify({discountType:'percent',discountValue:10,discountReason:'منحة'})});
+    assert.equal(discountResponse.status,200);
+    assert.equal((await discountResponse.json()).discountValue,10);
     const response = await fetch(`${server.url}/api/data`, { headers });
     assert.equal(response.status, 200);
     assert.equal((await response.json()).expenses[0].amount, 15);
@@ -175,24 +177,25 @@ test('HTTP server supports login and CRUD using SQLite', async () => {
   }
 });
 
-test('personal edits preserve fees; fee edits preserve identity and recorded payments', () => {
+test('personal edits preserve the discount; a discount edit preserves identity and payments', () => {
   db.init(temp());
-  const s = db.addStudent({...student, registrationFee:200, monthlyFee:1000});
+  db.updateFeeSettings({registrationFee:200,defaultMonthlyFee:1000});
+  const s = db.addStudent({...student});
+  db.updateStudentDiscount(s.id,{discountType:'amount',discountValue:150,discountReason:'إخوة'});
   db.addStudentPayment({studentId:s.id,month:'أكتوبر',amount:400,date:'2026-10-05'});
   db.updateStudent(s.id,{...student,name:'اسم جديد'});
   let saved = db.getData().students[0];
-  assert.equal(saved.registrationFee,200);
-  assert.equal(saved.monthlyFee,1000);
+  assert.equal(saved.discountValue,150);
+  assert.equal(saved.discountReason,'إخوة');
   const payments = db.getData().studentPayments;
-  db.updateStudentFees(s.id,{registrationFee:0,monthlyFee:900});
+  db.updateStudentDiscount(s.id,{discountType:'percent',discountValue:20,discountReason:'منحة'});
   saved = db.getData().students[0];
   assert.equal(saved.name,'اسم جديد');
-  assert.equal(saved.registrationFee,0);
-  assert.equal(saved.monthlyFee,900);
+  assert.equal(saved.discountType,'percent');
+  assert.equal(saved.discountValue,20);
   assert.deepEqual(db.getData().studentPayments,payments);
-  assert.throws(()=>db.updateStudentFees(s.id,{registrationFee:300,monthlyFee:-1}));
-  assert.equal(db.getData().students[0].registrationFee,0);
-  assert.throws(()=>db.updateStudentFees(s.id,{registrationFee:100,monthlyFee:Infinity}));
+  assert.throws(()=>db.updateStudentDiscount(s.id,{discountType:'percent',discountValue:140}));
+  assert.equal(db.getData().students[0].discountValue,20,'a refused edit changes nothing');
 });
 
 test('testing database, settings and reset backups stay separate from production', () => {

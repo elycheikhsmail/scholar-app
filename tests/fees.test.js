@@ -15,40 +15,47 @@ afterEach(() => { db.close(); for (const dir of dirs.splice(0)) fs.rmSync(dir, {
 // accrual tests override this date to exercise the current-balance rule.
 const settings = { schoolYear: '2026 / 2027', asOf: '2027-06-30' };
 const base = { name: 'طالب', schoolNo: 'S1', nni: '1234567890', gender: 'ذكر', className: '6AF' };
+// Fees belong to the school, not to the student: the engine reads the
+// registration fee from the settings and the monthly fee from the level.
+const withFees = (registrationFee, monthlyFee, extra = {}) =>
+  ({ ...settings, registrationFee, departments: [{ name: '6AF', monthlyFee }], ...extra });
+const enrolled = extra => ({ className: '6AF', ...extra });
 const amounts = ledger => ledger.rows.map(row => [row.month, row.amount, row.paid, row.remaining]);
 
 test('charges only cover the months between enrolment and departure', () => {
-  const midYear = { registrationDate: '2027-02-10', registrationFee: 5000, monthlyFee: 10000 };
-  const months = dues.chargesFor(midYear, settings).map(c => c.month);
+  const school = withFees(5000, 10000);
+  const midYear = enrolled({ registrationDate: '2027-02-10' });
+  const months = dues.chargesFor(midYear, school).map(c => c.month);
   assert.deepEqual(months, [dues.REGISTRATION, 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو']);
   // The old behaviour billed all nine months: 5000 + 9 * 10000.
-  assert.equal(dues.ledgerFor(midYear, [], settings).totalDue, 55000);
+  assert.equal(dues.ledgerFor(midYear, [], school).totalDue, 55000);
 
   const left = { ...midYear, leaveDate: '2027-04-03', status: 'منقطع' };
-  assert.deepEqual(dues.chargesFor(left, settings).map(c => c.month), [dues.REGISTRATION, 'فبراير', 'مارس', 'أبريل']);
-  assert.equal(dues.ledgerFor(left, [], settings).totalDue, 35000);
+  assert.deepEqual(dues.chargesFor(left, school).map(c => c.month), [dues.REGISTRATION, 'فبراير', 'مارس', 'أبريل']);
+  assert.equal(dues.ledgerFor(left, [], school).totalDue, 35000);
 
-  const early = { registrationDate: '2026-09-01', registrationFee: 0, monthlyFee: 1000 };
-  assert.equal(dues.chargesFor(early, settings).length, 1 + dues.MONTHS.length, 'enrolment before October covers the whole year');
+  const early = enrolled({ registrationDate: '2026-09-01' });
+  assert.equal(dues.chargesFor(early, withFees(0, 1000)).length, 1 + dues.MONTHS.length, 'enrolment before October covers the whole year');
 });
 
 test('current balance excludes future months while keeping them available for advance payment', () => {
-  const student = { registrationDate:'2026-09-01', registrationFee:3000, monthlyFee:10000 };
-  const september = dues.ledgerFor(student, [], { ...settings, asOf:'2026-09-10' });
+  const school = withFees(3000, 10000);
+  const student = enrolled({ registrationDate:'2026-09-01' });
+  const september = dues.ledgerFor(student, [], { ...school, asOf:'2026-09-10' });
   assert.equal(september.totalDue, 3000, 'before October only registration is currently due');
   assert.equal(september.outstanding, 3000);
   assert.equal(september.scheduledOutstanding, 93000, 'the school-year schedule remains available for prepayment');
   assert.deepEqual(september.accruedRows.map(row=>row.month), [dues.REGISTRATION]);
   assert.ok(september.byMonth.has('نوفمبر'), 'a future month can still be selected and paid');
 
-  const november = dues.ledgerFor(student, [], { ...settings, asOf:'2026-11-01' });
+  const november = dues.ledgerFor(student, [], { ...school, asOf:'2026-11-01' });
   assert.deepEqual(november.accruedRows.map(row=>row.month), [dues.REGISTRATION,'أكتوبر','نوفمبر']);
   assert.equal(november.totalDue, 23000, 'the whole current month counts even before its exact due day');
 
   const prepaid = dues.ledgerFor(student,[
     {id:1,month:dues.REGISTRATION,amount:3000,date:'2026-09-01'},
     {id:2,month:'أكتوبر',amount:20000,date:'2026-09-10'}
-  ],{ ...settings, asOf:'2026-09-10' });
+  ],{ ...school, asOf:'2026-09-10' });
   assert.equal(prepaid.outstanding,0);
   assert.equal(prepaid.totalPaid,23000);
   assert.equal(prepaid.scheduledOutstanding,70000);
@@ -56,12 +63,12 @@ test('current balance excludes future months while keeping them available for ad
 });
 
 test('a future-month receipt reconciles its fee and stops at the selected month', () => {
-  const student={registrationDate:'2026-09-01',registrationFee:0,monthlyFee:13000};
+  const student=enrolled({registrationDate:'2026-09-01'});
   const ledger=dues.ledgerFor(student,[
     {id:1,month:'أكتوبر',amount:13000,date:'2026-09-01'},
     {id:2,month:'نوفمبر',amount:3000,date:'2026-09-05'},
     {id:3,month:'نوفمبر',amount:3000,date:'2026-09-10'}
-  ],{...settings,asOf:'2026-09-10'});
+  ],withFees(0,13000,{asOf:'2026-09-10'}));
   const november=ledger.byMonth.get('نوفمبر');
   assert.deepEqual([november.amount,november.paid,november.remaining],[13000,6000,7000]);
   assert.equal(ledger.outstanding,0,'future November is not current September debt');
@@ -70,9 +77,9 @@ test('a future-month receipt reconciles its fee and stops at the selected month'
 });
 
 test('a payment is a credit allocated to the oldest unpaid charge first', () => {
-  const student = { registrationDate: '2026-10-01', registrationFee: 0, monthlyFee: 10000 };
+  const student = enrolled({ registrationDate: '2026-10-01' });
   // One payment recorded against October that actually covers three months.
-  const ledger = dues.ledgerFor(student, [{ id: 1, month: 'أكتوبر', amount: 30000, date: '2026-10-05' }], settings);
+  const ledger = dues.ledgerFor(student, [{ id: 1, month: 'أكتوبر', amount: 30000, date: '2026-10-05' }], withFees(0, 10000));
   assert.deepEqual(amounts(ledger).slice(0, 5), [
     [dues.REGISTRATION, 0, 0, 0],
     ['أكتوبر', 10000, 10000, 0],
@@ -87,8 +94,8 @@ test('a payment is a credit allocated to the oldest unpaid charge first', () => 
 });
 
 test('surplus beyond every charge stays on the account as a credit', () => {
-  const student = { registrationDate: '2026-10-01', registrationFee: 1000, monthlyFee: 1000 };
-  const ledger = dues.ledgerFor(student, [{ id: 1, amount: 12000, date: '2026-10-05' }], settings);
+  const student = enrolled({ registrationDate: '2026-10-01' });
+  const ledger = dues.ledgerFor(student, [{ id: 1, amount: 12000, date: '2026-10-05' }], withFees(1000, 1000));
   assert.equal(ledger.totalDue, 10000);
   assert.equal(ledger.outstanding, 0);
   assert.equal(ledger.credit, 2000);
@@ -96,11 +103,11 @@ test('surplus beyond every charge stays on the account as a credit', () => {
 });
 
 test('allocation follows payment date then id, and records which invoice paid what', () => {
-  const student = { registrationDate: '2026-10-01', registrationFee: 0, monthlyFee: 5000 };
+  const student = enrolled({ registrationDate: '2026-10-01' });
   const ledger = dues.ledgerFor(student, [
     { id: 2, invoiceNo: 'F-000002', amount: 6000, date: '2026-11-02' },
     { id: 1, invoiceNo: 'F-000001', amount: 3000, date: '2026-10-02' }
-  ], settings);
+  ], withFees(0, 5000));
   const october = ledger.byMonth.get('أكتوبر'), november = ledger.byMonth.get('نوفمبر');
   assert.deepEqual(october.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000001', 3000], ['F-000002', 2000]]);
   assert.deepEqual(november.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000002', 4000]]);
@@ -108,61 +115,68 @@ test('allocation follows payment date then id, and records which invoice paid wh
 });
 
 test('decimal amounts allocate without leaving rounding dust', () => {
-  const student = { registrationDate: '2026-10-01', registrationFee: 0, monthlyFee: 33.33 };
-  const ledger = dues.ledgerFor(student, [{ id: 1, amount: 99.99, date: '2026-10-01' }], settings);
+  const student = enrolled({ registrationDate: '2026-10-01' });
+  const ledger = dues.ledgerFor(student, [{ id: 1, amount: 99.99, date: '2026-10-01' }], withFees(0, 33.33));
   assert.equal(ledger.byMonth.get('ديسمبر').remaining, 0);
   assert.equal(ledger.byMonth.get('يناير').paid, 0);
   assert.equal(ledger.credit, 0);
 });
 
-test('a charge keeps the fee that applied when it fell due', () => {
-  const student = {
-    registrationDate: '2026-10-01', registrationFee: 0, monthlyFee: 15000,
-    feeHistory: [{ fromMonth: 'أكتوبر', monthlyFee: 10000 }, { fromMonth: 'يناير', monthlyFee: 15000 }]
-  };
-  const ledger = dues.ledgerFor(student, [], settings);
+test('every charge reads the school fee of the student level', () => {
+  const student = enrolled({ registrationDate: '2026-10-01' });
+  const ledger = dues.ledgerFor(student, [], withFees(2000, 10000));
+  assert.equal(ledger.byMonth.get(dues.REGISTRATION).amount, 2000);
   assert.equal(ledger.byMonth.get('أكتوبر').amount, 10000);
-  assert.equal(ledger.byMonth.get('ديسمبر').amount, 10000, 'a January rise must not reprice December');
-  assert.equal(ledger.byMonth.get('يناير').amount, 15000);
-  assert.equal(ledger.totalDue, 3 * 10000 + 6 * 15000);
-  // Records with no history fall back to the single current fee.
-  assert.equal(dues.ledgerFor({ registrationDate: '2026-10-01', monthlyFee: 8000 }, [], settings).byMonth.get('أكتوبر').amount, 8000);
+  assert.equal(ledger.byMonth.get('يونيو').amount, 10000, 'the monthly fee is the same in every month');
+  assert.equal(ledger.totalDue, 2000 + 9 * 10000);
+
+  // Correcting the fee is meant to reach the whole year, including months
+  // already billed: that is what makes the settings the only place to set it.
+  assert.equal(dues.ledgerFor(student, [], withFees(2000, 12000)).totalDue, 2000 + 9 * 12000);
+
+  // A level the settings do not price falls back to the default fee.
+  const unknown = { registrationDate: '2026-10-01', className: 'قسم غير معروف' };
+  assert.equal(dues.monthlyFeeFor(unknown, withFees(0, 10000, { defaultMonthlyFee: 4000 })), 4000);
+  assert.equal(dues.monthlyFeeFor(student, withFees(0, 10000, { defaultMonthlyFee: 4000 })), 10000);
+  // A student record carrying its own old fee cannot outvote the settings.
+  assert.equal(dues.monthlyFeeFor({ ...student, monthlyFee: 999 }, withFees(0, 10000)), 10000);
+  assert.equal(dues.registrationFeeFor(withFees(2000, 0)), 2000);
 });
 
-test('raising the fee opens a new period and leaves billed months untouched', () => {
+test('raising a level fee reprices its students, and the record keeps no fee of its own', () => {
   const dir = temp(); db.init(dir);
-  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', monthlyFee: 10000, registrationFee: 2000 });
-  assert.deepEqual(student.feeHistory, [{ fromMonth: 'أكتوبر', monthlyFee: 10000, date: '2026-10-01' }]);
-  assert.equal(student.status, dues.ACTIVE_STATUS);
+  db.updateFeeSettings({ registrationFee: 200, defaultMonthlyFee: 0 });
+  const department = db.getDepartments().find(d => d.name === '6AF');
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01' });
+  for (const field of ['monthlyFee', 'registrationFee', 'feeHistory']) {
+    assert.equal(field in student, false, `the record no longer carries ${field}`);
+  }
+  const school = () => ({ ...db.publicSettings(), asOf: settings.asOf, departments: db.getDepartments() });
+  assert.equal(dues.ledgerFor(student, [], school()).totalDue, 200 + 9 * department.monthlyFee);
 
-  const raised = db.updateStudentFees(student.id, { registrationFee: 2000, monthlyFee: 15000, effectiveFrom: 'يناير' });
-  assert.deepEqual(raised.feeHistory.map(p => [p.fromMonth, p.monthlyFee]), [['أكتوبر', 10000], ['يناير', 15000]]);
-  assert.equal(raised.monthlyFee, 15000, 'the current fee tracks the latest period');
-  assert.equal(dues.ledgerFor(raised, [], settings).byMonth.get('ديسمبر').amount, 10000);
+  db.updateDepartment(department.id, { name: '6AF', monthlyFee: 20000 });
+  assert.equal(dues.ledgerFor(student, [], school()).totalDue, 200 + 9 * 20000, 'a level fee reaches every month at once');
 
-  // Correcting the same period amends it instead of stacking a duplicate.
-  const corrected = db.updateStudentFees(student.id, { registrationFee: 2000, monthlyFee: 16000, effectiveFrom: 'يناير' });
-  assert.deepEqual(corrected.feeHistory.map(p => [p.fromMonth, p.monthlyFee]), [['أكتوبر', 10000], ['يناير', 16000]]);
+  db.updateFeeSettings({ registrationFee: 500, defaultMonthlyFee: 0 });
+  assert.equal(dues.ledgerFor(student, [], school()).byMonth.get(dues.REGISTRATION).amount, 500);
+  assert.throws(() => db.updateFeeSettings({ registrationFee: -1, defaultMonthlyFee: 0 }), /لا تقل عن صفر/);
+  assert.throws(() => db.updateFeeSettings({ registrationFee: '', defaultMonthlyFee: 0 }), /لا تقل عن صفر/);
 });
 
-test('a record with no fee history keeps its old fee on months already billed', () => {
+test('a record that still carries its own fee loses it when the database is opened', () => {
   const dir = temp(); db.init(dir);
-  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', monthlyFee: 10000 });
-  // An existing SQLite database skips the JSON backfill, so strip the history the
-  // way such a record actually looks on disk.
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01' });
   db.close();
   const raw = new DatabaseSync(path.join(dir, 'database', 'school-data.sqlite'));
   const { record } = raw.prepare('SELECT record FROM students WHERE id = ?').get(student.id);
-  const stripped = JSON.parse(record);
-  delete stripped.feeHistory;
-  raw.prepare('UPDATE students SET record = ? WHERE id = ?').run(JSON.stringify(stripped), student.id);
+  raw.prepare('UPDATE students SET record = ? WHERE id = ?').run(
+    JSON.stringify({ ...JSON.parse(record), monthlyFee: 3000, registrationFee: 7000,
+      feeHistory: [{ fromMonth: 'أكتوبر', monthlyFee: 3000 }] }), student.id);
   raw.close();
-  db.init(dir);
-  assert.equal(db.getData().students[0].feeHistory, undefined, 'the record really has no history');
 
-  const updated = db.updateStudentFees(student.id, { registrationFee: 0, monthlyFee: 20000, effectiveFrom: 'مارس' });
-  assert.deepEqual(updated.feeHistory.map(p => [p.fromMonth, p.monthlyFee]), [['أكتوبر', 10000], ['مارس', 20000]]);
-  assert.equal(dues.ledgerFor(updated, [], settings).byMonth.get('فبراير').amount, 10000);
+  db.init(dir);
+  const migrated = db.getData().students[0];
+  assert.deepEqual([migrated.monthlyFee, migrated.registrationFee, migrated.feeHistory], [undefined, undefined, undefined]);
 });
 
 test('departure needs a date and a status, and the date cannot precede enrolment', () => {
@@ -180,7 +194,7 @@ test('departure needs a date and a status, and the date cannot precede enrolment
   assert.equal(db.getData().students[0].status, 'محوَّل', 'the departure survives a restart');
 });
 
-test('a JSON database migrates to fee history, active status and no departure', () => {
+test('a JSON database migrates to school fees, active status and no departure', () => {
   const dir = temp();
   fs.mkdirSync(path.join(dir, 'database'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'database', 'school-data.json'), JSON.stringify({
@@ -188,58 +202,65 @@ test('a JSON database migrates to fee history, active status and no departure', 
   }));
   db.init(dir);
   const student = db.getData().students[0];
-  assert.deepEqual(student.feeHistory, [{ fromMonth: 'يناير', monthlyFee: 7000, date: '2027-01-12' }]);
+  assert.equal(student.monthlyFee, undefined, 'the fee it used to carry is dropped for the school fee');
   assert.equal(student.status, dues.ACTIVE_STATUS);
   assert.equal(student.leaveDate, '');
-  assert.equal(dues.ledgerFor(student, [], settings).totalDue, 6 * 7000, 'January enrolment is not billed for October to December');
+  assert.equal(dues.ledgerFor(student, [], withFees(0, 7000)).totalDue, 6 * 7000, 'January enrolment is not billed for October to December');
 });
 
 test('each month falls due on the registration day within that month', () => {
-  const student = { registrationDate: '2027-02-10', registrationFee: 0, monthlyFee: 12000 };
-  const dates = dues.chargesFor(student, settings).map(c => [c.month, c.dueDate]);
+  const student = enrolled({ registrationDate: '2027-02-10' });
+  const dates = dues.chargesFor(student, withFees(0, 12000)).map(c => [c.month, c.dueDate]);
   assert.deepEqual(dates, [
     [dues.REGISTRATION, '2027-02-10'], ['فبراير', '2027-02-10'], ['مارس', '2027-03-10'],
     ['أبريل', '2027-04-10'], ['مايو', '2027-05-10'], ['يونيو', '2027-06-10']
   ]);
-  const monthEnd = { registrationDate: '2026-10-31', registrationFee: 0, monthlyFee: 100 };
-  const november = dues.chargesFor(monthEnd, settings).find(c => c.month === 'نوفمبر');
+  const monthEnd = enrolled({ registrationDate: '2026-10-31' });
+  const november = dues.chargesFor(monthEnd, withFees(0, 100)).find(c => c.month === 'نوفمبر');
   assert.equal(november.dueDate, '2026-11-30', 'the day is clamped to the length of the month');
 });
 
 test('a discount reduces the monthly fee but never the registration fee', () => {
   const dir = temp(); db.init(dir);
-  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', monthlyFee: 10000, registrationFee: 4000 });
+  db.updateFeeSettings({ registrationFee: 4000, defaultMonthlyFee: 0 });
+  const department = db.getDepartments().find(d => d.name === '6AF');
+  db.updateDepartment(department.id, { name: '6AF', monthlyFee: 10000 });
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01' });
   assert.equal(student.discountType, '');
+  const school = { ...settings, registrationFee: 4000, departments: [{ name: '6AF', monthlyFee: 10000 }] };
 
-  const half = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: 'percent', discountValue: 25, discountReason: 'منحة' });
-  const october = dues.ledgerFor(half, [], settings).byMonth.get('أكتوبر');
+  const half = db.updateStudentDiscount(student.id, { discountType: 'percent', discountValue: 25, discountReason: 'منحة' });
+  const october = dues.ledgerFor(half, [], school).byMonth.get('أكتوبر');
   assert.deepEqual([october.gross, october.discount, october.amount], [10000, 2500, 7500]);
-  assert.equal(dues.ledgerFor(half, [], settings).byMonth.get(dues.REGISTRATION).amount, 4000, 'registration is not discounted');
-  assert.equal(dues.ledgerFor(half, [], settings).totalDiscount, 9 * 2500);
+  assert.equal(dues.ledgerFor(half, [], school).byMonth.get(dues.REGISTRATION).amount, 4000, 'registration is not discounted');
+  assert.equal(dues.ledgerFor(half, [], school).totalDiscount, 9 * 2500);
   assert.equal(half.discountReason, 'منحة');
 
-  const fixed = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: 'amount', discountValue: 3000 });
-  assert.equal(dues.ledgerFor(fixed, [], settings).byMonth.get('أكتوبر').amount, 7000);
+  const fixed = db.updateStudentDiscount(student.id, { discountType: 'amount', discountValue: 3000 });
+  assert.equal(dues.ledgerFor(fixed, [], school).byMonth.get('أكتوبر').amount, 7000);
   assert.equal(fixed.discountReason, '', 'the reason is cleared with the discount type');
 
   // A discount larger than the fee zeroes the charge instead of going negative.
-  const capped = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: 'amount', discountValue: 99999 });
-  assert.equal(dues.ledgerFor(capped, [], settings).byMonth.get('أكتوبر').amount, 0);
+  const capped = db.updateStudentDiscount(student.id, { discountType: 'amount', discountValue: 99999 });
+  assert.equal(dues.ledgerFor(capped, [], school).byMonth.get('أكتوبر').amount, 0);
 
-  const bad = extra => () => db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', ...extra });
+  const bad = extra => () => db.updateStudentDiscount(student.id, extra);
   assert.throws(bad({ discountType: 'نسبة' }), /نوع الخصم/);
   assert.throws(bad({ discountType: 'percent', discountValue: 140 }), /100/);
   assert.throws(bad({ discountType: 'percent', discountValue: -5 }), /لا يقل عن صفر/);
   assert.throws(bad({ discountType: 'amount', discountValue: 0 }), /أدخل قيمة الخصم/);
 
-  const cleared = db.updateStudentFees(student.id, { registrationFee: 4000, monthlyFee: 10000, effectiveFrom: 'أكتوبر', discountType: '' });
-  assert.equal(dues.ledgerFor(cleared, [], settings).byMonth.get('أكتوبر').amount, 10000);
+  const cleared = db.updateStudentDiscount(student.id, { discountType: '' });
+  assert.equal(dues.ledgerFor(cleared, [], school).byMonth.get('أكتوبر').amount, 10000);
 });
 
 test('a payment cannot exceed what the account still owes', () => {
   const dir = temp(); db.init(dir);
-  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', monthlyFee: 1000, registrationFee: 0 });
-  const outstanding = dues.ledgerFor(student, [], settings).totalDue;
+  db.updateFeeSettings({ registrationFee: 0, defaultMonthlyFee: 0 });
+  const department = db.getDepartments().find(d => d.name === '6AF');
+  db.updateDepartment(department.id, { name: '6AF', monthlyFee: 1000 });
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01' });
+  const outstanding = dues.ledgerFor(student, [], { ...settings, registrationFee: 0, departments: db.getDepartments() }).totalDue;
   assert.equal(outstanding, 9000);
 
   assert.throws(() => db.addStudentPayment({ studentId: student.id, month: 'أكتوبر', amount: 9001 }), /المتبقي على الطالب هو 9000/);
@@ -249,6 +270,42 @@ test('a payment cannot exceed what the account still owes', () => {
   // Editing a payment measures the remainder without counting that payment twice.
   assert.doesNotThrow(() => db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 8000 }));
   assert.throws(() => db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 9500 }), /المتبقي على الطالب هو 9000/);
+});
+
+// What the fee form sends: one receipt per fee, weighed against the balance as
+// a whole so a set that overshoots cannot slip through payment by payment.
+test('a visit records one receipt per fee, and the batch is capped as a whole', () => {
+  const dir = temp(); db.init(dir);
+  db.updateFeeSettings({ registrationFee: 200, defaultMonthlyFee: 0 });
+  const department = db.getDepartments().find(d => d.name === '6AF');
+  db.updateDepartment(department.id, { name: '6AF', monthlyFee: 1000 });
+  const student = db.addStudent({ ...base, registrationDate: '2026-10-01' });
+
+  const payments = db.addStudentPayments({ studentId: student.id, date: '2026-10-05', entries: [
+    { month: dues.REGISTRATION, amount: 200 },
+    { month: 'أكتوبر', amount: 1000 },
+    { month: 'نوفمبر', amount: 400 }
+  ]});
+  assert.deepEqual(payments.map(p => [p.month, p.amount, p.paymentType]), [
+    [dues.REGISTRATION, 200, 'registration'], ['أكتوبر', 1000, 'monthly'], ['نوفمبر', 400, 'monthly']]);
+  assert.deepEqual(payments.map(p => p.invoiceNo), ['F-000001', 'F-000002', 'F-000003']);
+  assert.equal(db.getData().studentPayments.length, 3);
+
+  const school = { ...settings, ...db.publicSettings(), departments: db.getDepartments() };
+  const ledger = dues.ledgerFor(db.getData().students[0], db.getData().studentPayments, school);
+  assert.equal(ledger.byMonth.get('نوفمبر').paid, 400);
+  assert.equal(ledger.outstanding, 200 + 9 * 1000 - 1600);
+
+  // 7600 is left; a batch worth more is refused entirely, not partly written.
+  assert.throws(() => db.addStudentPayments({ studentId: student.id, date: '2026-11-05', entries: [
+    { month: 'نوفمبر', amount: 600 }, { month: 'ديسمبر', amount: 7100 }
+  ]}), /المتبقي على الطالب/);
+  assert.equal(db.getData().studentPayments.length, 3, 'nothing of a refused batch is written');
+
+  assert.throws(() => db.addStudentPayments({ studentId: student.id, entries: [] }), /لم تُحدَّد أي دفعة/);
+  assert.throws(() => db.addStudentPayments({ studentId: student.id, entries: [{ month: 'أكتوبر', amount: 0 }] }), /أدخل الشهر والمبلغ/);
+  assert.throws(() => db.addStudentPayments({ studentId: student.id, entries: [{ month: 'سبتمبر', amount: 10 }] }), /اختر الرسم/);
+  assert.throws(() => db.addStudentPayments({ studentId: 9999, entries: [{ month: 'أكتوبر', amount: 10 }] }), /الطالب غير موجود/);
 });
 
 test('the data endpoint payload leaves exams to their own endpoint', () => {
@@ -309,50 +366,4 @@ test('one vocabulary covers every dues state, and the filters reuse it', () => {
   }
   assert.equal(new Set(Object.values(dues.FEE_STATUS_LABELS)).size,
     Object.keys(dues.FEE_STATUS_LABELS).length, 'no two states share a word');
-});
-
-test('fee periods read back as ranges, and an edit can be previewed or undone', () => {
-  const student = { registrationDate: '2026-10-01', registrationFee: 5000, monthlyFee: 3500,
-    feeHistory: [{ fromMonth: 'أكتوبر', monthlyFee: 3000 }, { fromMonth: 'يناير', monthlyFee: 3500 }] };
-  assert.deepEqual(dues.feePeriodRanges(student).map(r => [r.fromMonth, r.toMonth, r.monthCount, r.monthlyFee]),
-    [['أكتوبر', 'ديسمبر', 3, 3000], ['يناير', 'يونيو', 6, 3500]]);
-
-  // The preview copy must match what the server writes, or it would mislead.
-  const edited = dues.withFeePeriod(student, 'مارس', 4000, settings);
-  assert.deepEqual(edited.feeHistory.map(p => [p.fromMonth, p.monthlyFee]),
-    [['أكتوبر', 3000], ['يناير', 3500], ['مارس', 4000]]);
-  assert.equal(edited.monthlyFee, 4000);
-  assert.equal(dues.monthlyFeeFor(edited, 'فبراير'), 3500);
-  assert.equal(dues.monthlyFeeFor(edited, 'أبريل'), 4000);
-  // Re-editing an existing period replaces it instead of stacking a second one.
-  assert.equal(dues.withFeePeriod(edited, 'يناير', 3600, settings).feeHistory.length, 3);
-
-  // A record with no history keeps its old fee on the months already billed.
-  const legacy = { registrationDate: '2026-10-01', monthlyFee: 2000, feeHistory: [] };
-  assert.deepEqual(dues.withFeePeriod(legacy, 'يناير', 2500, settings).feeHistory.map(p => [p.fromMonth, p.monthlyFee]),
-    [['أكتوبر', 2000], ['يناير', 2500]]);
-
-  // Undoing a period returns its months to the fee before it.
-  const undone = dues.withoutFeePeriod(edited, 'مارس');
-  assert.deepEqual(undone.feeHistory.map(p => p.fromMonth), ['أكتوبر', 'يناير']);
-  assert.equal(dues.monthlyFeeFor(undone, 'أبريل'), 3500);
-});
-
-test('a fee period can be removed, but never the last one', () => {
-  const dir = temp(); db.init(dir);
-  const student = db.addStudent({ ...base, registrationDate: '2026-10-01', registrationFee: 5000, monthlyFee: 3000 });
-  db.updateStudentFees(student.id, { registrationFee: 5000, monthlyFee: 4000, effectiveFrom: 'يناير' });
-  const withTwo = db.getData().students.find(s => s.id === student.id);
-  assert.equal(withTwo.feeHistory.length, 2);
-  assert.equal(dues.monthlyFeeFor(withTwo, 'مارس'), 4000);
-
-  db.removeStudentFeePeriod(student.id, 'يناير');
-  const withOne = db.getData().students.find(s => s.id === student.id);
-  assert.deepEqual(withOne.feeHistory.map(p => p.fromMonth), ['أكتوبر']);
-  // The record's headline fee follows the last period that survives.
-  assert.equal(withOne.monthlyFee, 3000);
-  assert.equal(dues.monthlyFeeFor(withOne, 'مارس'), 3000);
-
-  assert.throws(() => db.removeStudentFeePeriod(student.id, 'أكتوبر'), /الوحيدة/);
-  assert.throws(() => db.removeStudentFeePeriod(student.id, 'مايو'), /لا توجد فترة/);
 });

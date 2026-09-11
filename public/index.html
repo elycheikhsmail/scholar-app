@@ -119,25 +119,21 @@
       <div><h3 id="studentFeesTitle">استمارة رسوم الطالب</h3><p id="studentFeesIdentity"></p></div>
       <button type="button" class="secondary" id="closeStudentFees" aria-label="إغلاق استمارة الرسوم">إغلاق ✕</button>
     </div>
-    <form id="studentFeesForm" class="form-grid">
-      <label>رسوم التسجيل<input id="studentRegistrationFee" type="number" min="0" step="0.01" required></label>
-      <label>الرسوم الشهرية<input id="studentMonthlyFee" type="number" min="0" step="0.01" required></label>
-      <label>تسري الرسوم الشهرية من شهر<select id="studentFeeFrom" required></select></label>
+    <p id="studentFeeRates" class="hint-box"></p>
+    <p id="studentPaidSummary" class="hint-box"></p>
+    <form id="studentFeesForm" class="fee-entry-form">
+      <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
+      <div id="studentFeeEntries" class="fee-entries"></div>
+      <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
+      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعات</button><button type="button" class="secondary" id="resetStudentFees">استعادة الحالة المحفوظة</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button></div>
+    </form>
+    <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
+    <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
+    <form id="studentDiscountForm" class="form-grid" aria-labelledby="studentDiscountTitle">
       <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
       <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
       <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
-      <div id="studentFeePreview" class="fee-preview" role="status" aria-live="polite"></div>
-      <div class="form-actions"><button class="primary" id="saveStudentFees">حفظ الرسوم</button><button type="button" class="secondary" id="resetStudentFees">استعادة القيم المحفوظة</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button></div>
-    </form>
-    <h3 class="table-title" id="studentFeePeriodsTitle">فترات الرسوم الشهرية</h3>
-    <p class="hint-box">كل سطر فترة تسري فيها رسوم شهرية واحدة. «تعديل» يحمّل الفترة في الاستمارة، و«حذف» يلغي فترة أُدخلت بالخطأ فتعود أشهرها إلى رسوم الفترة السابقة.</p>
-    <div class="table-scroll fee-periods-scroll"><table aria-labelledby="studentFeePeriodsTitle"><thead><tr><th>من شهر</th><th>إلى شهر</th><th>عدد الأشهر</th><th>الرسوم الشهرية</th><th>تاريخ الإدخال</th><th>إجراءات</th></tr></thead><tbody id="studentFeePeriods"></tbody></table></div>
-    <p id="studentPaidSummary" class="hint-box"></p>
-    <form id="studentFeePaymentForm" class="form-grid">
-      <label>الرسوم التي تخصها الدفعة<select id="studentPaymentMonth" required></select></label>
-      <label>مبلغ دفعه الطالب ولم يُسجّل بعد<input id="studentPaymentAmount" type="number" min="0.01" step="0.01" required></label>
-      <label>تاريخ الدفع<input id="studentPaymentDate" type="date" class="date-dmy" required></label>
-      <div class="form-actions"><button class="primary">تسجيل الدفعة</button></div>
+      <div class="form-actions"><button class="primary" id="saveStudentDiscount">حفظ الخصم</button></div>
     </form>
   </dialog>
   <dialog id="studentLedgerDialog" class="app-dialog ledger-dialog" aria-labelledby="studentLedgerTitle">
@@ -331,9 +327,18 @@
       <button class="primary">تبديل الوضع</button>
     </form>
   </div>
-  <div class="panel"><form id="settingsForm" class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>الرسوم الشهرية الافتراضية<input id="setDefaultMonthlyFee" type="number" min="0"></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
+  <div class="panel"><form id="settingsForm" class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
   <div class="panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
-  <div class="panel"><h3>إدارة الأقسام ورسومها الشهرية</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
+  <div class="panel"><h3>إعدادات الرسوم</h3>
+    <p class="hint-box">تُحدَّد الرسوم هنا مرة واحدة: رسم تسجيل سنوي واحد للمدرسة، ورسم شهري ثابت لكل مستوى في جدول الأقسام أسفله. استمارة الطالب تقرأ هذه القيم ولا تطلب إدخالها، وأي تعديل هنا يسري على كل الطلاب.</p>
+    <form id="feeSettingsForm" class="form-grid">
+      <label>رسم التسجيل السنوي<input id="setRegistrationFee" type="number" min="0" step="0.01" required></label>
+      <label>الرسوم الشهرية الافتراضية (لقسم بلا رسوم)<input id="setDefaultMonthlyFee" type="number" min="0" step="0.01" required></label>
+      <div class="form-actions"><button class="primary">حفظ إعدادات الرسوم</button></div>
+    </form>
+  </div>
+
+  <div class="panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
 </section>
 </main></div>
 <footer class="app-footer">الإصدار <span id="appVersion">—</span></footer>

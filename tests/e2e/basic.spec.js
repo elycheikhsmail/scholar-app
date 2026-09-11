@@ -39,7 +39,8 @@ test('يسجل الدخول ويتنقل إلى الطلاب ثم يسجل ال�
   await page.locator('#studentsTable tr').first().getByRole('button', {name:'رسوم الطالب'}).click();
   await expect(page.locator('#fees')).toHaveClass(/active-section/);
   await expect(page.locator('#studentFeesIdentity')).toContainText(firstStudentName);
-  await expect(page.locator('#studentRegistrationFee')).toBeVisible();
+  await expect(page.locator('#studentFeeRates')).toContainText('رسم التسجيل');
+  await expect(page.locator('#studentFeeEntries .fee-entry').first()).toContainText('لم يدفع بعد');
   await page.locator('#showStudentLedger').click();
   await expect(page.locator('#studentLedger')).toBeVisible();
   await expect(page.locator('#studentLedgerRows tr')).toHaveCount(10);

@@ -3,6 +3,42 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.10.0 — 2026-09-11
+
+- Les frais ne sont plus saisis élève par élève. L'écran **الإعدادات** contient
+  un nouveau bloc **إعدادات الرسوم** : un frais d'inscription annuel unique pour
+  toute l'école (200 par défaut) et, dans le tableau des niveaux, un frais
+  mensuel fixe par classe, constant sur toute l'année scolaire.
+- L'استمارة des frais de l'élève ne demande plus aucun montant : elle rappelle
+  les frais lus dans les réglages, puis présente une ligne par montant dû —
+  رسم التسجيل, puis chaque mois d'inscription jusqu'à يونيو — avec trois
+  réponses : « لم يدفع بعد », « دفع المبلغ كاملا », « دفع جزء من المبلغ ».
+- Le choix « دفع جزء من المبلغ » ouvre un champ de montant sous le bouton, exigé
+  strictement supérieur à zéro et strictement inférieur au montant dû.
+- Un montant déjà soldé est verrouillé dans le formulaire : le corriger passe
+  par la suppression de son reçu dans le relevé, et non par une saisie inverse.
+- Si un mois plus ancien reste impayé, le formulaire prévient avant
+  l'enregistrement que les paiements sont affectés au plus ancien montant dû
+  d'abord, puis laisse enregistrer.
+- Corriger un tarif dans les réglages ou dans un niveau vaut désormais pour tous
+  les élèves concernés et pour toute l'année, mois déjà facturés compris. Les
+  périodes de frais par élève (`feeHistory`) disparaissent, ainsi que leur
+  tableau et leur aperçu dans le formulaire.
+- La remise de l'élève (bourse, fratrie) reste modifiable, dans son propre bloc
+  du formulaire des frais.
+- Technique : `public/fees.js` lit les frais depuis `settings.registrationFee`
+  et depuis le niveau (`settings.departments`) ; `registrationFee`, `monthlyFee`
+  et `feeHistory` sont retirés des fiches élèves à la lecture de la base.
+  Nouvelles routes `PUT /api/fee-settings`, `PUT /api/students/:id/discount` et
+  `POST /api/student-payments/batch` — cette dernière enregistre un reçu par
+  montant dû et valide le lot entier contre le solde restant. Les routes
+  `PUT /api/students/:id/fees` et `DELETE /api/students/:id/fee-periods/:month`
+  sont supprimées.
+- Vérification : `npm run check`, `npm test` (34 tests) et `npm run test:ui`
+  passent ; le parcours complet (ouverture du formulaire, choix partiel, refus
+  d'un montant hors bornes, enregistrement, relevé) a été rejoué dans Chromium
+  contre un serveur réel.
+
 ## 1.9.3 — 2026-09-10
 
 - L'installateur Windows et l'application portent désormais l'icône de l'école,

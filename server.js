@@ -223,18 +223,19 @@ async function api(req, res) {
     if (parts[1] === "exam-records" && method === "POST") return json(res, 200, db.saveExamRecord(await body(req)));
     if (parts[1] === "exam-records" && method === "DELETE") { db.deleteExamRecord(parts[2]); return json(res, 200, { ok: true }); }
 
+    if (parts[1] === "fee-settings" && method === "PUT") return json(res, 200, db.updateFeeSettings(await body(req)));
+
     if (parts[1] === "departments" && method === "GET") return json(res, 200, db.getDepartments());
     if (parts[1] === "departments" && method === "POST") return json(res, 200, db.addDepartment(await body(req)));
     if (parts[1] === "departments" && method === "PUT") return json(res, 200, db.updateDepartment(parts[2], await body(req)));
     if (parts[1] === "departments" && method === "DELETE") { db.deleteDepartment(parts[2]); return json(res, 200, { ok: true }); }
 
     if (parts[1] === "students" && method === "POST") return json(res, 200, db.addStudent(await body(req)));
-    if (parts[1] === "students" && parts[3] === "fees" && method === "PUT") return json(res, 200, db.updateStudentFees(parts[2], await body(req)));
-    if (parts[1] === "students" && parts[3] === "fee-periods" && method === "DELETE")
-      return json(res, 200, db.removeStudentFeePeriod(parts[2], decodeURIComponent(parts[4] || "")));
+    if (parts[1] === "students" && parts[3] === "discount" && method === "PUT") return json(res, 200, db.updateStudentDiscount(parts[2], await body(req)));
     if (parts[1] === "students" && method === "PUT") return json(res, 200, db.updateStudent(parts[2], await body(req)));
     if (parts[1] === "students" && method === "DELETE") { db.deleteStudent(parts[2]); return json(res, 200, { ok: true }); }
 
+    if (parts[1] === "student-payments" && parts[2] === "batch" && method === "POST") return json(res, 200, db.addStudentPayments(await body(req)));
     if (parts[1] === "student-payments" && method === "POST") return json(res, 200, db.addStudentPayment(await body(req)));
     if (parts[1] === "student-payments" && method === "PUT") return json(res, 200, db.updateStudentPayment(parts[2], await body(req)));
     if (parts[1] === "student-payments" && method === "DELETE") { db.deleteStudentPayment(parts[2]); return json(res, 200, { ok: true }); }

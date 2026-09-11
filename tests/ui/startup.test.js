@@ -155,11 +155,12 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.match(feesWorkbookBytes.toString(),/xl\/worksheets\/sheet1\.xml/);
   assert.match(feesWorkbookBytes.toString(),/طالب تجريبي/);
   const receiptBody=await page.evaluate(()=>{
-    const originalData=state.data;
+    const originalData=state.data,originalSettings=state.settings,originalDepartments=state.departments;
     state.data=structuredClone(originalData);
     const student=state.data.students[0];
-    Object.assign(student,{registrationDate:'2026-09-01',registrationFee:0,monthlyFee:13000,discountType:'',discountValue:0,
-      feeHistory:[{fromMonth:'أكتوبر',monthlyFee:13000,date:'2026-09-01'}]});
+    Object.assign(student,{registrationDate:'2026-09-01',discountType:'',discountValue:0});
+    state.settings={...state.settings,registrationFee:0};
+    state.departments=[{id:1,name:student.className,monthlyFee:13000}];
     state.data.studentPayments=[
       {id:1,invoiceNo:'F-000001',studentId:student.id,month:'أكتوبر',amount:13000,date:'2026-09-01'},
       {id:2,invoiceNo:'F-000002',studentId:student.id,month:'نوفمبر',amount:3000,date:'2026-09-05'},
@@ -170,7 +171,7 @@ test('browser scripts support login, all sections, student fees and session rest
     window.printWindow=options=>{body=options.body};
     printStudentReceipt(3);
     window.printWindow=originalPrintWindow;
-    state.data=originalData;
+    state.data=originalData;state.settings=originalSettings;state.departments=originalDepartments;
     return body;
   });
   assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*6,000 أوقية/);
@@ -197,13 +198,25 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentsTable .btn-pay').click();
   await expect(page.locator('#studentFeesPanel')).toHaveAttribute('open', '');
   await expect(page.locator('#studentFeesPanel')).toBeVisible();
-  // Editing a monthly fee shows the periods it covers and what a save would change.
-  await expect(page.locator('#studentFeePeriods tr')).toHaveCount(1);
-  await expect(page.locator('#studentFeePreview')).toContainText('لا يوجد تغيير');
+  // The form states the school's fees and asks only what the family has paid.
+  await expect(page.locator('#studentFeeRates')).toContainText('رسم التسجيل');
+  await expect(page.locator('#studentFeeEntries .fee-entry')).toHaveCount(10);
+  await expect(page.locator('#studentFeeEntries .fee-entry').nth(1)).toContainText('أكتوبر');
+  await expect(page.locator('#studentFeeEntries .fee-entry').nth(1).getByText('دفع جزء من المبلغ')).toBeVisible();
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
-  await page.locator('#studentMonthlyFee').fill('7000');
+  // A partial amount opens its own field, and must stay under the whole fee.
+  const october = page.locator('#studentFeeEntries .fee-entry').nth(1);
+  await expect(october.locator('.fee-entry-amount')).toBeHidden();
+  await october.getByText('دفع جزء من المبلغ').click();
+  await expect(october.locator('.fee-entry-amount')).toBeVisible();
+  await october.locator('[data-fee-amount]').fill('99999');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('أكبر من صفر وأقل من');
+  await expect(page.locator('#saveStudentFees')).toBeDisabled();
+  await october.locator('[data-fee-amount]').fill('4000');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('4,000');
   await expect(page.locator('#saveStudentFees')).toBeEnabled();
-  await expect(page.locator('#studentFeePreview')).toContainText('يتغيّر');
+  await page.locator('#studentFeeEntries .fee-entry').nth(2).getByText('دفع المبلغ كاملا').click();
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('لم تُسدَّد بعد');
   await page.locator('#resetStudentFees').click();
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
   await page.locator('#showStudentLedger').click();

@@ -5,8 +5,9 @@
 //      month; later months stay scheduled so they can still be paid in advance.
 //   2. A payment is a credit on the account, allocated to the oldest unpaid
 //      charge first, so paying several months at once clears them all.
-//   3. A charge keeps the fee that applied when it fell due, so changing the
-//      monthly fee never rewrites months that are already billed.
+//   3. Fees are not a property of the student. The school sets one registration
+//      fee and one monthly fee per level, both in the settings, and every charge
+//      reads them from there, so a fee corrected once is corrected everywhere.
 (function (root, factory) {
   const api = factory();
   if (typeof module === 'object' && module.exports) module.exports = api;
@@ -90,58 +91,25 @@ function monthIndexOf(dateStr, startYear) {
   return Math.min(Math.max(offset, 0), MONTHS.length - 1);
 }
 
-// The fee history is an append-only list of periods, each starting at a school
-// month. A charge takes the fee of the latest period that began on or before it.
-function feePeriodsOf(student) {
-  const history = Array.isArray(student && student.feeHistory) ? student.feeHistory : [];
-  return history
-    .map(period => ({ fromMonth: String(period.fromMonth || ''), monthlyFee: Math.max(0, Number(period.monthlyFee) || 0), date: String(period.date || '') }))
-    .filter(period => MONTHS.includes(period.fromMonth))
-    .sort((a,b) => MONTHS.indexOf(a.fromMonth) - MONTHS.indexOf(b.fromMonth));
+// The two fees the school sets. `settings` carries the school's own values and
+// the list of levels (departments), so both sides of the application resolve a
+// fee the same way: the level's fee if it has one, the default otherwise.
+function registrationFeeFor(settings) {
+  return round2(Math.max(0, Number(settings && settings.registrationFee) || 0));
 }
 
-// The months each fee period covers, so the interface can show the history as
-// ranges the reader can check against a month, instead of a list of start dates.
-function feePeriodRanges(student) {
-  const periods = feePeriodsOf(student);
-  return periods.map((period, index) => {
-    const from = MONTHS.indexOf(period.fromMonth);
-    const next = index + 1 < periods.length ? MONTHS.indexOf(periods[index + 1].fromMonth) : MONTHS.length;
-    return { ...period, toMonth: MONTHS[next - 1], monthCount: Math.max(0, next - from) };
-  });
+function departmentFeeOf(settings, className) {
+  const departments = Array.isArray(settings && settings.departments) ? settings.departments : [];
+  const department = departments.find(d => String(d && d.name) === String(className || ''));
+  const fee = department ? Number(department.monthlyFee) : NaN;
+  return Number.isFinite(fee) ? Math.max(0, fee) : null;
 }
 
-// A copy of the student with one fee period set, mirroring what the server does
-// in updateStudentFees. The interface runs the ledger over the copy to show the
-// effect of an edit before it is saved.
-function withFeePeriod(student, fromMonth, monthlyFee, settings) {
-  const baseline = MONTHS[enrolmentIndex(student, startYearOf(settings && settings.schoolYear))];
-  const history = feePeriodsOf(student).filter(period => period.fromMonth !== fromMonth);
-  // A record older than the fee history keeps its old fee on the months already billed.
-  if (!history.length && fromMonth !== baseline) {
-    history.push({ fromMonth: baseline, monthlyFee: Math.max(0, Number(student && student.monthlyFee) || 0) });
-  }
-  history.push({ fromMonth, monthlyFee: Math.max(0, Number(monthlyFee) || 0) });
-  history.sort((a, b) => MONTHS.indexOf(a.fromMonth) - MONTHS.indexOf(b.fromMonth));
-  return { ...student, feeHistory: history, monthlyFee: history[history.length - 1].monthlyFee };
-}
-
-// A copy without one period: the only way to undo a period entered by mistake.
-function withoutFeePeriod(student, fromMonth) {
-  const history = feePeriodsOf(student).filter(period => period.fromMonth !== fromMonth);
-  return { ...student, feeHistory: history,
-    monthlyFee: history.length ? history[history.length - 1].monthlyFee : Math.max(0, Number(student && student.monthlyFee) || 0) };
-}
-
-function monthlyFeeFor(student, month) {
-  const periods = feePeriodsOf(student);
-  if (!periods.length) return Math.max(0, Number(student && student.monthlyFee) || 0);
-  const index = MONTHS.indexOf(month);
-  let fee = periods[0].monthlyFee;
-  for (const period of periods) {
-    if (MONTHS.indexOf(period.fromMonth) <= index) fee = period.monthlyFee;
-  }
-  return fee;
+// The monthly fee is fixed for the whole year: it depends on the student's
+// level, never on the month.
+function monthlyFeeFor(student, settings) {
+  const levelFee = departmentFeeOf(settings, student && student.className);
+  return round2(levelFee === null ? Math.max(0, Number(settings && settings.defaultMonthlyFee) || 0) : levelFee);
 }
 
 // A scholarship or sibling discount reduces the monthly fee, never the
@@ -181,15 +149,15 @@ function chargesFor(student, settings) {
   const startYear = startYearOf(settings && settings.schoolYear);
   const first = enrolmentIndex(student, startYear);
   const last = departureIndex(student, startYear);
-  const registration = round2(Math.max(0, Number(student.registrationFee) || 0));
+  const registration = registrationFeeFor(settings);
   const charges = [{
     month: REGISTRATION,
     dueDate: dueDateFor(student, REGISTRATION, startYear),
     gross: registration, discount: 0, amount: registration
   }];
+  const gross = monthlyFeeFor(student, settings);
+  const discount = discountOn(student, gross);
   for (let i = first; i <= last; i++) {
-    const gross = round2(monthlyFeeFor(student, MONTHS[i]));
-    const discount = discountOn(student, gross);
     charges.push({
       month: MONTHS[i],
       dueDate: dueDateFor(student, MONTHS[i], startYear),
@@ -268,7 +236,7 @@ function outstandingThrough(ledger, month) {
 return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDENT_STATUSES,
   DISCOUNT_TYPES, DISCOUNT_LABELS,
   FEE_STATUS_LABELS, FEE_STATUS_CLASSES, FEE_FILTERS, feeStatusKey, feeStatusOf,
-  round2, startYearOf, monthDate, monthIndexOf, feePeriodsOf, feePeriodRanges,
-  withFeePeriod, withoutFeePeriod, monthlyFeeFor, discountOn,
+  round2, startYearOf, monthDate, monthIndexOf,
+  registrationFeeFor, departmentFeeOf, monthlyFeeFor, discountOn,
   enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor, outstandingThrough };
 });

@@ -1,31 +1,115 @@
+// Les trois sélecteurs de département sont remplis depuis la même liste. Le
+// filtre de l'écran « الطلاب » garde sa valeur si le département existe encore.
 function populateDepartments(){
-  const studentFilterValue=$('studentDepartmentFilter').value;
-  $('className').innerHTML=`<option value="">اختر القسم</option>`+state.departments.map(d=>`<option value="${esc(d.name)}">${esc(d.name)}</option>`).join('');
-  $('studentDepartmentFilter').innerHTML=`<option value="">كل الأقسام والشُّعب</option>`+state.departments.map(d=>`<option value="${esc(d.name)}">${esc(d.name)}</option>`).join('');
-  if(state.departments.some(d=>d.name===studentFilterValue))$('studentDepartmentFilter').value=studentFilterValue;
-  $('feeDepartment').innerHTML=`<option value="">الكل</option>`+state.departments.map(d=>`<option value="${esc(d.name)}">${esc(d.name)}</option>`).join('');
+  const previousFilter=$('studentDepartmentFilter').value;
+  const options=state.departments.map(d=>`<option value="${esc(d.name)}">${esc(d.name)}</option>`).join('');
+  $('className').innerHTML=`<option value="">اختر القسم</option>`+options;
+  $('studentDepartmentFilter').innerHTML=`<option value="">كل الأقسام والشُّعب</option>`+options;
+  $('feeDepartment').innerHTML=`<option value="">الكل</option>`+options;
+  if(state.departments.some(d=>d.name===previousFilter))$('studentDepartmentFilter').value=previousFilter;
 }
 
-function firstCallNo(dep,exclude=null){const used=new Set(state.data.students.filter(s=>s.className===dep&&Number(s.id)!==Number(exclude)).map(s=>parseInt(s.callNo,10)).filter(Number.isFinite));let n=1;while(used.has(n))n++;return String(n)}
+// Premier numéro d'appel libre du département : les numéros se réutilisent quand
+// un élève part, l'élève en cours d'édition ne bloque pas le sien.
+function firstCallNo(dep,exclude=null){
+  const used=new Set(state.data.students
+    .filter(s=>s.className===dep&&Number(s.id)!==Number(exclude))
+    .map(s=>parseInt(s.callNo,10))
+    .filter(Number.isFinite));
+  let n=1;
+  while(used.has(n))n++;
+  return String(n);
+}
 function departmentFee(dep){const d=state.departments.find(x=>x.name===dep);return Number(d?.monthlyFee||0)}
-function toggleLeaveField(){const active=$('studentStatus').value===ACTIVE_STATUS;$('leaveDateWrap').classList.toggle('hidden-field',active);if(active)$('studentLeaveDate').value=''}
+// La date de départ n'a de sens que pour un élève qui n'est plus actif.
+function toggleLeaveField(){
+  const active=$('studentStatus').value===ACTIVE_STATUS;
+  $('leaveDateWrap').classList.toggle('hidden-field',active);
+  if(active)$('studentLeaveDate').value='';
+}
 $('studentStatus').onchange=toggleLeaveField;
-function resetStudent(){if(!$('studentForm'))return;$('studentForm').reset();$('studentId').value='';$('registrationDate').value=today();$('callNo').value='';$('gender').value='';$('studentStatus').value=ACTIVE_STATUS;$('studentLeaveDate').value='';toggleLeaveField()}
+function resetStudent(){
+  if(!$('studentForm'))return;
+  $('studentForm').reset();
+  $('studentId').value='';
+  $('registrationDate').value=today();
+  $('callNo').value='';
+  $('gender').value='';
+  $('studentStatus').value=ACTIVE_STATUS;
+  $('studentLeaveDate').value='';
+  toggleLeaveField();
+}
 $('cancelStudent').onclick=resetStudent;
-$('className').addEventListener('change',()=>{$('callNo').value=$('className').value?firstCallNo($('className').value,$('studentId').value||null):''})
-$('studentForm').addEventListener('submit',async e=>{e.preventDefault();const p={schoolNo:western($('schoolNo').value),name:$('studentName').value,callNo:$('callNo').value,gender:$('gender').value,nni:western($('nni').value),birthPlace:$('birthPlace').value,birthDate:$('birthDate').value,guardianName:$('guardianName').value,guardianPhone:western($('guardianPhone').value),className:$('className').value,registrationDate:$('registrationDate').value,status:$('studentStatus').value,leaveDate:$('studentLeaveDate').value,notes:$('studentNotes').value};try{const id=$('studentId').value;let created=null;if(id){if(!(await requirePassword()))return;created=await api(`/students/${id}`,{method:'PUT',body:JSON.stringify(p)})}else created=await api('/students',{method:'POST',body:JSON.stringify(p)});await load();resetStudent();renderStudents();renderFees();renderPaymentHistory();toast('تم حفظ الطالب.');}catch(err){toast(err.message)}});
+$('className').addEventListener('change',()=>{
+  $('callNo').value=$('className').value?firstCallNo($('className').value,$('studentId').value||null):'';
+});
+$('studentForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const payload={
+    schoolNo:western($('schoolNo').value),
+    name:$('studentName').value,
+    callNo:$('callNo').value,
+    gender:$('gender').value,
+    nni:western($('nni').value),
+    birthPlace:$('birthPlace').value,
+    birthDate:$('birthDate').value,
+    guardianName:$('guardianName').value,
+    guardianPhone:western($('guardianPhone').value),
+    className:$('className').value,
+    registrationDate:$('registrationDate').value,
+    status:$('studentStatus').value,
+    leaveDate:$('studentLeaveDate').value,
+    notes:$('studentNotes').value
+  };
+  try{
+    const id=$('studentId').value;
+    if(id){
+      // Modifier une fiche existante demande la confirmation du mot de passe.
+      if(!(await requirePassword()))return;
+      await api(`/students/${id}`,{method:'PUT',body:JSON.stringify(payload)});
+    }else{
+      await api('/students',{method:'POST',body:JSON.stringify(payload)});
+    }
+    await load();
+    resetStudent();
+    renderStudents();
+    renderFees();
+    renderPaymentHistory();
+    toast('تم حفظ الطالب.');
+  }catch(error){
+    toast(error.message);
+  }
+});
 $('studentSearch').oninput=debounce(renderStudents);
 $('studentDepartmentFilter').onchange=renderStudents;
-let ledgerCache=null,ledgerData=null,ledgerSettings=null;
+// Fees live in the settings and in the departments, so the dues engine is
+// handed both together wherever a ledger is computed.
+function feeSettings(){return {...(state.settings||{}),departments:state.departments||[]}}
+let ledgerCache=null,ledgerData=null,ledgerSettings=null,ledgerDepartments=null;
+// Les relevés sont recalculés pour tous les élèves d'un coup et gardés en cache :
+// chaque écran les interroge des dizaines de fois par rendu. Le cache tombe dès
+// que `load()` remplace les données ou les réglages.
 function ledgers(){
-  if(ledgerCache&&ledgerData===state.data&&ledgerSettings===state.settings)return ledgerCache;
+  if(ledgerCache&&ledgerData===state.data&&ledgerSettings===state.settings&&ledgerDepartments===state.departments)return ledgerCache;
+  const settings=feeSettings();
   const byStudent=new Map();
-  for(const p of state.data.studentPayments){const key=Number(p.studentId);const list=byStudent.get(key);if(list)list.push(p);else byStudent.set(key,[p])}
+  for(const p of state.data.studentPayments){
+    const key=Number(p.studentId);
+    const list=byStudent.get(key);
+    if(list)list.push(p);
+    else byStudent.set(key,[p]);
+  }
   const map=new Map();
-  for(const s of state.data.students)map.set(Number(s.id),ledgerFor(s,byStudent.get(Number(s.id))||[],state.settings||{}));
-  ledgerData=state.data;ledgerSettings=state.settings;ledgerCache=map;return map;
+  for(const s of state.data.students){
+    map.set(Number(s.id),ledgerFor(s,byStudent.get(Number(s.id))||[],settings));
+  }
+  ledgerData=state.data;
+  ledgerSettings=state.settings;
+  ledgerDepartments=state.departments;
+  ledgerCache=map;
+  return map;
 }
-function ledgerOf(student){return ledgers().get(Number(student.id))||ledgerFor(student,[],state.settings||{})}
+function ledgerOf(student){return ledgers().get(Number(student.id))||ledgerFor(student,[],feeSettings())}
 function studentById(sid){return state.data.students.find(s=>Number(s.id)===Number(sid))}
 // Null for a month the student is not enrolled in: nothing is owed for it.
 function chargeOf(student,month){return student?ledgerOf(student).byMonth.get(month)||null:null}
@@ -38,8 +122,31 @@ function paymentLabel(p){return p.month==='رسوم التسجيل'?'رسوم ا
 function invoiceNo(p){return p?.invoiceNo||`F-${String(p?.id||0).padStart(6,'0')}`}
 function lateFor(student,month){const row=chargeOf(student,month);return !!row&&row.remaining>0&&today()>row.dueDate}
 function statusFor(student,month){return feeStatusOf(chargeOf(student,month),today())}
-function filteredStudents(){const q=$('studentSearch').value.toLowerCase().trim(),dep=$('studentDepartmentFilter').value;return state.data.students.filter(s=>(!dep||s.className===dep)&&[s.className,s.name,s.schoolNo,s.nni].join(' ').toLowerCase().includes(q))}
-function renderStudents(){const list=filteredStudents();$('studentCount').textContent=`عدد الطلاب: ${list.length}`;$('studentsTable').innerHTML=list.map(s=>`<tr><td>${esc(s.className)}</td><td>${esc(s.callNo)}</td><td>${esc(s.schoolNo)}</td><td>${esc(s.name)}</td><td>${esc(s.gender||'')}</td><td>${esc(s.nni)}</td><td class="${(s.status||ACTIVE_STATUS)===ACTIVE_STATUS?'':'status-exempt'}">${esc(s.status||ACTIVE_STATUS)}${s.leaveDate?' — '+esc(s.leaveDate):''}</td><td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">رسوم الطالب</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td></tr>`).join('')||'<tr><td colspan="8">لا يوجد طلاب مطابقون للتصفية.</td></tr>'}
+// La recherche porte sur le département, le nom, le numéro scolaire et le NNI.
+function filteredStudents(){
+  const query=$('studentSearch').value.toLowerCase().trim();
+  const dep=$('studentDepartmentFilter').value;
+  return state.data.students.filter(s=>(!dep||s.className===dep)
+    &&[s.className,s.name,s.schoolNo,s.nni].join(' ').toLowerCase().includes(query));
+}
+function renderStudents(){
+  const list=filteredStudents();
+  $('studentCount').textContent=`عدد الطلاب: ${list.length}`;
+  const rows=list.map(s=>{
+    const status=s.status||ACTIVE_STATUS;
+    return `<tr>
+      <td>${esc(s.className)}</td>
+      <td>${esc(s.callNo)}</td>
+      <td>${esc(s.schoolNo)}</td>
+      <td>${esc(s.name)}</td>
+      <td>${esc(s.gender||'')}</td>
+      <td>${esc(s.nni)}</td>
+      <td class="${status===ACTIVE_STATUS?'':'status-exempt'}">${esc(status)}${s.leaveDate?' — '+esc(s.leaveDate):''}</td>
+      <td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">رسوم الطالب</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td>
+    </tr>`;
+  }).join('');
+  $('studentsTable').innerHTML=rows||'<tr><td colspan="8">لا يوجد طلاب مطابقون للتصفية.</td></tr>';
+}
 const STUDENT_EXPORT_COLUMNS=[
   {key:'className',label:'القسم',value:s=>s.className||''},
   {key:'callNo',label:'رقم النداء',value:s=>Number(s.callNo)||s.callNo||''},
@@ -64,13 +171,18 @@ try{
   if(Array.isArray(saved))studentExportColumns=saved.filter(key=>STUDENT_EXPORT_COLUMNS.some(column=>column.key===key));
 }catch{}
 function renderStudentExportColumns(){
-  $('studentExportColumns').innerHTML=STUDENT_EXPORT_COLUMNS.map(column=>`<label><input type="checkbox" data-student-export-column="${column.key}" ${studentExportColumns.includes(column.key)?'checked':''}> ${esc(column.label)}</label>`).join('');
+  const toggle=column=>`<label><input type="checkbox" data-student-export-column="${column.key}" ${studentExportColumns.includes(column.key)?'checked':''}> ${esc(column.label)}</label>`;
+  $('studentExportColumns').innerHTML=STUDENT_EXPORT_COLUMNS.map(toggle).join('');
 }
 function selectedStudentExportColumns(){
-  const checked=new Set([...document.querySelectorAll('[data-student-export-column]')].filter(input=>input.checked).map(input=>input.dataset.studentExportColumn));
+  const checked=new Set([...document.querySelectorAll('[data-student-export-column]')]
+    .filter(input=>input.checked)
+    .map(input=>input.dataset.studentExportColumn));
   return STUDENT_EXPORT_COLUMNS.filter(column=>checked.has(column.key));
 }
-function setAllStudentExportColumns(checked){document.querySelectorAll('[data-student-export-column]').forEach(input=>{input.checked=checked})}
+function setAllStudentExportColumns(checked){
+  for(const input of document.querySelectorAll('[data-student-export-column]'))input.checked=checked;
+}
 $('selectAllStudentExport').onclick=()=>setAllStudentExportColumns(true);
 $('clearStudentExport').onclick=()=>setAllStudentExportColumns(false);
 $('closeStudentExport').onclick=()=>$('studentExportDialog').close();
@@ -94,11 +206,33 @@ $('studentExportForm').addEventListener('submit',e=>{
   $('studentExportDialog').close();
   toast(`تم تصدير ${money(students.length)} طالب إلى Excel.`);
 });
-window.editStudent=id=>{const s=state.data.students.find(x=>x.id===id);if(!s)return;for(const [id2,v] of Object.entries({studentId:s.id,className:s.className,callNo:s.callNo,schoolNo:s.schoolNo,studentName:s.name,gender:s.gender||'',nni:s.nni,birthPlace:s.birthPlace,birthDate:s.birthDate,guardianName:s.guardianName,guardianPhone:s.guardianPhone,registrationDate:s.registrationDate,studentStatus:s.status||ACTIVE_STATUS,studentLeaveDate:s.leaveDate||'',studentNotes:s.notes}))$(id2).value=v??'';toggleLeaveField();showEditForm('students','studentForm','studentName')}
+window.editStudent=id=>{
+  const s=state.data.students.find(x=>x.id===id);
+  if(!s)return;
+  const fields={
+    studentId:s.id,
+    className:s.className,
+    callNo:s.callNo,
+    schoolNo:s.schoolNo,
+    studentName:s.name,
+    gender:s.gender||'',
+    nni:s.nni,
+    birthPlace:s.birthPlace,
+    birthDate:s.birthDate,
+    guardianName:s.guardianName,
+    guardianPhone:s.guardianPhone,
+    registrationDate:s.registrationDate,
+    studentStatus:s.status||ACTIVE_STATUS,
+    studentLeaveDate:s.leaveDate||'',
+    studentNotes:s.notes
+  };
+  for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value??'';
+  toggleLeaveField();
+  showEditForm('students','studentForm','studentName');
+};
 window.removeStudent=async id=>{await deleteWithPassword(`/students/${id}`,'هل تريد حذف الطالب وجميع دفعاته؟','تم حذف الطالب وجميع دفعاته.');};
 
 let selectedFeeStudentId = null;
-$('studentPaymentMonth').innerHTML = monthOptionsHtml();
 function selectedFeeStudent() { return state.data?.students.find(s => Number(s.id) === Number(selectedFeeStudentId)); }
 window.openStudentFees = (id, showLedger = false) => {
   selectedFeeStudentId = Number(id);
@@ -106,116 +240,153 @@ window.openStudentFees = (id, showLedger = false) => {
   if (!student) return;
   go('fees');
   if(!showLedger&&!$('studentFeesPanel').open)$('studentFeesPanel').showModal();
-  fillStudentFeeForm(student, months.includes($('feeMonth').value) ? $('feeMonth').value : currentMonth());
-  $('studentPaymentAmount').value = '';
-  const selectedMonth=$('feeMonth').value;
-  $('studentPaymentMonth').value = selectedMonth===TOTAL_MODE ? (ledgerOf(student).oldestUnpaid?.month || REGISTRATION) : selectedMonth;
-  $('studentPaymentDate').value = today();
+  $('studentFeeEntryDate').value = today();
+  fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
   if(showLedger)openStudentLedgerDialog();
-  else showEditForm('fees','studentFeesForm','studentRegistrationFee');
+  else showEditForm('fees','studentFeesForm','firstFeeChoice');
 };
-function fillStudentFeeForm(student, month) {
-  $('studentRegistrationFee').value = student.registrationFee || 0;
-  $('studentFeeFrom').value = month;
+function fillStudentDiscountForm(student) {
   $('studentDiscountType').value = student.discountType || '';
   $('studentDiscountValue').value = student.discountValue || '';
   $('studentDiscountReason').value = student.discountReason || '';
   toggleDiscountFields();
-  showFeeForMonth();
 }
 
-// The student the form currently describes, as a record the ledger engine reads,
-// or null while an amount is still unusable.
-function draftFeeStudent(student) {
-  const monthlyFee = Number(western($('studentMonthlyFee').value));
-  const registrationFee = Number(western($('studentRegistrationFee').value));
-  if (![monthlyFee, registrationFee].every(value => Number.isFinite(value) && value >= 0)) return null;
-  return { ...withFeePeriod(student, $('studentFeeFrom').value, monthlyFee, state.settings || {}),
-    registrationFee,
-    discountType: $('studentDiscountType').value,
-    discountValue: western($('studentDiscountValue').value),
-    discountReason: $('studentDiscountReason').value };
+// The fee form no longer asks what a student owes: the registration fee comes
+// from «إعدادات الرسوم» and the monthly fee from the level, so the form states
+// them and asks the one question left — what has the family paid?
+const FEE_CHOICES = [
+  { value: 'none', label: 'لم يدفع بعد' },
+  { value: 'full', label: 'دفع المبلغ كاملا' },
+  { value: 'partial', label: 'دفع جزء من المبلغ' }
+];
+// One line per charge: the registration fee, then every month the student is
+// enrolled in, with what the ledger has already settled on it.
+function studentFeeRows(student) {
+  return ledgerOf(student).rows.map((row, index) => ({ index, month: row.month, amount: row.amount, paid: row.paid, remaining: row.remaining }));
 }
-
-// Saving rewrites every month the new fee reaches, and a discount reaches even
-// months already settled. Both used to happen silently; the form now names the
-// affected dues and the new totals before anything is written.
-function renderStudentFeePreview() {
-  const box = $('studentFeePreview'), save = $('saveStudentFees'), student = selectedFeeStudent();
-  if (!student) { box.textContent = ''; box.className = 'fee-preview hidden'; return; }
-  const draft = draftFeeStudent(student);
-  if (!draft) { box.className = 'fee-preview warn'; box.textContent = 'أدخل رسومًا صحيحة لا تقل عن صفر.'; save.disabled = true; return; }
-  const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
-  const before = ledgerOf(student), after = ledgerFor(draft, payments, state.settings || {});
-  const amountOf = (ledger, month) => { const row = ledger.byMonth.get(month); return row ? row.amount : null; };
-  const changed = [REGISTRATION, ...months].filter(month => amountOf(before, month) !== amountOf(after, month));
-  const reasonChanged = (student.discountReason || '') !== $('studentDiscountReason').value;
-  if (!changed.length) {
-    box.className = 'fee-preview';
-    box.textContent = reasonChanged ? 'سيُحفظ سبب الخصم دون تغيير أي مبلغ.' : 'لا يوجد تغيير عن القيم المحفوظة.';
-    save.disabled = !reasonChanged;
+function feeEntryHtml(row) {
+  const head = `<div class="fee-entry-head"><b>${esc(row.month)}</b><span>المستحق: ${money(row.amount)} أوقية</span>`
+    + (row.paid > 0 ? `<span class="status-partial">سبق تسديد ${money(row.paid)}</span>` : '') + '</div>';
+  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<p class="status-exempt">بلا رسوم على هذا الشهر.</p></div>`;
+  const settled = row.remaining <= 0;
+  const selected = settled ? 'full' : row.paid > 0 ? 'partial' : 'none';
+  const choices = FEE_CHOICES.map((choice, position) => {
+    // A fee already settled, and the «لم يدفع بعد» of one partly settled, would
+    // both mean taking money back: that is a receipt to delete, not a choice here.
+    const disabled = settled || (choice.value === 'none' && row.paid > 0);
+    return `<label class="fee-choice${disabled ? ' fee-choice-locked' : ''}">`
+      + `<input type="radio" name="feeChoice${row.index}"${row.index === 0 && position === 0 ? ' id="firstFeeChoice"' : ''} value="${choice.value}"`
+      + `${choice.value === selected ? ' checked' : ''}${disabled ? ' disabled' : ''}>${esc(choice.label)}</label>`;
+  }).join('');
+  const amount = `<label class="fee-entry-amount${selected === 'partial' && !settled ? '' : ' hidden-field'}">المبلغ المدفوع من هذا الرسم`
+    + `<input type="number" data-fee-amount min="0.01" max="${round2(row.amount - 0.01)}" step="0.01"`
+    + ` value="${selected === 'partial' && !settled ? row.paid : ''}"${settled ? ' disabled' : ''}></label>`;
+  return `<div class="fee-entry${settled ? ' fee-entry-settled' : ''}" data-fee-entry="${row.index}">${head}`
+    + `<div class="fee-entry-choices" role="radiogroup" aria-label="حالة دفع ${esc(row.month)}">${choices}</div>`
+    + amount
+    + (settled ? '<p class="status-paid">مسدَّد بالكامل. لتصحيحه احذف دفعته من كشف الحساب.</p>' : '')
+    + '</div>';
+}
+function renderStudentFeeEntries() {
+  const student = selectedFeeStudent();
+  if (!student) return;
+  const monthly = monthlyFeeFor(student, feeSettings());
+  const discount = discountOn(student, monthly);
+  $('studentFeeRates').innerHTML = `رسم التسجيل: <b>${money(registrationFeeFor(feeSettings()))}</b> أوقية`
+    + ` — الرسم الشهري لمستوى ${esc(student.className || '—')}: <b>${money(monthly)}</b> أوقية`
+    + (discount > 0 ? ` — بعد الخصم: <b>${money(round2(monthly - discount))}</b> أوقية` : '')
+    + `. تُقرأ هذه المبالغ من «إعدادات الرسوم» ولا تُدخَل هنا؛ لتغييرها عدّل الإعدادات أو رسوم القسم.`;
+  $('studentFeeEntries').innerHTML = studentFeeRows(student).map(feeEntryHtml).join('')
+    || '<p>لا توجد رسوم مستحقة على هذا الطالب.</p>';
+  updateStudentFeeSummary();
+}
+// What the form says now, line by line: the total the charge should show, the
+// new money that implies, and the reason a line cannot be saved as entered.
+function readStudentFeeEntries() {
+  const student = selectedFeeStudent();
+  if (!student) return [];
+  return studentFeeRows(student).map(row => {
+    const box = $('studentFeeEntries').querySelector(`[data-fee-entry="${row.index}"]`);
+    const choice = box?.querySelector('input[type=radio]:checked')?.value || 'none';
+    if (!(row.amount > 0) || choice === 'none') return { ...row, choice, target: row.paid, delta: 0, error: '' };
+    if (choice === 'full') return { ...row, choice, target: row.amount, delta: round2(row.amount - row.paid), error: '' };
+    const typed = Number(western(box.querySelector('[data-fee-amount]').value));
+    if (!Number.isFinite(typed) || typed <= 0 || typed >= row.amount) {
+      return { ...row, choice, target: row.paid, delta: 0, error: `المبلغ الجزئي لـ«${row.month}» يجب أن يكون أكبر من صفر وأقل من ${money(row.amount)}.` };
+    }
+    if (typed < row.paid) return { ...row, choice, target: row.paid, delta: 0, error: `لا يمكن أن يقل المبلغ المدفوع لـ«${row.month}» عن ${money(row.paid)} المسدَّدة سابقًا؛ احذف دفعتها من كشف الحساب لتصحيحها.` };
+    return { ...row, choice, target: typed, delta: round2(typed - row.paid), error: '' };
+  });
+}
+// Payments settle the oldest open fee first, so a month marked paid over an
+// older unpaid one pays that older one instead. The form names them before it
+// saves, instead of letting the ledger surprise the reader afterwards.
+function skippedFeeMonths(entries) {
+  const lastPaid = entries.reduce((last, entry, index) => entry.delta > 0 ? index : last, -1);
+  return entries.slice(0, Math.max(lastPaid, 0)).filter(entry => entry.amount > 0 && entry.target < entry.amount).map(entry => entry.month);
+}
+function updateStudentFeeSummary() {
+  const box = $('studentFeeEntrySummary'), save = $('saveStudentFees');
+  if (!selectedFeeStudent()) { box.textContent = ''; box.className = 'fee-preview hidden'; return; }
+  const entries = readStudentFeeEntries();
+  const failed = entries.filter(entry => entry.error);
+  if (failed.length) {
+    box.className = 'fee-preview warn';
+    box.innerHTML = failed.map(entry => `<p>${esc(entry.error)}</p>`).join('');
+    save.disabled = true;
     return;
   }
-  save.disabled = false;
-  const settled = changed.filter(month => { const row = before.byMonth.get(month); return row && row.amount > 0 && row.remaining <= 0; });
-  const past = changed.filter(month => { const row = before.byMonth.get(month); return row && row.dueDate < today(); });
-  const names = changed.length > 6 ? esc(changed[0]) + ' … ' + esc(changed[changed.length - 1]) : changed.map(esc).join('، ');
-  const total = (label, from, to) => '<span><small>' + label + '</small><b>' + money(from) + ' ← ' + money(to) + '</b></span>';
-  box.className = settled.length ? 'fee-preview warn' : 'fee-preview';
+  const paying = entries.filter(entry => entry.delta > 0);
+  save.disabled = !paying.length;
+  if (!paying.length) {
+    box.className = 'fee-preview';
+    box.textContent = 'حدّد ما دفعه الطالب من كل رسم ثم سجّل الدفعات.';
+    return;
+  }
+  const total = round2(paying.reduce((sum, entry) => sum + entry.delta, 0));
+  const skipped = skippedFeeMonths(entries);
+  box.className = skipped.length ? 'fee-preview warn' : 'fee-preview';
   box.innerHTML = '<div class="fee-preview-totals">'
-    + total('إجمالي المستحق', before.totalDue, after.totalDue)
-    + total('المتبقي', before.outstanding, after.outstanding)
-    + (after.credit !== before.credit ? total('رصيد دائن', before.credit, after.credit) : '')
-    + '</div><p>يتغيّر ' + money(changed.length) + ' من الرسوم: ' + names + '.</p>'
-    + (past.length ? '<p>منها ' + money(past.length) + ' مضى تاريخ استحقاقها.</p>' : '')
-    + (settled.length ? '<p class="status-unpaid">تنبيه: ' + money(settled.length) + ' من هذه الرسوم مسدَّدة بالكامل وسيُعاد احتسابها، وقد يظهر رصيد دائن أو متبقٍّ جديد.</p>' : '');
+    + `<span><small>عدد الدفعات</small><b>${money(paying.length)}</b></span>`
+    + `<span><small>إجمالي ما سيُسجَّل</small><b>${money(total)} أوقية</b></span>`
+    + '</div><p>' + paying.map(entry => `${esc(entry.month)}: ${money(entry.delta)}`).join('، ') + '.</p>'
+    + (skipped.length ? `<p class="status-unpaid">تنبيه: ${esc(skipped.join('، '))} لم تُسدَّد بعد، وتُوزَّع الدفعات على أقدم رسم غير مسدَّد أولًا.</p>` : '');
 }
-
-// The history was invisible: the form showed one month's fee and nothing else.
-function renderStudentFeePeriods() {
-  const student = selectedFeeStudent(), current = $('studentFeeFrom').value;
-  const ranges = student ? feePeriodRanges(student) : [];
-  $('studentFeePeriods').innerHTML = ranges.map(range =>
-    '<tr class="' + (range.fromMonth === current ? 'fee-period-active' : '') + '">'
-    + '<td>' + esc(range.fromMonth) + '</td><td>' + esc(range.toMonth || '—') + '</td>'
-    + '<td>' + money(range.monthCount) + '</td><td>' + money(range.monthlyFee) + '</td>'
-    + '<td>' + (range.date ? western(range.date) : '—') + '</td>'
-    + '<td class="actions"><button type="button" class="btn-edit" data-period-month="' + esc(range.fromMonth) + '">تعديل</button>'
-    + (ranges.length > 1 ? '<button type="button" class="btn-delete" data-period-month="' + esc(range.fromMonth) + '" data-period-remove="1">حذف</button>' : '')
-    + '</td></tr>').join('')
-    || '<tr><td colspan="6">لا توجد فترات رسوم بعد.</td></tr>';
-}
-$('studentFeePeriods').onclick = event => {
-  const button = event.target.closest('[data-period-month]');
-  if (!button) return;
-  if (button.dataset.periodRemove) return removeStudentFeePeriod(button.dataset.periodMonth);
-  $('studentFeeFrom').value = button.dataset.periodMonth;
-  showFeeForMonth();
-  renderStudentFeePeriods();
-  renderStudentFeePreview();
-  $('studentMonthlyFee').focus();
-};
-async function removeStudentFeePeriod(month) {
+$('studentFeeEntries').addEventListener('change', event => {
+  const box = event.target.closest('[data-fee-entry]');
+  if (box && event.target.matches('input[type=radio]')) {
+    const amount = box.querySelector('.fee-entry-amount');
+    amount.classList.toggle('hidden-field', event.target.value !== 'partial');
+    if (event.target.value === 'partial') amount.querySelector('[data-fee-amount]').focus();
+  }
+  updateStudentFeeSummary();
+});
+$('studentFeeEntries').addEventListener('input', event => { if (event.target.matches('[data-fee-amount]')) updateStudentFeeSummary(); });
+$('resetStudentFees').onclick = () => { $('studentFeeEntryDate').value = today(); renderStudentFeeEntries(); };
+$('studentFeesForm').onsubmit = async event => {
+  event.preventDefault();
   const student = selectedFeeStudent();
   if (!student) return;
-  if (!(await askConfirm('هل تريد حذف فترة الرسوم التي تبدأ من ' + month + '؟ ستسري على أشهرها رسوم الفترة السابقة.'))) return;
-  if (!(await requirePassword())) return;
+  const entries = readStudentFeeEntries();
+  const failed = entries.find(entry => entry.error);
+  if (failed) return toast(failed.error);
+  const paying = entries.filter(entry => entry.delta > 0);
+  if (!paying.length) return toast('لم تحدَّد أي دفعة جديدة لتسجيلها.');
+  const date = $('studentFeeEntryDate').value;
+  if (!date) return toast('أدخل تاريخ الدفع.');
+  const skipped = skippedFeeMonths(entries);
+  if (skipped.length && !(await askConfirm(`رسوم ${skipped.join('، ')} لم تُسدَّد بعد، وتُوزَّع الدفعات على أقدم رسم غير مسدَّد أولًا، فقد تذهب المبالغ إليها. هل تريد المتابعة؟`))) return;
+  const total = round2(paying.reduce((sum, entry) => sum + entry.delta, 0));
+  const button = event.submitter;
+  button.disabled = true;
   try {
-    await api('/students/' + student.id + '/fee-periods/' + encodeURIComponent(month), {method:'DELETE'});
-    await load();
-    const updated = selectedFeeStudent();
-    if (updated) fillStudentFeeForm(updated, $('studentFeeFrom').value);
-    renderFees(); renderDashboard(); refreshStudentFeeDetails();
-    toast('تم حذف فترة الرسوم.');
-  } catch(error) { toast(error.message); }
-}
-$('resetStudentFees').onclick = () => {
-  const student = selectedFeeStudent();
-  if (!student) return;
-  fillStudentFeeForm(student, $('studentFeeFrom').value);
-  renderStudentFeePeriods();
-  renderStudentFeePreview();
+    await api('/student-payments/batch', {method:'POST',body:JSON.stringify({studentId:student.id,date,
+      entries:paying.map(entry => ({month:entry.month,amount:entry.delta}))})});
+    await load(); renderFees(); renderPaymentHistory(); renderDashboard();
+    toast(`تم تسجيل ${money(paying.length)} دفعة بإجمالي ${money(total)} أوقية.`);
+  } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };
 function openStudentLedgerDialog(){
   refreshStudentFeeDetails();
@@ -231,18 +402,42 @@ function refreshStudentFeeDetails() {
   $('studentLedgerIdentity').textContent=identity;
   const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
   const ledger = ledgerOf(student);
-  $('studentPaidSummary').textContent = `إجمالي المستحق: ${money(ledger.totalDue)} — المدفوع: ${money(ledger.totalPaid)} — المتبقي: ${money(ledger.outstanding)}${ledger.totalDiscount > 0 ? ` — الخصم: ${money(ledger.totalDiscount)}` : ''}${ledger.credit > 0 ? ` — رصيد دائن: ${money(ledger.credit)}` : ''} أوقية${student.discountReason ? ` (${student.discountReason})` : ''}. أدخل دفعة غير مسجلة فقط؛ تُوزَّع تلقائيًا على أقدم استحقاق غير مسدَّد.`;
+  // Remise et rصيد dائn ne s'affichent que lorsqu'ils existent.
+  $('studentPaidSummary').textContent = `إجمالي المستحق: ${money(ledger.totalDue)} — المدفوع: ${money(ledger.totalPaid)} — المتبقي: ${money(ledger.outstanding)}`
+    + (ledger.totalDiscount > 0 ? ` — الخصم: ${money(ledger.totalDiscount)}` : '')
+    + (ledger.credit > 0 ? ` — رصيد دائن: ${money(ledger.credit)}` : '')
+    + ` أوقية`
+    + (student.discountReason ? ` (${student.discountReason})` : '')
+    + `.`;
   $('studentLedgerRows').innerHTML = [REGISTRATION,...months].map(month => {
     const row = ledger.byMonth.get(month);
     if (!row) return `<tr><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
     const period = row.dueDate < today().slice(0,7)+'-01' ? 'سابقة' : row.dueDate.slice(0,7) === today().slice(0,7) ? 'جارية' : 'قادمة';
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
-    return `<tr><td>${esc(month)}</td><td>${esc(row.dueDate)}</td><td>${period}</td><td>${money(row.gross)}</td><td class="${row.discount > 0 ? 'status-exempt' : ''}">${row.discount > 0 ? money(row.discount) : '—'}</td><td>${money(row.amount)}</td><td>${money(row.paid)}</td><td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td><td class="paid-months">${covered}</td></tr>`;
+    return `<tr>
+      <td>${esc(month)}</td>
+      <td>${esc(row.dueDate)}</td>
+      <td>${period}</td>
+      <td>${money(row.gross)}</td>
+      <td class="${row.discount > 0 ? 'status-exempt' : ''}">${row.discount > 0 ? money(row.discount) : '—'}</td>
+      <td>${money(row.amount)}</td>
+      <td>${money(row.paid)}</td>
+      <td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td>
+      <td class="paid-months">${covered}</td>
+    </tr>`;
   }).join('');
+  renderStudentFeeEntries();
   // The ledger is where a wrong payment is noticed, so it edits and deletes in place.
-  renderStudentFeePeriods();
-  renderStudentFeePreview();
-  $('studentLedgerPayments').innerHTML = payments.slice().sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).map(p=>`<tr><td>${esc(invoiceNo(p))}</td><td>${esc(paymentLabel(p))}</td><td>${money(p.amount)}</td><td>${esc(western(p.date))}</td><td class="actions"><button type="button" class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button type="button" class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button type="button" class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td></tr>`).join('') || '<tr><td colspan="5">لا توجد دفعات مسجلة لهذا الطالب.</td></tr>';
+  const paymentRows = payments.slice()
+    .sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id)
+    .map(p=>`<tr>
+      <td>${esc(invoiceNo(p))}</td>
+      <td>${esc(paymentLabel(p))}</td>
+      <td>${money(p.amount)}</td>
+      <td>${esc(western(p.date))}</td>
+      <td class="actions"><button type="button" class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button type="button" class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button type="button" class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td>
+    </tr>`).join('');
+  $('studentLedgerPayments').innerHTML = paymentRows || '<tr><td colspan="5">لا توجد دفعات مسجلة لهذا الطالب.</td></tr>';
 }
 function toggleDiscountFields(){
   const on=Boolean($('studentDiscountType').value);
@@ -251,37 +446,23 @@ function toggleDiscountFields(){
   if(!on){$('studentDiscountValue').value='';$('studentDiscountReason').value=''}
 }
 $('studentDiscountType').onchange=toggleDiscountFields;
-// The form edits one fee period at a time, so it shows that period's amount.
-function showFeeForMonth(){const student=selectedFeeStudent();if(student)$('studentMonthlyFee').value=monthlyFeeFor(student,$('studentFeeFrom').value)}
-$('studentFeeFrom').innerHTML = months.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
-$('studentFeeFrom').onchange = () => { showFeeForMonth(); renderStudentFeePeriods(); renderStudentFeePreview(); };
-for (const id of ['studentRegistrationFee','studentMonthlyFee','studentDiscountValue','studentDiscountReason']) $(id).addEventListener('input', renderStudentFeePreview);
-$('studentDiscountType').addEventListener('change', renderStudentFeePreview);
 $('showStudentLedger').onclick=openStudentLedgerDialog;
 $('closeStudentLedger').onclick=()=>$('studentLedgerDialog').close();
 $('studentLedgerDialog').onclick=event=>{if(event.target===$('studentLedgerDialog'))$('studentLedgerDialog').close()};
 $('closeStudentFees').onclick = () => { if($('studentLedgerDialog').open)$('studentLedgerDialog').close(); $('studentFeesPanel').close(); selectedFeeStudentId = null; };
 $('studentFeesPanel').onclick=event=>{if(event.target===$('studentFeesPanel'))$('closeStudentFees').click()};
-$('studentFeesForm').onsubmit = async event => {
+$('studentDiscountForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();
   if (!student || !(await requirePassword())) return;
   const button = event.submitter;
   button.disabled = true;
   try {
-    await api(`/students/${student.id}/fees`, {method:'PUT',body:JSON.stringify({registrationFee:$('studentRegistrationFee').value,monthlyFee:$('studentMonthlyFee').value,effectiveFrom:$('studentFeeFrom').value,discountType:$('studentDiscountType').value,discountValue:western($('studentDiscountValue').value),discountReason:$('studentDiscountReason').value})});
-    await load(); renderFees(); renderDashboard(); toast('تم حفظ رسوم الطالب.');
-  } catch(error) { toast(error.message); } finally { button.disabled = false; renderStudentFeePreview(); }
-};
-$('studentFeePaymentForm').onsubmit = async event => {
-  event.preventDefault();
-  const student = selectedFeeStudent();
-  if (!student) return;
-  const button = event.submitter;
-  button.disabled = true;
-  try {
-    await api('/student-payments',{method:'POST',body:JSON.stringify({studentId:student.id,month:$('studentPaymentMonth').value,amount:$('studentPaymentAmount').value,date:$('studentPaymentDate').value})});
-    $('studentPaymentAmount').value = '';
-    await load(); renderFees(); renderPaymentHistory(); renderDashboard(); toast('تم تسجيل دفعة الطالب.');
+    await api(`/students/${student.id}/discount`, {method:'PUT',body:JSON.stringify({
+      discountType:$('studentDiscountType').value,
+      discountValue:western($('studentDiscountValue').value),
+      discountReason:$('studentDiscountReason').value
+    })});
+    await load(); renderFees(); renderDashboard(); toast('تم حفظ خصم الطالب.');
   } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };

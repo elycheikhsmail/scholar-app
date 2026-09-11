@@ -133,7 +133,7 @@ L'effacement des données crée d'abord une copie SQLite cohérente dans `databa
 
 Tests de migration, de persistance et de transactions : `node --test tests/db.test.js`.
 
-Les élèves portent aussi `status`, `leaveDate`, `feeHistory`, `discountType`, `discountValue` et `discountReason` (voir « Calcul des frais dus »). Une base JSON migrée reçoit ces champs automatiquement ; une base SQLite existante fonctionne sans migration, l'ancien tarif servant de valeur de repli.
+Les élèves portent aussi `status`, `leaveDate`, `discountType`, `discountValue` et `discountReason` (voir « Calcul des frais dus »). Ils ne portent plus de tarif : `registrationFee`, `monthlyFee` et `feeHistory` sont retirés des fiches à la lecture, les frais étant désormais lus dans les réglages et dans le niveau.
 
 Les bases de données, sauvegardes, journaux, fichiers `.env`, résultats de tests et fichiers de compilation sont exclus du dépôt Git par `.gitignore`.
 
@@ -143,7 +143,9 @@ Le moteur de calcul est dans `public/fees.js`, partagé par l'interface et le se
 
 **Période d'inscription.** Un élève n'est facturé que des mois compris entre son mois d'inscription et son mois de départ. Un élève inscrit en février ne doit rien pour octobre à janvier ; ces mois apparaissent dans son relevé avec la mention « خارج فترة القيد ». Le champ **حالة الطالب** (نشط, منقطع, محوَّل, متخرج) et le champ **تاريخ المغادرة** arrêtent les frais mensuels : le mois du départ reste facturé, les suivants non. Un départ exige une date, et une date de départ exige un statut de départ.
 
-**Historique des frais.** Chaque élève porte un `feeHistory` : une liste de périodes, chacune commençant à un mois scolaire. Un mois est facturé au tarif de la dernière période commencée avant lui, donc modifier les frais mensuels ne réécrit jamais les mois déjà facturés. Le formulaire des frais demande **تسري الرسوم الشهرية من شهر** pour choisir le mois d'effet. Les fiches créées avant cette version conservent leur ancien tarif sur les mois déjà facturés lors de la première modification.
+**Origine des frais.** Les frais ne sont plus saisis élève par élève : l'écran **الإعدادات** contient un bloc **إعدادات الرسوم** avec un frais d'inscription annuel unique pour l'école, et le tableau des niveaux fixe le frais mensuel de chaque classe, constant sur toute l'année. Chaque montant dû est relu depuis ces valeurs, donc corriger un tarif dans les réglages vaut immédiatement pour tous les élèves concernés, mois déjà facturés compris. Un niveau sans tarif retombe sur **الرسوم الشهرية الافتراضية**.
+
+**Formulaire des frais de l'élève.** Le formulaire n'affiche plus de champ de tarif : il rappelle les frais lus dans les réglages, puis présente une ligne par montant dû — frais d'inscription, puis chaque mois d'inscription de l'élève — avec trois réponses : **لم يدفع بعد**, **دفع المبلغ كاملا**, **دفع جزء من المبلغ**. Le choix partiel ouvre un champ de montant, strictement supérieur à zéro et strictement inférieur au montant dû. L'enregistrement envoie `POST /api/student-payments/batch` : un reçu par montant dû, validés ensemble contre le solde. Un montant déjà soldé est verrouillé (se corrige en supprimant son reçu dans le relevé), et si un mois plus ancien reste impayé, le formulaire prévient que l'affectation FIFO servira d'abord ce mois-là.
 
 **Affectation des paiements.** Un paiement est un crédit sur le compte de l'élève, affecté automatiquement au plus ancien montant dû non soldé (FIFO), par date de paiement puis par identifiant. Un règlement couvrant trois mois solde donc bien les trois mois, quel que soit le mois indiqué sur le reçu. Le surplus restant reste au crédit de l'élève et n'est plus compté comme une dette. Le relevé de l'élève affiche, pour chaque montant dû, les factures qui l'ont couvert.
 

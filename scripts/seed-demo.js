@@ -15,6 +15,9 @@ async function seedDemo(baseDir = path.resolve(__dirname, '..')) {
     const source = new DatabaseSync(path.join(baseDir, 'database', 'school-data.sqlite'), { readOnly: true });
     try { await backup(source, backupPath); } finally { source.close(); }
     const departments = db.getDepartments().slice(0, 18);
+    // Fees come from the settings and the level, so the demo reads them instead
+    // of inventing amounts the ledger would refuse as overpayments.
+    const registrationFee = db.publicSettings().registrationFee;
     const boys = ['محمد', 'أحمد', 'سيدي', 'عبد الله', 'المختار', 'الحسن', 'إبراهيم', 'يوسف'];
     const girls = ['فاطمة', 'مريم', 'عائشة', 'خديجة', 'آمنة', 'زينب', 'سلمى', 'حفصة'];
     const families = ['الشيخ', 'محمد الأمين', 'المختار', 'أحمد سالم', 'عبد الرحمن', 'الحسن', 'سيدي محمد', 'إبراهيم'];
@@ -35,13 +38,13 @@ async function seedDemo(baseDir = path.resolve(__dirname, '..')) {
             gender: n % 2 ? 'أنثى' : 'ذكر', nni: String(1000 + index).padStart(10, '0'),
             birthPlace: cities[index % cities.length], birthDate: `${2021 - Math.min(d, 15)}-03-${String(n + 10).padStart(2, '0')}`,
             guardianName: `ولي أمر تجريبي ${index + 1}`, guardianPhone: '',
-            className: department.name, registrationDate: '2026-09-01', registrationFee: 2000,
-            monthlyFee: department.monthlyFee, notes: `${TAG} بيانات خيالية لاختبار التطبيق فقط`
+            className: department.name, registrationDate: '2026-09-01',
+            notes: `${TAG} بيانات خيالية لاختبار التطبيق فقط`
           });
         }
         students.push(student);
         for (const [m, month] of ['رسوم التسجيل', 'أكتوبر', 'نوفمبر', 'ديسمبر'].entries()) {
-          const due = m === 0 ? 2000 : Number(student.monthlyFee);
+          const due = m === 0 ? registrationFee : Number(department.monthlyFee);
           const fraction = [1, 0.5, 0, 0.75][(n + m) % 4];
           const notes = `${TAG} student:${student.id} month:${m}`;
           if (due > 0 && fraction > 0 && !paymentKeys.has(notes)) {

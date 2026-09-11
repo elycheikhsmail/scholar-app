@@ -9,7 +9,6 @@ $('settingsForm').onsubmit=async e=>{
       schoolName:$('setSchoolName').value,
       schoolYear:$('setSchoolYear').value,
       username:$('setUsername').value,
-      defaultMonthlyFee:western($('setDefaultMonthlyFee').value),
       managerName:$('setManagerName').value,
       managerPhone:western($('setManagerPhone').value),
       schoolPhone:western($('setSchoolPhone').value),
@@ -45,10 +44,31 @@ function renderSettings(){
     setMinistry:state.settings.ministry||'وزارة التعليم',
     setRegional:state.settings.regional||'الإدارة الجهوية للتعليم',
     setUsername:state.settings.username,
+    setRegistrationFee:state.settings.registrationFee,
     setDefaultMonthlyFee:state.settings.defaultMonthlyFee
   };
   for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value;
 }
+// Les frais ne sont plus saisis élève par élève : ils sont fixés ici une fois,
+// et chaque relevé les relit. Un changement vaut donc pour toute l'école.
+$('feeSettingsForm').onsubmit=async e=>{
+  e.preventDefault();
+  if(!(await requirePassword()))return;
+  try{
+    const result=await api('/fee-settings',{method:'PUT',body:JSON.stringify({
+      registrationFee:western($('setRegistrationFee').value),
+      defaultMonthlyFee:western($('setDefaultMonthlyFee').value)
+    })});
+    state.settings={...state.settings,...result};
+    renderSettings();
+    renderStudents();
+    renderFees();
+    renderDashboard();
+    toast('تم حفظ إعدادات الرسوم.');
+  }catch(error){
+    toast(error.message);
+  }
+};
 $('clearDataBtn').onclick=async()=>{
   const first=await askConfirm('تحذير: سيتم حذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات. ستبقى الإعدادات والأقسام فقط. هل تريد المتابعة؟');
   if(!first)return;
@@ -113,6 +133,7 @@ window.editDepartment=async id=>{
     renderDepartments();
     renderStudents();
     renderFees();
+    renderDashboard();
     toast('تم تعديل القسم ورسومه.');
   }catch(error){
     toast(error.message);

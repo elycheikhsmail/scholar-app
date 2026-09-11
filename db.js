@@ -34,6 +34,14 @@ function createSchema(connection = sqlite) {
   }
 }
 
+// Fees used to be copied onto every student. They now live in the settings and
+// in the level, so an older record's copy is dropped as it is read: leaving it
+// there would put a second, silent answer next to the one the school sets.
+function dropLegacyStudentFees(student) {
+  delete student.feeHistory; delete student.monthlyFee; delete student.registrationFee;
+  return student;
+}
+
 let touched;
 function readData() {
   const result = {};
@@ -50,6 +58,7 @@ function readData() {
       enumerable: true, configurable: true,
       get() {
         if (!rows) { rows = sqlite.prepare(`SELECT record FROM "${table}" ORDER BY position`).all().map(row => JSON.parse(row.record)); touched.add(table); }
+        if (table === 'students') rows.forEach(dropLegacyStudentFees);
         return rows;
       },
       set(value) { rows = value; touched.add(table); }
@@ -83,6 +92,7 @@ const DEFAULT_DATA = {
     schoolYear: '2026 / 2027',
     username: 'yaghoub',
     passwordHash: null,
+    registrationFee: 200,
     defaultMonthlyFee: 0,
     managerName: 'سيد محمد بوشارب',
     managerPhone: '22037331',
@@ -236,7 +246,6 @@ function normalizeData() {
     remarksRules: Array.isArray(data.examSettings?.remarksRules) ? data.examSettings.remarksRules : clone(DEFAULT_DATA.examSettings.remarksRules),
     decisionRules: Array.isArray(data.examSettings?.decisionRules) ? data.examSettings.decisionRules : clone(DEFAULT_DATA.examSettings.decisionRules)
   };
-  const startYear = dues.startYearOf(data.settings.schoolYear);
   data.students.forEach(s => {
     if (!dues.STUDENT_STATUSES.includes(clean(s.status))) s.status = dues.ACTIVE_STATUS;
     if (typeof s.leaveDate !== 'string') s.leaveDate = '';
@@ -244,9 +253,7 @@ function normalizeData() {
     if (!dues.DISCOUNT_TYPES.includes(clean(s.discountType))) s.discountType = '';
     s.discountValue = s.discountType ? Math.max(0, Number(s.discountValue) || 0) : 0;
     if (typeof s.discountReason !== 'string') s.discountReason = '';
-    if (!Array.isArray(s.feeHistory) || !s.feeHistory.length) {
-      s.feeHistory = [{ fromMonth: dues.MONTHS[dues.enrolmentIndex(s, startYear)], monthlyFee: Math.max(0, Number(s.monthlyFee) || 0), date: clean(s.registrationDate) }];
-    }
+    dropLegacyStudentFees(s);
   });
   data.studentPayments.forEach(p => { if (!p.invoiceNo) p.invoiceNo = `F-${String(Number(p.id)||0).padStart(6,'0')}`; if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly'; });
   const feeMap = new Map(DEFAULT_DATA.departments.map(d => [d.name, d.monthlyFee]));
@@ -265,7 +272,8 @@ function publicSettings() {
     schoolName: data.settings.schoolName,
     schoolYear: data.settings.schoolYear,
     username: data.settings.username,
-    defaultMonthlyFee: Number(data.settings.defaultMonthlyFee) || 0,
+    registrationFee: Math.max(0, Number(data.settings.registrationFee) || 0),
+    defaultMonthlyFee: Math.max(0, Number(data.settings.defaultMonthlyFee) || 0),
     managerName: data.settings.managerName || '',
     managerPhone: data.settings.managerPhone || '',
     schoolPhone: data.settings.schoolPhone || '',
@@ -297,7 +305,6 @@ function updateSettings(input) {
   data.settings.schoolName = clean(input.schoolName);
   data.settings.schoolYear = clean(input.schoolYear);
   data.settings.username = clean(input.username);
-  data.settings.defaultMonthlyFee = Math.max(0, Number(input.defaultMonthlyFee) || 0);
   data.settings.managerName = clean(input.managerName);
   data.settings.managerPhone = clean(input.managerPhone);
   data.settings.schoolPhone = clean(input.schoolPhone);
@@ -306,6 +313,23 @@ function updateSettings(input) {
   data.settings.regional = clean(input.regional) || DEFAULT_DATA.settings.regional;
   if (data.settings.managerPhone && !/^\d{8}$/.test(data.settings.managerPhone)) throw new Error('هاتف المدير يجب أن يتكون من 8 أرقام.');
   if (input.newPassword) data.settings.passwordHash = hashPassword(input.newPassword);
+  save();
+  return publicSettings();
+}
+
+// The dues engine resolves every charge from the school's own fees, so it needs
+// the levels alongside the settings row.
+function feeSettings() { return { ...data.settings, departments: data.departments }; }
+
+// «إعدادات الرسوم» : one registration fee for the school, and the fee of a level
+// for any student whose department carries none.
+function updateFeeSettings(input) {
+  for (const field of ['registrationFee', 'defaultMonthlyFee']) {
+    const value = Number(input && input[field]);
+    if (input[field] === '' || input[field] == null || !Number.isFinite(value) || value < 0) throw new Error('أدخل رسومًا صحيحة لا تقل عن صفر.');
+  }
+  data.settings.registrationFee = Math.max(0, Number(input.registrationFee));
+  data.settings.defaultMonthlyFee = Math.max(0, Number(input.defaultMonthlyFee));
   save();
   return publicSettings();
 }
@@ -351,9 +375,6 @@ function deleteDepartment(id) {
   data.departments = data.departments.filter(x => Number(x.id) !== Number(id));
   save();
 }
-
-function schoolStartYear() { return dues.startYearOf(data.settings && data.settings.schoolYear); }
-function enrolmentMonth(student) { return dues.MONTHS[dues.enrolmentIndex(student, schoolStartYear())]; }
 
 function nextCallNo(department, excludeId = null) {
   const used = new Set(
@@ -415,19 +436,16 @@ function addStudent(s) {
     guardianPhone: clean(s.guardianPhone),
     className: clean(s.className),
     registrationDate: clean(s.registrationDate) || new Date().toISOString().slice(0,10),
-    registrationFee: Math.max(0, Number(s.registrationFee) || 0),
-    monthlyFee: Math.max(0, Number(s.monthlyFee ?? data.departments.find(d => d.name === clean(s.className))?.monthlyFee ?? data.settings.defaultMonthlyFee) || 0),
     notes: clean(s.notes),
     gender: clean(s.gender),
     status: clean(s.status) || dues.ACTIVE_STATUS,
     leaveDate: clean(s.leaveDate),
     discountType: '', discountValue: 0, discountReason: ''
   };
-  student.feeHistory = [{ fromMonth: enrolmentMonth(student), monthlyFee: student.monthlyFee, date: student.registrationDate }];
   data.students.push(student);
   const initialPaid = Math.max(0, Number(s.initialPaid) || 0);
   const paymentDate = clean(s.initialPaymentDate) || student.registrationDate;
-  const registrationPaid = Math.min(initialPaid, student.registrationFee);
+  const registrationPaid = Math.min(initialPaid, dues.registrationFeeFor(feeSettings()));
   const monthlyPaid = Math.max(0, initialPaid - registrationPaid);
   if (registrationPaid > 0) {
     const paymentId = nextId('studentPayments');
@@ -473,54 +491,18 @@ function updateStudent(id, s) {
     callNo: oldDep === newDep ? student.callNo : nextCallNo(newDep, id),
     nni: clean(s.nni), gender: clean(s.gender), birthPlace: clean(s.birthPlace), birthDate: clean(s.birthDate),
     guardianName: clean(s.guardianName), guardianPhone: clean(s.guardianPhone), className: newDep,
-    registrationDate: clean(s.registrationDate), registrationFee: s.registrationFee === undefined ? student.registrationFee : Math.max(0, Number(s.registrationFee) || 0),
-    monthlyFee: s.monthlyFee === undefined ? student.monthlyFee : Math.max(0, Number(s.monthlyFee) || 0), notes: clean(s.notes),
+    registrationDate: clean(s.registrationDate), notes: clean(s.notes),
     status: clean(s.status) || dues.ACTIVE_STATUS, leaveDate: clean(s.leaveDate)
   });
   save(); return student;
 }
 
-function updateStudentFees(id, input) {
+// A student no longer carries a fee; the only thing left to set on the account
+// is the discount that scholarships and siblings earn on the monthly fee.
+function updateStudentDiscount(id, input) {
   const student = data.students.find(s => Number(s.id) === Number(id));
   if (!student) throw new Error('الطالب غير موجود.');
-  for (const field of ['registrationFee','monthlyFee']) {
-    if (input[field] === '' || input[field] == null || !Number.isFinite(Number(input[field])) || Number(input[field]) < 0) throw new Error('أدخل رسومًا صحيحة لا تقل عن صفر.');
-  }
-  const baseline = enrolmentMonth(student);
-  const fromMonth = clean(input.effectiveFrom) || baseline;
-  if (!dues.MONTHS.includes(fromMonth)) throw new Error('اختر الشهر الذي تسري منه الرسوم الجديدة.');
-  const discount = validateDiscount(input);
-  const monthlyFee = Number(input.monthlyFee);
-  const previousFee = Math.max(0, Number(student.monthlyFee) || 0);
-  const history = (Array.isArray(student.feeHistory) ? student.feeHistory : [])
-    .filter(p => dues.MONTHS.includes(clean(p.fromMonth)) && clean(p.fromMonth) !== fromMonth)
-    .map(p => ({ fromMonth: clean(p.fromMonth), monthlyFee: Math.max(0, Number(p.monthlyFee) || 0), date: clean(p.date) }));
-  // Records predating fee history keep their old fee on the months already billed.
-  if (!history.length && fromMonth !== baseline) history.push({ fromMonth: baseline, monthlyFee: previousFee, date: clean(student.registrationDate) });
-  history.push({ fromMonth, monthlyFee, date: new Date().toISOString().slice(0,10) });
-  history.sort((a,b) => dues.MONTHS.indexOf(a.fromMonth) - dues.MONTHS.indexOf(b.fromMonth));
-  student.registrationFee = Number(input.registrationFee);
-  Object.assign(student, discount);
-  student.feeHistory = history;
-  student.monthlyFee = history[history.length - 1].monthlyFee;
-  save(); return student;
-}
-
-// Until now a period entered on the wrong month could never be taken back: the
-// form only ever added or replaced one. Removing the last period is refused —
-// a student always has a fee in force — so that case is an edit, not a delete.
-function removeStudentFeePeriod(id, fromMonth) {
-  const student = data.students.find(s => Number(s.id) === Number(id));
-  if (!student) throw new Error('الطالب غير موجود.');
-  const month = clean(fromMonth);
-  const periods = dues.feePeriodsOf(student);
-  if (!periods.some(period => period.fromMonth === month)) throw new Error('لا توجد فترة رسوم تبدأ من هذا الشهر.');
-  if (periods.length <= 1) throw new Error('لا يمكن حذف فترة الرسوم الوحيدة؛ عدّل قيمتها بدل حذفها.');
-  const kept = new Set(dues.withoutFeePeriod(student, month).feeHistory.map(period => period.fromMonth));
-  student.feeHistory = (Array.isArray(student.feeHistory) ? student.feeHistory : [])
-    .filter(period => kept.has(clean(period.fromMonth)))
-    .map(period => ({ fromMonth: clean(period.fromMonth), monthlyFee: Math.max(0, Number(period.monthlyFee) || 0), date: clean(period.date) }));
-  student.monthlyFee = student.feeHistory[student.feeHistory.length - 1].monthlyFee;
+  Object.assign(student, validateDiscount(input));
   save(); return student;
 }
 
@@ -537,9 +519,23 @@ function assertWithinOutstanding(student, amount, excludePaymentId = null) {
   const payments = data.studentPayments.filter(x => Number(x.studentId) === Number(student.id) && Number(x.id) !== Number(excludePaymentId));
   // Future months are not current debt, but remain payable in advance up to the
   // balance scheduled for the school year.
-  const outstanding = dues.ledgerFor(student, payments, data.settings).scheduledOutstanding;
+  const outstanding = dues.ledgerFor(student, payments, feeSettings()).scheduledOutstanding;
   if (outstanding <= 0) throw new Error('لا توجد مستحقات غير مسددة على هذا الطالب.');
   if (amount > outstanding) throw new Error(`المتبقي على الطالب هو ${outstanding} أوقية.`);
+}
+
+// One receipt. Callers check the cap first, then save: `addStudentPayments`
+// enters several at once and must weigh them against the balance together.
+function pushStudentPayment(student, month, amount, date, notes) {
+  const id = nextId('studentPayments');
+  const payment = { id, invoiceNo:`F-${String(id).padStart(6,'0')}`, studentId:Number(student.id), month,
+    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, notes };
+  data.studentPayments.push(payment);
+  return payment;
+}
+
+function assertPaymentMonth(month) {
+  if (month !== dues.REGISTRATION && !dues.MONTHS.includes(month)) throw new Error('اختر الرسم الذي تخصه الدفعة.');
 }
 
 function addStudentPayment(p) {
@@ -548,14 +544,37 @@ function addStudentPayment(p) {
   const amount = Number(p.amount) || 0;
   const month = clean(p.month);
   if (!month || amount <= 0) throw new Error('أدخل الشهر والمبلغ بشكل صحيح.');
+  assertPaymentMonth(month);
   assertWithinOutstanding(student, amount);
-  const payment = { id: nextId('studentPayments'), invoiceNo:`F-${String(nextId('studentPayments')).padStart(6,'0')}`, studentId:Number(student.id), month, paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly', amount, date:clean(p.date)||new Date().toISOString().slice(0,10), notes:clean(p.notes) };
-  data.studentPayments.push(payment); save(); return payment;
+  const payment = pushStudentPayment(student, month, amount, clean(p.date) || new Date().toISOString().slice(0,10), clean(p.notes));
+  save(); return payment;
+}
+
+// The fee form records a whole visit at once: what the family paid on the
+// registration fee and on each month, one receipt per fee. The batch is weighed
+// against the balance as a whole — checked one by one, each amount would be
+// measured against a balance the others had not reduced yet, and the last of
+// them could pass a cap the set as a whole breaks.
+function addStudentPayments(input) {
+  const student = data.students.find(x => Number(x.id) === Number(input && input.studentId));
+  if (!student) throw new Error('الطالب غير موجود.');
+  const date = clean(input.date) || new Date().toISOString().slice(0,10);
+  const entries = (Array.isArray(input.entries) ? input.entries : [])
+    .map(entry => ({ month: clean(entry.month), amount: dues.round2(Number(entry.amount) || 0) }));
+  if (!entries.length) throw new Error('لم تُحدَّد أي دفعة لتسجيلها.');
+  for (const entry of entries) {
+    if (!entry.month || !(entry.amount > 0)) throw new Error('أدخل الشهر والمبلغ بشكل صحيح.');
+    assertPaymentMonth(entry.month);
+  }
+  assertWithinOutstanding(student, dues.round2(entries.reduce((total, entry) => total + entry.amount, 0)));
+  const payments = entries.map(entry => pushStudentPayment(student, entry.month, entry.amount, date, clean(input.notes)));
+  save(); return payments;
 }
 function updateStudentPayment(id,p) {
   const payment = data.studentPayments.find(x=>Number(x.id)===Number(id)); if(!payment)throw new Error('الدفعة غير موجودة.');
   const student=data.students.find(x=>Number(x.id)===Number(payment.studentId)); if(!student)throw new Error('الطالب غير موجود.');
   const amount=Number(p.amount)||0, month=clean(p.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
+  assertPaymentMonth(month);
   assertWithinOutstanding(student, amount, payment.id);
   Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:clean(p.date)||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=`F-${String(payment.id).padStart(6,'0')}`; save(); return payment;
 }
@@ -668,7 +687,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,addStudent,updateStudent,updateStudentFees,removeStudentFeePeriod,deleteStudent,addStudentPayment,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,updateFeeSettings,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.
