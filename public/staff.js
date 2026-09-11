@@ -16,6 +16,9 @@ function renderStaffRoleOptions(selected){
   select.value=roles.includes(current)?current:(roles.includes('معلم')?'معلم':roles[0]);
 }
 
+const salaryReceiptNo=p=>p?.receiptNo||`S-${String(p?.id||0).padStart(6,'0')}`;
+const advanceReceiptNo=a=>a?.receiptNo||`A-${String(a?.id||0).padStart(6,'0')}`;
+
 // --- Fiche employé ----------------------------------------------------------
 
 function toggleRoleFields(){
@@ -219,7 +222,11 @@ function updateSalaryHint(){
   const st=teacherMonthState(t,month);
   const remaining=Math.max(0,due-st.adv-st.paid);
   suggestSalaryAmount(remaining);
-  const tail=`السلف: ${money(st.adv)}. المتبقي قبل الدفعة: ${money(remaining)}.`;
+  const advances=monthRows(state.data.teacherAdvances,t.id,month);
+  const advanceText=advances.length
+    ?`تُخصم السلف: ${advances.map(a=>`${money(a.amount)} (${western(a.date)})`).join('، ')} = ${money(st.adv)}.`
+    :'لا توجد سلف لهذا الشهر.';
+  const tail=`${advanceText} المتبقي قبل الدفعة: ${money(remaining)}.`;
   $('salaryDueInfo').textContent=roleNeedsFixed(t.role)
     ? `الراتب الثابت للشهر: ${money(due)}. ${tail}`
     : `الاستحقاق = الساعات × سعر الساعة = ${money(Number(enteredHours||0))} × ${money(t.hourlyRate)} = ${money(due)}. ${tail}`;
@@ -354,8 +361,76 @@ window.prefillAdvanceForm=teacherId=>{
   if(!t)return;
   $('advanceTeacher').value=String(t.id);
   $('advanceMonth').value=$('payrollMonth').value;
+  updateAdvanceHint();
   $('advanceForm').scrollIntoView({behavior:'smooth',block:'center'});
   $('advanceAmount').focus();
+};
+
+// --- Impressions : reçus de salaire, d'avance et كشف du mois -------------------
+
+function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}){
+  const school=state.settings?.schoolName||'';
+  const line=(label,value)=>`<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
+  return `<div class="receipt">`
+    +(isTestMode()?`<div class="center title">${TEST_MODE_LABEL}</div>`:'')
+    +`<div class="center school">${esc(school)}</div>`
+    +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
+    +`<div class="line"></div>`
+    +`<div class="center title">${title}</div>`
+    +line('رقم الإيصال',esc(number))
+    +line('التاريخ',dateTime(record)||western(today()))
+    +`<div class="line"></div>`
+    +line('الموظف',esc(teacher?.name||'محذوف'))
+    +line('طبيعة العمل',esc(teacher?.role||''))
+    +line('الشهر',esc(record.month))
+    +`<div class="line"></div>`
+    +lines.map(([label,value,cls])=>`<div class="row ${cls||''}"><span class="label">${label}</span><span>${value}</span></div>`).join('')
+    +`<div class="row amount"><span>${amountLabel}</span><span>${money(amount)} أوقية</span></div>`
+    +(record.notes?line('ملاحظات',esc(record.notes)):'')
+    +`<div class="line"></div>`
+    +`<div class="signature">توقيع المحاسب: __________________</div>`
+    +`<div class="signature">توقيع المستلم: __________________</div>`
+    +`<button class="print" onclick="window.print()">طباعة الإيصال</button>`
+    +`</div>`;
+}
+function openStaffReceipt(title,body){
+  printWindow({title,style:RECEIPT_STYLE,body,width:420,height:700,blockedMessage:'اسمح للنوافذ المنبثقة حتى يتم فتح الإيصال.',autoPrint:true});
+}
+window.printSalaryReceipt=id=>{
+  const p=state.data.teacherPayments.find(x=>Number(x.id)===Number(id));
+  if(!p)return;
+  const t=state.data.teachers.find(x=>Number(x.id)===Number(p.teacherId));
+  const due=Number(p.salaryDue||(t?salaryDue(t,p.month,p.hours,p.hourlyRate):0));
+  const adv=teacherAdvance(p.teacherId,p.month);
+  const paid=teacherPaid(p.teacherId,p.month);
+  const lines=[];
+  if(t&&t.role==='أستاذ')lines.push(['الساعات × سعر الساعة',`${money(Number(p.hours||0))} × ${money(Number(p.hourlyRate||0))}`]);
+  lines.push(['استحقاق الشهر',`${money(due)} أوقية`]);
+  lines.push(['السلف المخصومة',`${money(adv)} أوقية`]);
+  lines.push(['إجمالي المدفوع لهذا الشهر',`${money(paid)} أوقية`]);
+  lines.push(['المتبقي بعد هذه الدفعة',`${money(Math.max(0,due-adv-paid))} أوقية`,'remaining']);
+  openStaffReceipt(salaryReceiptNo(p),staffReceiptHtml({title:'إيصال صرف راتب',number:salaryReceiptNo(p),record:p,teacher:t,lines,amountLabel:'المبلغ المستلم',amount:p.amount}));
+};
+window.printAdvanceReceipt=id=>{
+  const a=state.data.teacherAdvances.find(x=>Number(x.id)===Number(id));
+  if(!a)return;
+  const t=state.data.teachers.find(x=>Number(x.id)===Number(a.teacherId));
+  const due=Number(a.salaryDue||(t?salaryDue(t,a.month):0));
+  const lines=[['استحقاق الشهر',`${money(due)} أوقية`],['إجمالي سلف الشهر',`${money(teacherAdvance(a.teacherId,a.month))} أوقية`,'remaining']];
+  openStaffReceipt(advanceReceiptNo(a),staffReceiptHtml({title:'إيصال سلفة على الراتب',number:advanceReceiptNo(a),record:a,teacher:t,lines,amountLabel:'مبلغ السلفة',amount:a.amount}));
+};
+// Le كشف du mois s'imprime en une page A4 avec une colonne de signature par employé.
+$('printPayroll').onclick=()=>{
+  if(!state.data)return;
+  const month=$('payrollMonth').value;
+  const rows=monthlyPayroll(month);
+  const totals=rows.reduce((a,r)=>({due:a.due+r.due,adv:a.adv+r.adv,paid:a.paid+r.paid,rem:a.rem+r.rem}),{due:0,adv:0,paid:0,rem:0});
+  const body=`<table><thead><tr><th>#</th><th>الموظف</th><th>طبيعة العمل</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>التوقيع</th></tr></thead><tbody>`
+    +rows.map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.teacher.name)}</td><td>${esc(r.teacher.role)}</td><td>${money(r.due)}</td><td>${money(r.adv)}</td><td>${money(r.paid)}</td><td>${money(r.rem)}</td><td>${PAYROLL_STATUS_LABELS[r.status]}</td><td style="min-width:120px"></td></tr>`).join('')
+    +`<tr class="total"><td></td><td colspan="2">الإجمالي</td><td>${money(totals.due)}</td><td>${money(totals.adv)}</td><td>${money(totals.paid)}</td><td>${money(totals.rem)}</td><td colspan="2"></td></tr>`
+    +`</tbody></table>`
+    +`<p style="margin-top:28px">المحاسب: __________________ &nbsp;&nbsp;&nbsp;&nbsp; المدير: __________________</p>`;
+  openPrintWindow(`كشف رواتب شهر ${month}`,body);
 };
 
 // --- Tableau des versements de salaire ------------------------------------------
@@ -373,17 +448,18 @@ function renderSalary(){
     const allPaid=teacherPaid(p.teacherId,p.month);
     const rem=Math.max(0,due-adv-allPaid);
     return `<tr>
+      <td>${esc(salaryReceiptNo(p))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
       <td>${esc(p.month)}</td>
       <td>${money(due)}</td>
       <td>${money(adv)}</td>
       <td>${money(allPaid)}</td>
       <td class="${rem>0?'overdue-soft':'status-paid'}">${money(rem)}</td>
-      <td>${western(p.date)}</td>
-      <td class="actions"><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
+      <td>${esc(dateTime(p))}</td>
+      <td class="actions"><button class="btn-pay" onclick="printSalaryReceipt(${p.id})">إيصال</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
     </tr>`;
   }).join('');
-  $('salaryTable').innerHTML=rows||'<tr><td colspan="8">لا توجد دفعات رواتب.</td></tr>';
+  $('salaryTable').innerHTML=rows||'<tr><td colspan="9">لا توجد دفعات رواتب.</td></tr>';
   renderPayroll();
 }
 
@@ -468,23 +544,41 @@ function nextUnpaidTeacherId(afterId,month){
 
 // --- Avances ----------------------------------------------------------------
 
+const selectedAdvanceTeacher=()=>state.data?.teachers.find(x=>Number(x.id)===Number($('advanceTeacher').value));
+// L'estimation d'un أستاذ dépend des heures : le champ apparaît dans le
+// formulaire même, comme pour la paie, au lieu d'une fenêtre séparée.
+function updateAdvanceHint(){
+  const t=selectedAdvanceTeacher();
+  if(!t){$('advanceDueInfo').textContent='';return}
+  const month=$('advanceMonth').value;
+  const hourly=!roleNeedsFixed(t.role);
+  $('advanceHoursWrap').classList.toggle('hidden-field',!hourly);
+  if(!hourly)$('advanceHours').value='';
+  else if(!$('advanceHours').value&&latestHours(t.id,month))$('advanceHours').value=String(latestHours(t.id,month));
+  const due=salaryDue(t,month,hourly?($('advanceHours').value||null):null);
+  const available=Math.max(0,due-teacherAdvance(t.id,month)-teacherPaid(t.id,month));
+  $('advanceDueInfo').textContent=hourly
+    ?`الاستحقاق = ${money(Number($('advanceHours').value||0))} × ${money(t.hourlyRate)} = ${money(due)}. السلف السابقة: ${money(teacherAdvance(t.id,month))}. المدفوع: ${money(teacherPaid(t.id,month))}. المتاح للسلفة: ${money(available)}.`
+    :`الراتب الثابت: ${money(due)}. السلف السابقة: ${money(teacherAdvance(t.id,month))}. المدفوع: ${money(teacherPaid(t.id,month))}. المتاح للسلفة: ${money(available)}.`;
+}
+$('advanceTeacher').onchange=updateAdvanceHint;
+$('advanceMonth').onchange=updateAdvanceHint;
+$('advanceHours').oninput=updateAdvanceHint;
 $('advanceForm').onsubmit=async e=>{
   e.preventDefault();
   const t=state.data.teachers.find(x=>x.id===Number($('advanceTeacher').value));
   if(!t)return;
   const month=$('advanceMonth').value;
-  let hours=0;
-  if(!roleNeedsFixed(t.role)){
-    // L'estimation d'un أستاذ dépend des heures ; on les demande avant de valider.
-    const enteredHours=await askInput('عدد ساعات الشهر لحساب استحقاق الأستاذ (اختياري):',latestHours(t.id,month)||0);
-    if(enteredHours===null)return;
-    hours=Number(enteredHours)||0;
-  }
+  const hours=roleNeedsFixed(t.role)?0:Number($('advanceHours').value)||0;
   const due=salaryDue(t,month,hours);
   const amount=Number($('advanceAmount').value)||0;
   const available=Math.max(0,due-teacherAdvance(t.id,month)-teacherPaid(t.id,month));
   if(amount<=0)return toast('أدخل مبلغ السلفة.');
-  if(due>0&&amount>available)return toast(`السلفة المتاحة لهذا الشهر ${money(available)}.`);
+  if(due>0&&amount>available){
+    $('advanceAmount').value=available>0?String(available):'';
+    $('advanceAmount').focus();
+    return toast(available>0?`السلفة المتاحة لهذا الشهر ${money(available)} وقد وُضعت في حقل المبلغ.`:'لا يوجد متاح للسلفة في هذا الشهر.');
+  }
   try{
     await api('/teacher-advances',{method:'POST',body:JSON.stringify({
       teacherId:t.id,
@@ -509,15 +603,16 @@ function renderAdvances(){
   const rows=state.data.teacherAdvances.map(a=>{
     const t=state.data.teachers.find(x=>x.id===a.teacherId);
     return `<tr>
+      <td>${esc(advanceReceiptNo(a))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
       <td>${esc(a.month)}</td>
       <td>${money(a.amount)}</td>
-      <td>${western(a.date)}</td>
+      <td>${esc(dateTime(a))}</td>
       <td>${esc(a.notes)}</td>
-      <td class="actions"><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
+      <td class="actions"><button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">إيصال</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
     </tr>`;
   }).join('');
-  $('advanceTable').innerHTML=rows||'<tr><td colspan="6">لا توجد سلف.</td></tr>';
+  $('advanceTable').innerHTML=rows||'<tr><td colspan="7">لا توجد سلف.</td></tr>';
   renderPayroll();
 }
 
@@ -554,5 +649,5 @@ function resetAdvance(){
   $('advanceForm').reset();
   $('advanceMonth').value=currentMonth();
   $('advanceDate').value=today();
-  if(state.data)populateStaffSelects();
+  if(state.data){populateStaffSelects();updateAdvanceHint()}
 }

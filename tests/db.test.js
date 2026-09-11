@@ -75,6 +75,14 @@ test('invoice numbers are never reused after a receipt is deleted or a restart',
   assert.equal(new Set(issued).size, 3, `duplicated invoice numbers: ${issued}`);
   assert.equal(third.invoiceNo, 'F-000003');
   assert.match(third.time, /^\d{2}:\d{2}$/, 'receipts record the entry time');
+  // Salary and advance receipts carry their own series.
+  const teacher = db.addTeacher({ name: 'م', role: 'معلم', fixedSalary: 5000 });
+  const salary = db.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, salaryDue: 5000 });
+  db.deleteTeacherPayment(salary.id);
+  const salaryAgain = db.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, salaryDue: 5000 });
+  assert.equal(salary.receiptNo, 'S-000001'); assert.equal(salaryAgain.receiptNo, 'S-000002');
+  assert.match(salaryAgain.time, /^\d{2}:\d{2}$/);
+  assert.equal(db.addTeacherAdvance({ teacherId: teacher.id, month: 'أكتوبر', amount: 500, salaryDue: 5000 }).receiptNo, 'A-000001');
   assert.match(third.date, /^\d{4}-\d{2}-\d{2}$/, 'the date stays comparable as text');
 });
 

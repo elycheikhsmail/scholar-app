@@ -256,15 +256,18 @@ function normalizeData() {
     if (typeof s.discountReason !== 'string') s.discountReason = '';
     dropLegacyStudentFees(s);
   });
-  // Invoice numbers come from a sequence that never decreases: `nextId` reuses
+  // Receipt numbers come from sequences that never decrease: `nextId` reuses
   // the id of a deleted receipt, which would print the same number twice.
-  data.invoiceSequence = Math.max(Number(data.invoiceSequence) || 0, highestInvoiceSequence());
-  const usedInvoiceNos = new Set();
-  data.studentPayments.forEach(p => {
-    if (!p.invoiceNo || usedInvoiceNos.has(p.invoiceNo)) p.invoiceNo = nextInvoiceNo();
-    usedInvoiceNos.add(p.invoiceNo);
-    if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly';
-  });
+  for (const collection of Object.keys(RECEIPT_SERIES)) {
+    const series = RECEIPT_SERIES[collection];
+    data[series.key] = Math.max(Number(data[series.key]) || 0, highestReceiptSequence(collection));
+    const used = new Set();
+    data[collection].forEach(p => {
+      if (!p[series.field] || used.has(p[series.field])) p[series.field] = nextReceiptNo(collection);
+      used.add(p[series.field]);
+    });
+  }
+  data.studentPayments.forEach(p => { if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly'; });
   const feeMap = new Map(DEFAULT_DATA.departments.map(d => [d.name, d.monthlyFee]));
   data.departments = data.departments.map((d, i) => ({ ...d, id: Number(d.id) || i + 1, name: clean(d.name), monthlyFee: d.monthlyFee != null && Number.isFinite(Number(d.monthlyFee)) ? Math.max(0, Number(d.monthlyFee)) : Number(feeMap.get(clean(d.name)) || 0) }));
   const existingNames = new Set(data.departments.map(d => clean(d.name)));
@@ -282,19 +285,29 @@ function currentTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 }
-function invoiceSequenceOf(invoiceNo) {
-  const match = /^F-(\d+)$/.exec(String(invoiceNo || ''));
+// One numbered series per kind of receipt: student invoices (F-), salary
+// receipts (S-) and advance receipts (A-).
+const RECEIPT_SERIES = {
+  studentPayments: { prefix: 'F', key: 'invoiceSequence', field: 'invoiceNo' },
+  teacherPayments: { prefix: 'S', key: 'salaryReceiptSequence', field: 'receiptNo' },
+  teacherAdvances: { prefix: 'A', key: 'advanceReceiptSequence', field: 'receiptNo' }
+};
+function receiptSequenceOf(prefix, number) {
+  const match = new RegExp(`^${prefix}-(\\d+)$`).exec(String(number || ''));
   return match ? Number(match[1]) : 0;
 }
-function highestInvoiceSequence() {
-  return data.studentPayments.reduce((m, p) => Math.max(m, invoiceSequenceOf(p.invoiceNo), Number(p.id) || 0), 0);
+function highestReceiptSequence(collection) {
+  const series = RECEIPT_SERIES[collection];
+  return data[collection].reduce((m, p) => Math.max(m, receiptSequenceOf(series.prefix, p[series.field]), Number(p.id) || 0), 0);
 }
-function nextInvoiceNo() {
+function nextReceiptNo(collection) {
+  const series = RECEIPT_SERIES[collection];
   // Databases created before the sequence existed resume after the highest number issued.
-  if (data.invoiceSequence == null) data.invoiceSequence = highestInvoiceSequence();
-  data.invoiceSequence = (Number(data.invoiceSequence) || 0) + 1;
-  return `F-${String(data.invoiceSequence).padStart(6, '0')}`;
+  if (data[series.key] == null) data[series.key] = highestReceiptSequence(collection);
+  data[series.key] = (Number(data[series.key]) || 0) + 1;
+  return `${series.prefix}-${String(data[series.key]).padStart(6, '0')}`;
 }
+const nextInvoiceNo = () => nextReceiptNo('studentPayments');
 
 function publicSettings() {
   return {
@@ -677,7 +690,7 @@ function deleteTeacher(id){const n=Number(id);data.teachers=data.teachers.filter
 function addTeacherPayment(p){
   const teacher=data.teachers.find(x=>Number(x.id)===Number(p.teacherId));if(!teacher)throw new Error('الموظف غير موجود.');
   const amount=Number(p.amount)||0;if(!clean(p.month)||amount<=0)throw new Error('بيانات الراتب غير صحيحة.');
-  const payment={id:nextId('teacherPayments'),teacherId:teacher.id,month:clean(p.month),amount,date:clean(p.date)||new Date().toISOString().slice(0,10),notes:clean(p.notes),hours:Math.max(0,Number(p.hours)||0),hourlyRate:Math.max(0,Number(p.hourlyRate)||0),salaryDue:Math.max(0,Number(p.salaryDue)||0)};
+  const payment={id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month:clean(p.month),amount,date:clean(p.date)||new Date().toISOString().slice(0,10),time:currentTime(),notes:clean(p.notes),hours:Math.max(0,Number(p.hours)||0),hourlyRate:Math.max(0,Number(p.hourlyRate)||0),salaryDue:Math.max(0,Number(p.salaryDue)||0)};
   data.teacherPayments.push(payment);save();return payment;
 }
 function updateTeacherPayment(id,p){
@@ -703,7 +716,7 @@ function addTeacherAdvance(p){
   const due=Math.max(0,Number(p.salaryDue)||0);const current=data.teacherAdvances.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===clean(p.month)).reduce((a,x)=>a+Number(x.amount||0),0);
   const payments=data.teacherPayments.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===clean(p.month)).reduce((a,x)=>a+Number(x.amount||0),0);
   if(due>0&&amount>Math.max(0,due-current-payments))throw new Error('السلفة أكبر من المتاح لهذا الشهر.');
-  const advance={id:nextId('teacherAdvances'),teacherId:teacher.id,month:clean(p.month),amount,date:clean(p.date)||new Date().toISOString().slice(0,10),notes:clean(p.notes),salaryDue:due};
+  const advance={id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month:clean(p.month),amount,date:clean(p.date)||new Date().toISOString().slice(0,10),time:currentTime(),notes:clean(p.notes),salaryDue:due};
   data.teacherAdvances.push(advance);save();return advance;
 }
 function updateTeacherAdvance(id,p){

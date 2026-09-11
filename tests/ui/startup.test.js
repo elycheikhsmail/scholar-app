@@ -158,6 +158,19 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#salaryTeacher option')).toHaveCount(0);
   await page.locator('#salaryTeacherSearch').fill('');
   await expect(page.locator('#salaryTeacher option')).toHaveCount(1);
+  // Salary and advance receipts print through the shared receipt window.
+  const salaryReceipt=await page.evaluate(()=>{
+    let body='';const original=window.printWindow;
+    window.printWindow=options=>{body=options.body};
+    printSalaryReceipt(state.data.teacherPayments[0].id);
+    window.printWindow=original;
+    return body;
+  });
+  assert.match(salaryReceipt,/إيصال صرف راتب/);
+  assert.match(salaryReceipt,/S-000001/);
+  assert.match(salaryReceipt,/موظف تجريبي/);
+  assert.match(salaryReceipt,/المتبقي بعد هذه الدفعة[\s\S]*2,000 أوقية/);
+  await expect(page.locator('#salaryTable')).toContainText('S-000001');
   await page.locator('#salaryTable .btn-edit').click();
   await expect(page.locator('#salaryEditDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#salaryEditIdentity')).toContainText('موظف تجريبي');

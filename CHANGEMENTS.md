@@ -3,6 +3,25 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.27.0 — 2026-09-11
+
+- Reçus imprimables : bouton **إيصال** dans سجل دفعات الرواتب (إيصال صرف
+  راتب : heures × taux, استحقاق, السلف المخصومة, total payé, reste, signatures
+  comptable/bénéficiaire) et dans سجل السلف (إيصال سلفة). Bouton **طباعة كشف
+  الشهر** : كشف الرواتب en A4 avec colonne de signature et totaux.
+- Numéros d'إيصال uniques et persistants : `S-000001` (salaires) et
+  `A-000001` (avances), affichés dans les tableaux ; heure de saisie
+  enregistrée et affichée avec la date.
+- Le formulaire de paie détaille les سلف déduites (montant et date) ; le
+  formulaire de سلفة affiche les heures du mois en ligne (plus de fenêtre
+  séparée) avec un rappel de l'استحقاق, du payé et du disponible ; un montant
+  trop élevé est ramené au disponible.
+- Technique : séries `RECEIPT_SERIES` (`db.js`) avec `salaryReceiptSequence`
+  et `advanceReceiptSequence`, champ `time` sur `teacherPayments` /
+  `teacherAdvances` ; `printSalaryReceipt`, `printAdvanceReceipt`,
+  `updateAdvanceHint` dans `public/staff.js`.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.26.0 — 2026-09-11
 
 - **كشف رواتب الشهر** en tête de **الموظفون والرواتب** : une ligne par employé
