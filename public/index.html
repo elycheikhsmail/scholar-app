@@ -67,7 +67,7 @@
 
 <section id="students" class="section">
   <div class="section-head"><div><h2>الطلاب</h2><p>تسجيل بيانات الطلاب الشخصية والدراسية</p></div></div>
-  <div class="panel student-form-panel">
+  <div class="panel student-form-panel write-only">
     <form id="studentForm" class="student-grid" novalidate>
       <input type="hidden" id="studentId">
       <label class="student-label strong-green dept-field">القسم<select id="className" required></select></label>
@@ -153,7 +153,7 @@
   <div id="studentFeesPanel" class="panel fee-form-page">
     <p id="studentFeeRates" class="hint-box"></p>
     <p id="studentPaidSummary" class="hint-box"></p>
-    <form id="studentFeesForm" class="fee-entry-form">
+    <form id="studentFeesForm" data-write-only class="fee-entry-form">
       <div class="fee-payment-controls">
         <div class="fee-payment-entry">
           <label class="fee-entry-amount-total">المبلغ المدفوع<input id="studentFeePaymentAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="أدخل المبلغ الإجمالي" required><small id="studentFeeAmountLimit"></small></label>
@@ -187,7 +187,7 @@
     </form>
     <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
     <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
-    <form id="studentDiscountForm" class="form-grid" aria-labelledby="studentDiscountTitle">
+    <form id="studentDiscountForm" data-write-only class="form-grid" aria-labelledby="studentDiscountTitle">
       <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
       <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
       <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
@@ -227,7 +227,7 @@
 </section>
 
 <section id="staff" class="section">
-  <div class="section-head"><div><h2>الموظفون والرواتب</h2><p>المعلمون والأساتذة والمحاسب والمراقب والعامل اليدوي</p></div><button type="button" class="primary" id="addTeacher">+ إضافة موظف</button></div>
+  <div class="section-head"><div><h2>الموظفون والرواتب</h2><p>المعلمون والأساتذة والمحاسب والمراقب والعامل اليدوي</p></div><button type="button" class="primary write-only" id="addTeacher">+ إضافة موظف</button></div>
   <dialog id="teacherDialog" class="app-dialog staff-dialog" aria-labelledby="teacherDialogTitle">
     <div class="app-dialog-head sticky-head"><h3 id="teacherDialogTitle">إضافة موظف</h3><button type="button" class="secondary" id="closeTeacherDialog" aria-label="إغلاق استمارة الموظف">إغلاق ✕</button></div>
     <form id="teacherForm" class="staff-grid" novalidate>
@@ -275,7 +275,7 @@
     <p id="teacherCount" class="totals-line" role="status" aria-live="polite"></p>
     <div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الحالة</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>الهاتف</th><th>آخر دفعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
-  <div role="tabpanel" tabindex="0" id="staffPanel-salaries" data-staff-panel="salaries" aria-labelledby="staffTab-salaries" class="hidden panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form" novalidate>
+  <div role="tabpanel" tabindex="0" id="staffPanel-salaries" data-staff-panel="salaries" aria-labelledby="staffTab-salaries" class="hidden panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" data-write-only class="inline-form salary-form" novalidate>
     <input id="salaryTeacherSearch" type="search" placeholder="ابحث عن موظف بالاسم" aria-label="بحث عن موظف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>
   </form><div id="salaryDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3>
   <div class="fee-toolbar staff-toolbar">
@@ -305,7 +305,7 @@
     </form>
   </dialog>
 
-  <div role="tabpanel" tabindex="0" id="staffPanel-advances" data-staff-panel="advances" aria-labelledby="staffTab-advances" class="hidden panel"><h3>السلف</h3><form id="advanceForm" class="inline-form"><select id="advanceTeacher" required aria-label="الموظف"></select><select id="advanceMonth" required aria-label="الشهر"></select><span id="advanceHoursWrap" class="hidden-field"><input id="advanceHours" type="number" min="0" placeholder="عدد ساعات الشهر" class="hours-field"></span><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date" aria-label="تاريخ السلفة"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div id="advanceDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3>
+  <div role="tabpanel" tabindex="0" id="staffPanel-advances" data-staff-panel="advances" aria-labelledby="staffTab-advances" class="hidden panel"><h3>السلف</h3><form id="advanceForm" data-write-only class="inline-form"><select id="advanceTeacher" required aria-label="الموظف"></select><select id="advanceMonth" required aria-label="الشهر"></select><span id="advanceHoursWrap" class="hidden-field"><input id="advanceHours" type="number" min="0" placeholder="عدد ساعات الشهر" class="hours-field"></span><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date" aria-label="تاريخ السلفة"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div id="advanceDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3>
   <div class="fee-toolbar staff-toolbar">
     <label>الموظف<select id="advanceLogTeacher"><option value="">الكل</option></select></label>
     <label>الشهر<select id="advanceLogMonth"><option value="">كل الأشهر</option></select></label>
@@ -318,7 +318,7 @@
 </section>
 
 <section id="expenses" class="section"><div class="section-head"><div><h2>المصروفات</h2><p>تسجيل ومتابعة مصروفات المدرسة</p></div></div>
-  <div class="panel"><form id="expenseForm" class="form-grid expenses-form" novalidate><input type="hidden" id="expenseId"><label>نوع المصروف<input id="expenseCategory" required></label><label>البيان / وصف المصروف<input id="expenseDescription"></label><label>المبلغ<input id="expenseAmount" type="number" min="1" required></label><label>التاريخ<input id="expenseDate" type="date"></label><label>المستفيد<input id="expenseBeneficiary"></label><label class="wide-field">ملاحظات<textarea id="expenseNotes"></textarea></label><div class="form-actions"><button class="primary">حفظ المصروف</button><button type="button" class="secondary" id="cancelExpense">تفريغ النموذج</button></div></form></div>
+  <div class="panel write-only"><form id="expenseForm" class="form-grid expenses-form" novalidate><input type="hidden" id="expenseId"><label>نوع المصروف<input id="expenseCategory" required></label><label>البيان / وصف المصروف<input id="expenseDescription"></label><label>المبلغ<input id="expenseAmount" type="number" min="1" required></label><label>التاريخ<input id="expenseDate" type="date"></label><label>المستفيد<input id="expenseBeneficiary"></label><label class="wide-field">ملاحظات<textarea id="expenseNotes"></textarea></label><div class="form-actions"><button class="primary">حفظ المصروف</button><button type="button" class="secondary" id="cancelExpense">تفريغ النموذج</button></div></form></div>
   <div class="panel"><h3 class="table-title" id="expensesTableTitle">سجل مصروفات المدرسة</h3>
     <div class="table-tools"><label class="report-period">تصفية حسب الشهر<select id="expenseMonth"></select></label><div class="totals-line"><span>عدد المصروفات: <b id="expenseCount">0</b></span><span>الإجمالي: <b id="expenseTotal">0</b></span></div></div>
     <div class="table-scroll"><table aria-labelledby="expensesTableTitle"><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th><th>المستفيد</th><th>إجراءات</th></tr></thead><tbody id="expensesTable"></tbody></table></div></div>
@@ -328,9 +328,9 @@
 <section id="exams" class="section">
   <div class="section-head"><div><h2>الامتحانات</h2><p>الامتحانات الأول والثاني والثالث، المواد والضوارب والنتائج وكشوف النقاط</p></div></div>
 
-  <div class="panel">
+  <div class="panel write-only">
     <h3>إعداد المواد والضوارب حسب القسم أو الشعبة</h3>
-    <form id="templateForm" class="exam-template-form">
+    <form id="templateForm" data-write-only class="exam-template-form">
       <label>القسم/الشعبة<select id="examTemplateDept" required></select></label>
       <label>نوع القسم<select id="examTemplateLevel"><option value="ابتدائي">ابتدائي</option><option value="إعدادي">إعدادي</option><option value="ثانوي">ثانوي</option></select></label>
       <label>اسم المادة<input id="examSubjectName" placeholder="مثال: الرياضيات"></label>
@@ -342,7 +342,7 @@
     <h3 class="table-title" id="examTemplatesTableTitle">جدول مواد الأقسام وضواربها</h3><div class="table-scroll"><table aria-labelledby="examTemplatesTableTitle"><thead><tr><th>القسم/الشعبة</th><th>النوع</th><th>المواد والضوارب</th><th>إجراءات</th></tr></thead><tbody id="examTemplatesTable"></tbody></table></div>
   </div>
 
-  <div class="panel">
+  <div class="panel write-only">
     <h3>إدخال نتائج الامتحانات</h3>
     <div class="exam-toolbar">
       <label>الامتحان<select id="examNo"><option value="1">الامتحان الأول</option><option value="2">الامتحان الثاني</option><option value="3">الامتحان الثالث</option></select></label>
@@ -378,7 +378,7 @@
 
   <div class="panel">
     <h3>رأس كشف النتائج</h3>
-    <form id="examHeaderForm" class="form-grid">
+    <form id="examHeaderForm" data-write-only class="form-grid">
       <label>الجمهورية<input id="examRepublic"></label>
       <label>الوزارة<input id="examMinistry"></label>
       <label>الإدارة الجهوية<input id="examRegional"></label>
@@ -413,28 +413,40 @@
     <button type="button" class="settings-tab" role="tab" id="settingsTab-roles" data-settings-tab="roles" aria-controls="settingsPanel-roles" aria-selected="false" tabindex="-1">طبيعة العمل</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-school" data-settings-tab="school" aria-controls="settingsPanel-school" aria-selected="false" tabindex="-1">المدرسة والدخول</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-mode" data-settings-tab="mode" aria-controls="settingsPanel-mode" aria-selected="false" tabindex="-1">وضع الاستخدام</button>
-    <button type="button" class="settings-tab" role="tab" id="settingsTab-data" data-settings-tab="data" aria-controls="settingsPanel-data" aria-selected="false" tabindex="-1">البيانات</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-sync" data-settings-tab="sync" aria-controls="settingsPanel-sync" aria-selected="false" tabindex="-1">المزامنة مع الموقع</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-data" data-settings-tab="data" aria-controls="settingsPanel-data" aria-selected="false" tabindex="-1">البيانات</button>
   </nav>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-sync" data-settings-panel="sync" aria-labelledby="settingsTab-sync" class="hidden panel write-only"><h3>المزامنة مع الموقع (نسخة للعرض فقط)</h3>
+    <p class="hint-box">يرسل زر «مزامنة الآن» نسخة كاملة من البيانات إلى الموقع الإلكتروني الذي يعرضها للقراءة فقط. اضغطه بعد إدخال كمية معتبرة من البيانات؛ وتُجرى مزامنة تلقائية عند إغلاق التطبيق. الموقع لا يغيّر شيئًا هنا.</p>
+    <div class="sync-status"><span>آخر مزامنة: <b id="syncLastAt">—</b></span><span>التغييرات منذ آخر مزامنة: <b id="syncPending">0</b></span><button type="button" class="primary" id="syncNow">مزامنة الآن</button></div>
+    <form id="syncSettingsForm" class="form-grid" novalidate>
+      <label class="name-field">رابط المزامنة (URL)<input id="syncUrl" type="url" placeholder="https://…/api/sync"></label>
+      <label>رمز المزامنة (Token)<input id="syncToken" type="password" autocomplete="new-password"></label>
+      <label>كلمة المرور الحالية<input id="syncCurrentPassword" type="password" autocomplete="current-password" required></label>
+      <p id="syncTokenInfo" class="hint-box"></p>
+      <div class="form-actions"><button class="primary">حفظ إعدادات المزامنة</button></div>
+    </form>
+  </div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-fees" data-settings-panel="fees" aria-labelledby="settingsTab-fees" class="hidden panel"><h3>إعدادات الرسوم</h3>
     <p class="hint-box">تُحدَّد الرسوم هنا مرة واحدة: رسم تسجيل سنوي واحد للمدرسة، ورسم شهري ثابت لكل مستوى يُضبط في تبويب «الأقسام». استمارة الطالب تقرأ هذه القيم ولا تطلب إدخالها، وأي تعديل هنا يسري على كل الطلاب.</p>
-    <form id="feeSettingsForm" class="form-grid">
+    <form id="feeSettingsForm" data-write-only class="form-grid">
       <label>رسم التسجيل السنوي<input id="setRegistrationFee" type="number" min="0" step="0.01" required></label>
       <label>الرسوم الشهرية الافتراضية (لقسم بلا رسوم)<input id="setDefaultMonthlyFee" type="number" min="0" step="0.01" required></label>
       <div class="form-actions"><button class="primary">حفظ إعدادات الرسوم</button></div>
     </form>
   </div>
 
-  <div role="tabpanel" tabindex="0" id="settingsPanel-departments" data-settings-panel="departments" aria-labelledby="settingsTab-departments" class="hidden panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-departments" data-settings-panel="departments" aria-labelledby="settingsTab-departments" class="hidden panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" data-write-only class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-roles" data-settings-panel="roles" aria-labelledby="settingsTab-roles" class="hidden panel"><h3>لائحة طبيعة العمل</h3>
     <p class="hint-box">هذه اللائحة تظهر في حقل «طبيعة العمل» باستمارة إضافة الموظف. «أستاذ» يُدفع له بالساعة و«أخرى» هي القيمة الافتراضية، لذلك لا يمكن حذفهما. تعديل الاسم يسري على الموظفين المرتبطين به، ولا يمكن حذف طبيعة عمل لها موظفون.</p>
-    <form id="staffRoleForm" class="department-form"><input id="staffRoleName" placeholder="طبيعة العمل الجديدة" maxlength="40" required><button class="primary">إضافة</button></form>
+    <form id="staffRoleForm" data-write-only class="department-form"><input id="staffRoleName" placeholder="طبيعة العمل الجديدة" maxlength="40" required><button class="primary">إضافة</button></form>
     <h3 class="table-title" id="staffRolesTableTitle">جدول طبيعة العمل</h3><div class="table-scroll"><table aria-labelledby="staffRolesTableTitle"><thead><tr><th>طبيعة العمل</th><th>عدد الموظفين</th><th>إجراءات</th></tr></thead><tbody id="staffRolesTable"></tbody></table></div></div>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-school" data-settings-panel="school" aria-labelledby="settingsTab-school" class="hidden panel"><h3>بيانات المدرسة والدخول</h3><form id="settingsForm" class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-school" data-settings-panel="school" aria-labelledby="settingsTab-school" class="hidden panel"><h3>بيانات المدرسة والدخول</h3><form id="settingsForm" data-write-only class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-mode" data-settings-panel="mode" aria-labelledby="settingsTab-mode" class="hidden panel">
     <h3>وضع استخدام التطبيق</h3>
     <p>لكل وضع قاعدة بيانات ونسخ احتياطية مستقلة. البيانات الحالية محفوظة في وضع الإنتاج. يبدأ وضع التجريب بقاعدة جديدة دون نسخ الطلاب أو الحسابات.</p>
     <p>عند إنشاء قاعدة جديدة تُنسخ إعدادات المدرسة وبيانات الدخول الحالية فقط. التبديل مباشر دون كلمة مرور أو إعادة تسجيل الدخول، ويحتفظ كل وضع ببياناته عند العودة إليه.</p>
-    <form id="applicationModeForm" class="inline-form">
+    <form id="applicationModeForm" data-write-only class="inline-form">
       <label>الوضع<select id="applicationMode"><option value="production">وضع الإنتاج</option><option value="test">وضع التجريب — نسخة للتجريب فقط</option></select></label>
       <button class="primary">تبديل الوضع</button>
     </form>

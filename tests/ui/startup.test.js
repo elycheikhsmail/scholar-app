@@ -106,7 +106,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#today')).toHaveText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)، \d{2} \S+ \d{4}$/);
   // The settings screen shows one form at a time, behind its own tab list.
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]')).toHaveCount(6);
+  await expect(page.locator('[data-settings-tab]')).toHaveCount(7);
   await expect(page.locator('[data-settings-panel]:visible')).toHaveCount(1);
   await expect(page.locator('#setRegistrationFee')).toBeVisible();
   await page.locator('[data-settings-tab="departments"]').click();
@@ -199,9 +199,40 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#clearSimulatedDate').click();
   await login();
   await expect(page.locator('#today')).not.toContainText('تاريخ تجريبي');
+  // The read-only web copy: same screens, badge, every writing control hidden,
+  // and no write ever leaves the browser.
+  responses['/api/mode'] = { mode: 'production', readOnly: true };
+  await page.reload();
+  await expect(page.locator('#loginModeBadge')).toHaveText('نسخة للعرض فقط');
+  await login();
+  await expect(page.locator('body')).toHaveClass(/read-only/);
+  await page.locator('.nav-item[data-section="students"]').click();
+  await expect(page.locator('#studentsTable')).toContainText('طالب تجريبي');
+  await expect(page.locator('.student-form-panel')).toBeHidden();
+  await expect(page.locator('#studentsTable .btn-delete').first()).toBeHidden();
+  await expect(page.locator('#studentsTable [onclick^="editStudent"]').first()).toBeHidden();
+  await expect(page.locator('#studentsTable .btn-pay').first()).toBeVisible();
+  await page.locator('.nav-item[data-section="staff"]').click();
+  await expect(page.locator('#addTeacher')).toBeHidden();
+  await page.locator('.nav-item[data-section="expenses"]').click();
+  await expect(page.locator('#expenseForm')).toBeHidden();
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await expect(page.locator('[data-settings-tab="sync"]')).toBeHidden();
+  await expect(page.locator('[data-settings-tab="data"]')).toBeHidden();
+  const refused = await page.evaluate(() => api('/expenses', { method: 'POST', body: '{}' }).then(() => 'sent', error => error.message));
+  assert.equal(refused, 'هذه النسخة للعرض فقط؛ لا يمكن الحفظ أو التعديل.');
+  assert.equal(errors.filter(e => /\/api\/expenses/.test(e)).length, 0, 'no write request was issued');
   responses['/api/mode'] = { mode: 'production' };
   await page.reload();
   await login();
+  await expect(page.locator('body')).not.toHaveClass(/read-only/);
+  // The sync tab shows the state of the web copy and sends the snapshot on demand.
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await page.locator('[data-settings-tab="sync"]').click();
+  await expect(page.locator('#syncLastAt')).toHaveText('لم تتم بعد');
+  await expect(page.locator('#syncPending')).toHaveText('3'); // the three records seeded above
+  await expect(page.locator('#syncNow')).toBeDisabled();
+  await expect(page.locator('#syncTokenInfo')).toContainText('لم يُحفظ');
   await page.locator('.nav-item[data-section="dashboard"]').click();
   await expect(page.locator('#sStudents')).toHaveText('1');
   await page.locator('.nav-item[data-section="students"]').click();

@@ -328,8 +328,48 @@ function publicSettings() {
     regional: data.settings.regional || 'الإدارة الجهوية للتعليم',
     staffRoles: staffRoles(),
     testDate: clean(data.settings.testDate),
-    testDateIssued: clean(data.settings.testDateIssued)
+    testDateIssued: clean(data.settings.testDateIssued),
+    // Remote read-only copy (NOTES-WEB-READONLY.md): the token never leaves the server.
+    syncUrl: clean(data.settings.syncUrl),
+    syncTokenSet: !!clean(data.settings.syncToken),
+    ...syncState()
   };
+}
+
+// --- Remote read-only copy ---------------------------------------------------
+// The desktop pushes a snapshot of everything the browser reads to the web
+// copy; the web copy only serves it back. Credentials never travel: the
+// snapshot carries the public settings, not the password hash.
+function snapshot() {
+  const exams = getExamData();
+  return { exportedAt: new Date().toISOString(), ...getCoreData(), examSettings: exams.settings, exams: exams.exams };
+}
+function syncSettings() {
+  return { url: clean(data.settings.syncUrl), token: clean(data.settings.syncToken) };
+}
+function updateSyncSettings(input) {
+  const url = clean(input.syncUrl);
+  if (url && !/^https?:\/\/\S+$/.test(url)) throw new Error('رابط المزامنة يجب أن يبدأ بـ http:// أو https://');
+  data.settings.syncUrl = url;
+  // An empty token keeps the one already stored, so the form need not repeat it.
+  if (clean(input.syncToken)) data.settings.syncToken = clean(input.syncToken);
+  if (!url) data.settings.syncToken = '';
+  save();
+  return publicSettings();
+}
+// When the copy was last refreshed and how many writes happened since: state
+// of this installation, kept in `metadata` next to the schema version rather
+// than in the school's data, so backups, exports and snapshots never carry it.
+const metadataValue = key => sqlite.prepare('SELECT value FROM metadata WHERE key = ?').get(key)?.value;
+const setMetadata = (key, value) => sqlite.prepare('INSERT INTO metadata(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value').run(key, String(value));
+function syncState() {
+  return { lastSyncAt: metadataValue('lastSyncAt') || '', writesSinceSync: Math.max(0, Number(metadataValue('writesSinceSync')) || 0) };
+}
+// Called once the web copy has confirmed it stored the snapshot.
+function recordSync(at) {
+  setMetadata('lastSyncAt', clean(at) || new Date().toISOString());
+  setMetadata('writesSinceSync', 0);
+  return publicSettings();
 }
 
 // A test database can carry the day it was prepared for (scripts/seed-testing.js
@@ -813,16 +853,24 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,checkLogin,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.
-const readOperations = new Set(['getData', 'getCoreData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData']);
+const readOperations = new Set(['getData', 'getCoreData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData', 'snapshot', 'syncSettings']);
+// Bookkeeping of the sync itself is not a change the web copy is missing.
+const uncountedWrites = new Set(['updateSyncSettings', 'recordSync', 'setTestDate']);
+function countWrite() {
+  sqlite.prepare(`INSERT INTO metadata(key, value) VALUES ('writesSinceSync', '1')
+    ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)`).run();
+}
 for (const [name, operation] of Object.entries(module.exports)) {
   if (name === 'init') continue;
   const run = args => {
     const backupPath = name === 'clearOperationalData' ? createBackup() : null;
-    return operation(...(backupPath ? [backupPath] : args));
+    const result = operation(...(backupPath ? [backupPath] : args));
+    if (!readOperations.has(name) && !uncountedWrites.has(name)) countWrite();
+    return result;
   };
   module.exports[name] = (...args) => {
     if (!sqlite) throw new Error('La base de données doit être initialisée.');

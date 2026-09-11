@@ -3,6 +3,23 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.44.0 — 2026-09-11
+
+- Préparation de la copie web en lecture seule (étapes 1–3 de
+  `NOTES-WEB-READONLY.md`) :
+  - mode lecture seule (`SCHOOL_READ_ONLY=1`) : badge « نسخة للعرض فقط »,
+    formulaires et boutons d'écriture masqués (`body.read-only`), `api()`
+    refuse les écritures côté navigateur et le serveur répond 405 ;
+  - `db.snapshot()` : instantané complet sans mot de passe ;
+  - الإعدادات ← « المزامنة مع الموقع » : URL + jeton, bouton « مزامنة الآن »,
+    « آخر مزامنة » et nombre de fiches modifiées depuis (table `metadata`) ;
+    synchronisation automatique à la fermeture d'Electron ; refusée en mode test.
+- Technique : `db.updateSyncSettings` / `syncSettings` / `recordSync`,
+  compteur d'écritures dans le wrapper de `db.js`, `syncRemote()` dans
+  `server.js`, `PUT /api/sync-settings`, `POST /api/sync-remote`,
+  `readOnly` dans `GET /api/mode` ; marqueurs `write-only` / `data-write-only`.
+- Vérification : `npm run check`, `npm test`, `npm run test:ui`.
+
 ## 1.43.0 — 2026-09-11
 
 - Nouveau `npm run fees:clear` (`scripts/clear-fees.js`) : vide les niveaux et

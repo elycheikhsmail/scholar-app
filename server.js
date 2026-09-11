@@ -24,8 +24,13 @@ let server = null;
 let actualPort = DEFAULT_PORT;
 let applicationMode = 'production';
 let modeGeneration = 0;
+// Read-only copy (SCHOOL_READ_ONLY=1): the web deployment and any mirror serve
+// the data but refuse every change. The browser hides the forms; the server
+// still refuses, so a stale page cannot write either.
+let readOnly = false;
+const READ_ONLY_MESSAGE = 'هذه النسخة للعرض فقط؛ لا يمكن الحفظ أو التعديل.';
 function modeInfo() {
-  const info = { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج', version:APP_VERSION };
+  const info = { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج', version:APP_VERSION, readOnly };
   // Only a test database proposes a test date; production always runs on the real day.
   if (applicationMode === 'test') {
     const { testDate, testDateIssued } = db.publicSettings();
@@ -217,6 +222,7 @@ async function api(req, res) {
   if (parts[1] === "data" && method === "GET") {
     return json(res, 200, db.getCoreData());
   }
+  if (readOnly && method !== "GET" && parts[1] !== "verify-password") return json(res, 405, { error: READ_ONLY_MESSAGE });
 
   try {
     if (parts[1] === "mode" && method === "PUT") {
@@ -275,6 +281,17 @@ async function api(req, res) {
       return json(res, 200, { ok: true, backup });
     }
 
+    // Remote read-only copy: where to push the snapshot, and the push itself.
+    if (parts[1] === "sync-settings" && method === "PUT") {
+      const b = await body(req);
+      if (!db.checkLogin(db.publicSettings().username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
+      return json(res, 200, { ok: true, settings: { ...db.updateSyncSettings(b), applicationMode } });
+    }
+    if (parts[1] === "sync-remote" && method === "POST") {
+      const result = await syncRemote();
+      return json(res, result.ok ? 200 : 502, result.ok ? { ...result, settings: publicSettings() } : { error: result.error });
+    }
+
     if (parts[1] === "settings" && method === "PUT") {
       const b = await body(req);
       const current = db.publicSettings();
@@ -288,6 +305,33 @@ async function api(req, res) {
   }
 
   return json(res, 404, { error: "المسار غير موجود." });
+}
+
+// Pushes the snapshot to the web copy (POST, bearer token). Never throws: the
+// desktop must keep working offline, so the outcome is a result object.
+async function syncRemote({ timeout = 20000 } = {}) {
+  try {
+    // Test data must never replace the school's real data on the web copy.
+    if (applicationMode === 'test') return { ok: false, error: "المزامنة متاحة في وضع الإنتاج فقط." };
+    const { url, token } = db.syncSettings();
+    if (!url) return { ok: false, error: "لم يُضبط رابط المزامنة بعد (الإعدادات ← المزامنة)." };
+    if (!token) return { ok: false, error: "لم يُضبط رمز المزامنة بعد (الإعدادات ← المزامنة)." };
+    const snapshot = db.snapshot();
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(snapshot),
+      signal: AbortSignal.timeout(timeout)
+    });
+    if (!response.ok) {
+      const detail = await response.json().catch(() => ({}));
+      return { ok: false, error: detail.error || `رفض الموقع المزامنة (HTTP ${response.status}).` };
+    }
+    const settings = db.recordSync(snapshot.exportedAt);
+    return { ok: true, lastSyncAt: settings.lastSyncAt, records: Object.values(snapshot).filter(Array.isArray).reduce((n, list) => n + list.length, 0) };
+  } catch (error) {
+    return { ok: false, error: error.name === "TimeoutError" ? "انتهت مهلة الاتصال بالموقع." : `تعذر الاتصال بالموقع: ${error.message}` };
+  }
 }
 
 function canListen(port) {
@@ -319,6 +363,7 @@ async function startServer() {
   }
 
   applicationMode = readMode();
+  readOnly = process.env.SCHOOL_READ_ONLY === '1';
   db.init(baseDir(), {mode:applicationMode});
   actualPort = await findFreePort();
 
@@ -370,4 +415,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { startServer };
+module.exports = { startServer, syncRemote };

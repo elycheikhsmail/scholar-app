@@ -281,6 +281,23 @@ La base de test enregistre sa **date de test** (dernier jour de février de l'an
 comme si elle avait été saisie dans الإعدادات ← وضع الاستخدام ; elle reste modifiable ou
 effaçable. Même graine aléatoire, même base à chaque exécution.
 
+## Copie web en lecture seule (préparation)
+
+Voir `NOTES-WEB-READONLY.md` pour l'analyse. Ce dépôt fournit déjà :
+
+- **Mode lecture seule** : `SCHOOL_READ_ONLY=1 npm run server` sert les mêmes écrans avec le
+  badge « نسخة للعرض فقط », masque tout ce qui écrit (formulaires, تعديل / حذف / دفع) et refuse
+  toute requête autre que GET (HTTP 405), connexion et déconnexion exceptées.
+- **Instantané** : `db.snapshot()` = tout ce que le navigateur lit (paramètres publics,
+  collections, examens), sans le mot de passe, avec `exportedAt`.
+- **Synchronisation** : الإعدادات ← المزامنة مع الموقع — URL et jeton (jamais renvoyé au
+  navigateur), bouton « مزامنة الآن » (`POST /api/sync-remote` → `POST <URL>` avec
+  `Authorization: Bearer <jeton>`), « آخر مزامنة » et le nombre de fiches modifiées depuis
+  (compteur dans la table `metadata`, hors des données de l'école). L'application Electron
+  synchronise aussi à la fermeture (5 s maximum, silencieux hors ligne). Refusée en وضع التجريب.
+
+Reste à faire côté hébergement (étape 4 des notes) : le site qui reçoit l'instantané et le sert.
+
 ## Modes production et test
 
 Dans **الإعدادات → onglet وضع الاستخدام**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.

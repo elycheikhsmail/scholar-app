@@ -77,7 +77,14 @@ const debounce=(fn,ms=200)=>{let timer;return(...args)=>{clearTimeout(timer);tim
 // pick which fee a payment settles must stay a plain list of months.
 const monthOptionsHtml=()=>`<option value="${REGISTRATION}">${REGISTRATION}</option>`+MONTHS.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
-function api(path,options={}){const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(`${API_BASE}${path}`,{...options,headers}).then(async r=>{const x=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&state.token&&path!=='/login')location.reload();throw Error(x.error||'حدث خطأ.');}return x})}
+// Copie en lecture seule : aucune écriture ne part vers le réseau ; le serveur
+// la refuserait de toute façon (405), mais l'utilisateur a droit à un message net.
+const READ_ONLY_MESSAGE='هذه النسخة للعرض فقط؛ لا يمكن الحفظ أو التعديل.';
+function applyReadOnly(flag){
+  state.readOnly=!!flag;
+  document.body.classList.toggle('read-only',state.readOnly);
+}
+function api(path,options={}){if(state.readOnly&&(options.method||'GET')!=='GET'&&!['/login','/logout'].includes(path))return Promise.reject(Error(READ_ONLY_MESSAGE));const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(`${API_BASE}${path}`,{...options,headers}).then(async r=>{const x=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&state.token&&path!=='/login')location.reload();throw Error(x.error||'حدث خطأ.');}return x})}
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3200)}
 function setDate(id){if($(id)&&!$(id).value)$(id).value=today()}
 

@@ -315,6 +315,100 @@ test('batch writes many operations in one transaction and rolls all of them back
   assert.equal(db.setTestDate('').testDate, '');
 });
 
+test('snapshot carries everything the browser reads without credentials; writes are counted until a sync', () => {
+  const dir = temp(); db.init(dir);
+  assert.equal(db.publicSettings().writesSinceSync, 0);
+  const s = db.addStudent(student);
+  db.addStudentPayment({ studentId: s.id, amount: 200, month: 'أكتوبر' });
+  db.getData(); db.publicSettings();
+  assert.equal(db.publicSettings().writesSinceSync, 2, 'reads are not counted');
+  const snapshot = db.snapshot();
+  assert.match(snapshot.exportedAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(snapshot.students.length, 1);
+  assert.equal(snapshot.studentPayments.length, 1);
+  assert.ok(Array.isArray(snapshot.exams) && snapshot.examSettings.subjectTemplates);
+  assert.equal(snapshot.settings.passwordHash, undefined);
+  assert.equal(JSON.stringify(snapshot).includes('passwordHash'), false);
+  assert.throws(() => db.updateSyncSettings({ syncUrl: 'ftp://x' }), /http/);
+  assert.equal(db.publicSettings().writesSinceSync, 2, 'sync bookkeeping is not counted');
+  let settings = db.updateSyncSettings({ syncUrl: 'https://school.example/api/sync', syncToken: 'secret-1' });
+  assert.equal(settings.syncTokenSet, true);
+  assert.equal(settings.syncToken, undefined, 'the token never leaves the server');
+  settings = db.updateSyncSettings({ syncUrl: 'https://school.example/api/sync', syncToken: '' });
+  assert.deepEqual(db.syncSettings(), { url: 'https://school.example/api/sync', token: 'secret-1' }, 'an empty token keeps the stored one');
+  settings = db.recordSync('2027-02-28T10:00:00.000Z');
+  assert.equal(settings.lastSyncAt, '2027-02-28T10:00:00.000Z');
+  assert.equal(settings.writesSinceSync, 0);
+  db.batch(() => { db.addExpense({ category: 'إيجار', amount: 500 }); db.addExpense({ category: 'مياه', amount: 100 }); });
+  assert.equal(db.publicSettings().writesSinceSync, 2, 'batched writes are counted too');
+  db.close(); db.init(dir);
+  assert.equal(db.publicSettings().writesSinceSync, 2, 'the count survives a restart');
+  assert.deepEqual(db.updateSyncSettings({ syncUrl: '' }).syncTokenSet, false, 'clearing the URL forgets the token');
+});
+
+test('read-only server refuses every change and the desktop pushes its snapshot to the web copy', async () => {
+  const dir = temp();
+  copySources(dir);
+  // A stand-in for the web copy: accepts the snapshot with the right token only.
+  const http = require('node:http');
+  const received = [];
+  const receiver = http.createServer((req, res) => {
+    let raw = ''; req.on('data', chunk => raw += chunk); req.on('end', () => {
+      if (req.headers.authorization !== 'Bearer secret-1') { res.writeHead(401, { 'Content-Type': 'application/json' }); return res.end('{"error":"رمز المزامنة غير صحيح."}'); }
+      received.push(JSON.parse(raw)); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"ok":true}');
+    });
+  });
+  await new Promise(resolve => receiver.listen(0, '127.0.0.1', resolve));
+  const receiverUrl = `http://127.0.0.1:${receiver.address().port}/api/sync`;
+  const previousPort = process.env.SCHOOL_PORT;
+  process.env.SCHOOL_PORT = '23881';
+  const service = require(path.join(dir, 'server.js'));
+  if (previousPort === undefined) delete process.env.SCHOOL_PORT; else process.env.SCHOOL_PORT = previousPort;
+  let server = await service.startServer();
+  const request = (endpoint, method = 'GET', token = '', payload) => fetch(server.url + '/api' + endpoint, { method, headers: { 'Content-Type': 'application/json', Connection: 'close', Authorization: `Bearer ${token}` }, ...(payload ? { body: JSON.stringify(payload) } : {}) });
+  const login = async () => (await (await request('/login', 'POST', '', { username: 'yaghoub', password: '36485606' })).json()).token;
+  try {
+    let token = await login();
+    assert.equal((await (await request('/mode')).json()).readOnly, false);
+    assert.equal((await request('/students', 'POST', token, student)).status, 200);
+    assert.equal((await (await request('/sync-remote', 'POST', token)).json()).error.includes('رابط'), true, 'nothing configured yet');
+    assert.equal((await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'wrong', currentPassword: 'nope' })).status, 403);
+    let saved = await (await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'wrong', currentPassword: '36485606' })).json();
+    assert.equal(saved.settings.syncTokenSet, true);
+    const refused = await request('/sync-remote', 'POST', token);
+    assert.equal(refused.status, 502);
+    assert.match((await refused.json()).error, /رمز المزامنة/);
+    await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'secret-1', currentPassword: '36485606' });
+    const pushed = await request('/sync-remote', 'POST', token);
+    assert.equal(pushed.status, 200);
+    const result = await pushed.json();
+    assert.equal(received.length, 1);
+    assert.equal(result.records, Object.values(received[0]).filter(Array.isArray).reduce((n, list) => n + list.length, 0));
+    assert.equal(result.settings.writesSinceSync, 0);
+    assert.equal(received[0].students[0].name, student.name);
+    assert.equal(received[0].settings.passwordHash, undefined);
+    assert.equal((await (await request('/settings')).json()).lastSyncAt, result.lastSyncAt);
+    // The same server started as the read-only copy serves the data and refuses writes.
+    server.close();
+    process.env.SCHOOL_READ_ONLY = '1';
+    try { server = await service.startServer(); } finally { delete process.env.SCHOOL_READ_ONLY; }
+    token = await login();
+    assert.equal((await (await request('/mode')).json()).readOnly, true);
+    assert.equal((await (await request('/data', 'GET', token)).json()).students.length, 1);
+    for (const [endpoint, method, payload] of [['/students', 'POST', student], ['/students/1', 'DELETE'], ['/expenses', 'POST', { category: 'x', amount: 5 }], ['/settings', 'PUT', {}], ['/mode', 'PUT', { mode: 'test' }], ['/reset-data', 'POST', { password: '36485606' }], ['/sync-remote', 'POST']]) {
+      const response = await request(endpoint, method, token, payload);
+      assert.equal(response.status, 405, `${method} ${endpoint}`);
+      assert.match((await response.json()).error, /للعرض فقط/);
+    }
+    assert.equal((await request('/verify-password', 'POST', token, { password: '36485606' })).status, 200);
+    assert.equal((await request('/logout', 'POST', token)).status, 200, 'signing out is not a change to the data');
+  } finally {
+    server.close();
+    receiver.close();
+    require(path.join(dir, 'db.js')).close();
+  }
+});
+
 test('mode API persists selection, rejects stale sessions and delayed writes, and preserves both databases', async () => {
   const dir = temp();
   copySources(dir);

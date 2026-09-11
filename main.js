@@ -1,6 +1,6 @@
 const { app, BrowserWindow } = require("electron");
 const path = require("path");
-const { startServer } = require("./server");
+const { startServer, syncRemote } = require("./server");
 
 let serverInfo = null;
 let mainWindow = null;
@@ -43,6 +43,15 @@ app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
 });
 
-app.on("before-quit", () => {
-  if (serverInfo && serverInfo.close) serverInfo.close();
+// Closing the application pushes the snapshot to the web copy when one is
+// configured; offline or refused, the application still closes (bounded wait).
+let quitting = false;
+app.on("before-quit", event => {
+  if (quitting) return;
+  quitting = true;
+  event.preventDefault();
+  syncRemote({ timeout: 5000 }).catch(() => {}).finally(() => {
+    if (serverInfo && serverInfo.close) serverInfo.close();
+    app.exit(0);
+  });
 });

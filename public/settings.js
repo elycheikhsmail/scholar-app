@@ -55,7 +55,38 @@ function renderSettings(){
     setDefaultMonthlyFee:state.settings.defaultMonthlyFee
   };
   for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value;
+  renderSyncStatus();
 }
+// --- Copie web en lecture seule : réglages et bouton de synchronisation ------
+function renderSyncStatus(){
+  const s=state.settings;
+  $('syncUrl').value=s.syncUrl||'';
+  $('syncToken').value='';
+  $('syncTokenInfo').textContent=s.syncTokenSet?'رمز المزامنة محفوظ؛ اتركه فارغًا للإبقاء عليه.':'لم يُحفظ رمز مزامنة بعد.';
+  $('syncLastAt').textContent=s.lastSyncAt?western(s.lastSyncAt.replace('T',' ').slice(0,16)):'لم تتم بعد';
+  $('syncPending').textContent=money(s.writesSinceSync||0);
+  $('syncNow').disabled=!s.syncUrl||!s.syncTokenSet;
+}
+$('syncSettingsForm').onsubmit=async e=>{
+  e.preventDefault();
+  try{
+    const result=await api('/sync-settings',{method:'PUT',body:JSON.stringify({syncUrl:$('syncUrl').value.trim(),syncToken:$('syncToken').value,currentPassword:$('syncCurrentPassword').value})});
+    state.settings={...state.settings,...result.settings};
+    $('syncCurrentPassword').value='';
+    renderSyncStatus();
+    toast('تم حفظ إعدادات المزامنة.');
+  }catch(error){toast(error.message)}
+};
+$('syncNow').onclick=async()=>{
+  const button=$('syncNow');
+  button.disabled=true;button.textContent='جارٍ الإرسال…';
+  try{
+    const result=await api('/sync-remote',{method:'POST'});
+    state.settings={...state.settings,...result.settings};
+    toast(`تمت المزامنة: ${money(result.records)} سجلًا.`);
+  }catch(error){toast(error.message)}
+  finally{button.textContent='مزامنة الآن';renderSyncStatus()}
+};
 // Les frais ne sont plus saisis élève par élève : ils sont fixés ici une fois,
 // et chaque relevé les relit. Un changement vaut donc pour toute l'école.
 $('feeSettingsForm').onsubmit=async e=>{
@@ -197,20 +228,23 @@ window.deleteStaffRole=async index=>{
 };
 
 
-function applyApplicationMode(mode) {
+function applyApplicationMode(mode, readOnly = state.readOnly) {
   if (!['test','production'].includes(mode)) return;
+  applyReadOnly(readOnly);
+  const label = readOnly ? 'نسخة للعرض فقط' : mode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج';
   for (const id of ['loginModeBadge','appModeBadge']) {
-    $(id).textContent = mode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج';
-    $(id).classList.toggle('test-mode',mode === 'test');
+    $(id).textContent = label;
+    $(id).classList.toggle('test-mode',mode === 'test' && !readOnly);
+    $(id).classList.toggle('read-only-badge',readOnly);
   }
-  document.title = `${mode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج'} — حسابات المدرسة`;
+  document.title = `${label} — حسابات المدرسة`;
 }
 async function checkApplicationMode() {
   try {
     const info = await api('/mode');
     if (state.token && state.settings?.applicationMode && state.settings.applicationMode !== info.mode) return location.reload();
     if (adoptTestDate(info)) return location.reload();
-    applyApplicationMode(info.mode);
+    applyApplicationMode(info.mode, !!info.readOnly);
   } catch { /* Keep the last confirmed label while disconnected. */ }
 }
 // La base de test peut proposer sa propre date (scripts/seed-testing.js) :
