@@ -241,8 +241,9 @@ window.openStudentFees = (id, showLedger = false) => {
   $('studentFeeEntryDate').value = today();
   fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
-  if(showLedger)openStudentLedgerPage();
-  else showEditForm('student-fees','studentFeesForm','firstFeeChoice');
+  showEditForm('student-fees','studentFeesForm','firstFeeChoice');
+  $('studentAccountDetails').open = Boolean(showLedger);
+  if(showLedger)requestAnimationFrame(()=>$('studentAccountDetails').scrollIntoView({block:'start'}));
 };
 function fillStudentDiscountForm(student) {
   $('studentDiscountType').value = student.discountType || '';
@@ -267,7 +268,8 @@ function studentFeeRows(student) {
 function feeEntryHtml(row) {
   const head = `<div class="fee-entry-head"><b>${esc(row.month)}</b><span>المستحق: ${money(row.amount)} أوقية</span>`
     + (row.paid > 0 ? `<span class="status-partial">سبق تسديد ${money(row.paid)}</span>` : '') + '</div>';
-  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<p class="status-exempt">بلا رسوم على هذا الشهر.</p></div>`;
+  const details = `<button type="button" class="secondary fee-details-button" data-charge-details="${row.index}" aria-label="عرض تفاصيل وفواتير ${esc(row.month)}">تفاصيل</button>`;
+  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<p class="status-exempt">بلا رسوم على هذا الشهر.</p>${details}</div>`;
   const settled = row.remaining <= 0;
   const selected = settled ? 'full' : row.paid > 0 ? 'partial' : 'none';
   const choices = FEE_CHOICES.map((choice, position) => {
@@ -283,6 +285,7 @@ function feeEntryHtml(row) {
     + ` value="${selected === 'partial' && !settled ? row.paid : ''}"${settled ? ' disabled' : ''}></label>`;
   return `<div class="fee-entry${settled ? ' fee-entry-settled' : ''}" data-fee-entry="${row.index}">${head}`
     + `<div class="fee-entry-choices" role="radiogroup" aria-label="حالة دفع ${esc(row.month)}">${choices}</div>`
+    + details
     + amount
     + (settled ? '<p class="status-paid">مسدَّد بالكامل. لتصحيحه احذف دفعته من كشف الحساب.</p>' : '')
     + '</div>';
@@ -361,6 +364,10 @@ $('studentFeeEntries').addEventListener('change', event => {
   }
   updateStudentFeeSummary();
 });
+$('studentFeeEntries').addEventListener('click', event => {
+  const button = event.target.closest('[data-charge-details]');
+  if(button)openStudentChargeDetails(Number(button.dataset.chargeDetails));
+});
 $('studentFeeEntries').addEventListener('input', event => { if (event.target.matches('[data-fee-amount]')) updateStudentFeeSummary(); });
 $('resetStudentFees').onclick = () => { $('studentFeeEntryDate').value = today(); renderStudentFeeEntries(); };
 $('studentFeesForm').onsubmit = async event => {
@@ -386,20 +393,43 @@ $('studentFeesForm').onsubmit = async event => {
     toast(`تم تسجيل ${money(paying.length)} دفعة بإجمالي ${money(total)} أوقية.`);
   } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };
-function openStudentLedgerPage(){
-  refreshStudentFeeDetails();
-  go('student-ledger');
-  requestAnimationFrame(()=>$('studentLedgerTitle').focus());
+function openStudentChargeDetails(index){
+  const student=selectedFeeStudent();
+  const row=student&&ledgerOf(student).rows[index];
+  if(!student||!row)return;
+  const payments=new Map(state.data.studentPayments.map(payment=>[Number(payment.id),payment]));
+  $('studentChargeDetailsTitle').textContent=`تفاصيل ${row.month}`;
+  $('studentChargeDetailsIdentity').textContent=`${student.name} — الرقم المدرسي: ${student.schoolNo}`;
+  const period=row.dueDate<today().slice(0,7)+'-01'?'سابقة':row.dueDate.slice(0,7)===today().slice(0,7)?'جارية':'قادمة';
+  const invoiceRows=row.allocations.map(allocation=>{
+    const payment=payments.get(Number(allocation.paymentId));
+    if(!payment)return '';
+    return `<tr><td>${esc(invoiceNo(payment))}</td><td>${esc(paymentLabel(payment))}</td><td>${money(allocation.amount)}</td><td>${money(payment.amount)}</td><td>${esc(western(payment.date))}</td>`
+      + `<td class="actions"><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${payment.id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${payment.id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${payment.id})">حذف</button></td></tr>`;
+  }).join('');
+  $('studentChargeDetailsBody').innerHTML=`<div class="charge-detail-summary">
+      <span><small>تاريخ الاستحقاق</small><b>${esc(western(row.dueDate))}</b></span><span><small>الفترة</small><b>${period}</b></span>
+      <span><small>الرسم الأصلي</small><b>${money(row.gross)}</b></span><span><small>الخصم</small><b>${money(row.discount||0)}</b></span>
+      <span><small>المستحق</small><b>${money(row.amount)}</b></span><span><small>المدفوع</small><b>${money(row.paid)}</b></span>
+      <span><small>المتبقي</small><b class="${row.remaining>0?'status-unpaid':'status-paid'}">${money(row.remaining)}</b></span>
+    </div><h4 class="table-title">الفواتير المرتبطة بهذا الرسم</h4>
+    <div class="table-scroll"><table><thead><tr><th>رقم الفاتورة</th><th>نوع الدفعة المسجلة</th><th>المخصَّص لهذا الرسم</th><th>إجمالي الفاتورة</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>${invoiceRows||'<tr><td colspan="6">لا توجد فاتورة مرتبطة بهذا الرسم حتى الآن.</td></tr>'}</tbody></table></div>`;
+  $('studentChargeDetailsDialog').showModal();
 }
+window.runChargeInvoiceAction=(action,id)=>{
+  $('studentChargeDetailsDialog').close();
+  if(action==='print')return printStudentReceipt(id);
+  if(action==='edit')return editStudentPayment(id);
+  if(action==='delete')return deleteStudentPayment(id);
+};
 function refreshStudentFeeDetails() {
   const student = selectedFeeStudent();
   if (!student) {
-    if($('student-fees').classList.contains('active-section')||$('student-ledger').classList.contains('active-section'))go('fees',{historyMode:'replace'});
+    if($('student-fees').classList.contains('active-section'))go('fees',{historyMode:'replace'});
     return;
   }
   const identity=`${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
   $('studentFeesIdentity').textContent=identity;
-  $('studentLedgerIdentity').textContent=identity;
   const payments = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id));
   const ledger = ledgerOf(student);
   // Remise et rصيد dائn ne s'affichent que lorsqu'ils existent.
@@ -446,9 +476,10 @@ function toggleDiscountFields(){
   if(!on){$('studentDiscountValue').value='';$('studentDiscountReason').value=''}
 }
 $('studentDiscountType').onchange=toggleDiscountFields;
-$('showStudentLedger').onclick=openStudentLedgerPage;
-$('closeStudentLedger').onclick=goToPreviousPage;
 $('closeStudentFees').onclick=goToPreviousPage;
+$('studentChargeDetailsDialog').addEventListener('click',event=>{
+  if(event.target.matches('[data-close-dialog="studentChargeDetailsDialog"]'))$('studentChargeDetailsDialog').close();
+});
 $('studentDiscountForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();

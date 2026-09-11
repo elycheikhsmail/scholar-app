@@ -207,6 +207,16 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .detail-page-head{align-items:flex-start}
 .detail-page-head p{margin:5px 0 0;color:var(--text-muted);font-weight:700}
 .fee-form-page,.ledger-page{border-top:5px solid var(--green)}
+.student-account-details{margin-top:22px;border:1px solid var(--border-panel);border-radius:var(--radius-lg);background:var(--surface-soft);overflow:hidden}
+.student-account-details>summary{cursor:pointer;padding:15px 18px;font-weight:900;color:var(--nav-fees);background:#fff}
+.student-account-details[open]>summary{border-bottom:1px solid var(--border-panel)}
+.student-account-details .ledger-page{padding:18px;border-top:0}
+.charge-details-dialog{--dialog-width:980px}
+.charge-detail-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:20px}
+.charge-detail-summary span{display:flex;flex-direction:column;gap:5px;padding:11px;border:1px solid var(--border-panel);border-radius:var(--radius-md);background:var(--surface-soft)}
+.charge-detail-summary small{color:var(--text-muted);font-weight:700}
+.charge-detail-summary b{font-size:15px}
+.charge-details-dialog .table-scroll table{min-width:820px}
 .ledger-page .table-scroll table{min-width:1100px}
 @media(max-width:700px){.detail-page-head{align-items:stretch;flex-direction:column}.detail-page-head .secondary{width:100%}}
 /* One dialog system. Every modal shares the frame, backdrop, animation and
@@ -282,6 +292,7 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .fee-entry-head b{font-size:16px;color:var(--nav-fees)}
 .fee-entry-head span{font-size:12px;color:var(--text-muted)}
 .fee-entry-choices{display:flex;flex-wrap:wrap;gap:8px}
+.fee-details-button{margin-inline-start:auto;white-space:nowrap}
 .fee-choice{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--border-field);border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;background:#fff}
 .fee-choice:has(input:checked){border-color:var(--blue);background:var(--blue-tint);color:var(--blue)}
 .fee-choice-locked{opacity:.5;cursor:not-allowed}

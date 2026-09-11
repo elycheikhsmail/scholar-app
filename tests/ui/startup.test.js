@@ -271,21 +271,33 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#studentFeeEntrySummary')).toContainText('لم تُسدَّد بعد');
   await page.locator('#resetStudentFees').click();
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
-  await page.locator('#showStudentLedger').click();
-  await expect(page.locator('#student-ledger')).toHaveClass(/active-section/);
-  await expect(page).toHaveURL(/#student-ledger$/);
+  // Each charge exposes its amounts and the invoices allocated to it without
+  // leaving the unified fee form.
+  await page.evaluate(()=>{
+    const student=state.data.students[0];
+    state.data.studentPayments=[{id:91,invoiceNo:'F-000091',studentId:student.id,month:REGISTRATION,amount:200,date:'2026-09-11'}];
+    ledgerCache=null;
+    refreshStudentFeeDetails();
+  });
+  await expect(page.locator('#studentFeeEntries [data-charge-details]')).toHaveCount(10);
+  await page.locator('#studentFeeEntries .fee-entry').first().locator('[data-charge-details]').click();
+  await expect(page.locator('#studentChargeDetailsDialog')).toHaveAttribute('open','');
+  await expect(page.locator('#studentChargeDetailsTitle')).toContainText('التسجيل');
+  await expect(page.locator('#studentChargeDetailsBody')).toContainText('F-000091');
+  await expect(page.locator('#studentChargeDetailsBody')).toContainText('المخصَّص لهذا الرسم');
+  await page.locator('#studentChargeDetailsDialog [data-close-dialog]').last().click();
+  await expect(page.locator('#studentChargeDetailsDialog')).not.toHaveAttribute('open','');
+  await page.locator('#studentAccountDetails summary').click();
   await expect(page.locator('#studentLedger')).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(page.locator('#student-ledger')).toHaveClass(/active-section/);
-  await page.locator('#closeStudentLedger').click();
+  await expect(page.locator('#studentLedgerPayments')).toContainText('F-000091');
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
   await page.locator('#closeStudentFees').click();
   await expect(page.locator('#students')).toHaveClass(/active-section/);
   await page.locator('.nav-item[data-section="fees"]').click();
   await page.locator('#feesTable .fee-row-actions .btn-edit').first().click();
-  await expect(page.locator('#student-ledger')).toHaveClass(/active-section/);
-  await expect(page.locator('#studentLedger')).not.toHaveClass(/app-dialog/);
-  await page.locator('#closeStudentLedger').click();
+  await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
+  await expect(page.locator('#studentAccountDetails')).toHaveAttribute('open','');
+  await page.locator('#closeStudentFees').click();
   await expect(page.locator('#fees')).toHaveClass(/active-section/);
   await page.locator('#feesTable .fee-row-actions button').first().click();
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);

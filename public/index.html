@@ -157,7 +157,7 @@
       <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
       <div id="studentFeeEntries" class="fee-entries"></div>
       <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
-      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعات</button><button type="button" class="secondary" id="resetStudentFees">استعادة الحالة المحفوظة</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button></div>
+      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعات</button><button type="button" class="secondary" id="resetStudentFees">استعادة الحالة المحفوظة</button></div>
     </form>
     <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
     <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
@@ -167,20 +167,22 @@
       <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
       <div class="form-actions"><button class="primary" id="saveStudentDiscount">حفظ الخصم</button></div>
     </form>
+    <details id="studentAccountDetails" class="student-account-details">
+      <summary>كشف المستحقات وسجل الدفعات</summary>
+      <div id="studentLedger" class="ledger-page">
+        <p>يُحتسب الاستحقاق من شهر التسجيل حتى شهر المغادرة، وتُوزَّع الدفعات تلقائيًا على أقدم استحقاق غير مسدَّد.</p>
+        <h3 class="table-title" id="studentLedgerTitle">المستحقات حسب الشهر</h3>
+        <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>الرسوم</th><th>الخصم</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الفواتير المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
+        <h3 class="table-title" id="studentLedgerPaymentsTitle">سجل دفعات الطالب</h3>
+        <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>
+      </div>
+    </details>
   </div>
-</section>
-
-<section id="student-ledger" class="section detail-page" aria-labelledby="studentLedgerTitle">
-  <div class="section-head detail-page-head">
-    <div><h2 id="studentLedgerTitle" tabindex="-1">كشف مستحقات الطالب حسب الشهر</h2><p id="studentLedgerIdentity"></p></div>
-    <button type="button" class="secondary" id="closeStudentLedger" aria-label="الرجوع من كشف الحساب">الرجوع إلى الصفحة السابقة</button>
-  </div>
-  <div id="studentLedger" class="panel ledger-page">
-    <p>يُحتسب الاستحقاق من شهر التسجيل حتى شهر المغادرة، بالرسوم التي كانت سارية في كل شهر. وتُوزَّع الدفعات تلقائيًا على أقدم استحقاق غير مسدَّد، ويبقى الفائض رصيدًا دائنًا للطالب.</p>
-    <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>الرسوم</th><th>الخصم</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الدفعات المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
-    <h3 class="table-title" id="studentLedgerPaymentsTitle">تفاصيل دفعات الطالب</h3>
-    <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>
-  </div>
+  <dialog id="studentChargeDetailsDialog" class="app-dialog charge-details-dialog" aria-labelledby="studentChargeDetailsTitle">
+    <div class="app-dialog-head sticky-head"><div><h3 id="studentChargeDetailsTitle">تفاصيل الرسم والفواتير</h3><p id="studentChargeDetailsIdentity"></p></div><button type="button" class="icon-close" data-close-dialog="studentChargeDetailsDialog" aria-label="إغلاق">×</button></div>
+    <div id="studentChargeDetailsBody"></div>
+    <div class="form-actions"><button type="button" class="secondary" data-close-dialog="studentChargeDetailsDialog">إغلاق</button></div>
+  </dialog>
 </section>
 
 <section id="collections" class="section">

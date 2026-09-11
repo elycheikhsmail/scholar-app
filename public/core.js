@@ -178,12 +178,13 @@ $('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const 
 $('logoutBtn').onclick=async()=>{try{await api('/logout',{method:'POST'})}catch{}location.reload()};
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.section));
 const APP_SECTIONS=new Set([...document.querySelectorAll('.section[id]')].map(section=>section.id));
-const DETAIL_SECTIONS=new Set(['student-fees','student-ledger']);
+const DETAIL_SECTIONS=new Set(['student-fees']);
 const NAVIGATION_INDEX_KEY='schoolNavigationIndex';
 let navigationIndex=Number.isInteger(history.state?.[NAVIGATION_INDEX_KEY])?history.state[NAVIGATION_INDEX_KEY]:0;
 function sectionFromLocation(){
   try{
     const section=decodeURIComponent(location.hash.slice(1));
+    if(section==='student-ledger')return 'fees';
     return APP_SECTIONS.has(section)?section:null;
   }catch{return null}
 }

@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.15.0 — 2026-09-11
+
+- Fusion de **استمارة رسوم الطالب** et du relevé mensuel dans un écran unique,
+  construit à partir de la fiche des frais existante. Le relevé complet et
+  l'historique des paiements sont désormais consultables en bas de la fiche.
+- Ajout d'un bouton **تفاصيل** sur chaque ligne de frais. Il affiche le montant
+  brut, la remise, le dû, le payé, le reste et toutes les factures réellement
+  affectées à ce frais, avec leurs montants affectés et leurs actions.
+- Le bouton **كشف الحساب** de la liste ouvre directement la fiche fusionnée et
+  déplie son relevé. L'ancienne adresse `#student-ledger` revient vers la liste
+  des frais afin que les anciens favoris ne conduisent pas à un écran vide.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.14.0 — 2026-09-11
 
 - Le **تاريخ الدفع** de la fiche des frais est désormais présenté dans un bloc
