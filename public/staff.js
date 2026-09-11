@@ -35,12 +35,24 @@ function toggleRoleFields(){
 }
 
 $('teacherRole').onchange=toggleRoleFields;
+function toggleTeacherStatusFields(){
+  const stopped=$('teacherStatus').value==='stopped';
+  $('teacherEndDateWrap').classList.toggle('hidden-field',!stopped);
+  if(!stopped)$('teacherEndDate').value='';
+  else if(!$('teacherEndDate').value)$('teacherEndDate').value=today();
+}
+$('teacherStatus').onchange=toggleTeacherStatusFields;
+const isActiveTeacher=t=>(t.status||'active')!=='stopped';
+// Only employees still in service are proposed for payments and advances.
+const activeTeachers=()=>state.data.teachers.filter(isActiveTeacher);
 
 function resetTeacher(){
   $('teacherForm').reset();
   $('teacherId').value='';
   renderStaffRoleOptions('معلم');
   $('teacherStart').value=today();
+  $('teacherStatus').value='active';
+  toggleTeacherStatusFields();
   toggleRoleFields();
 }
 
@@ -68,6 +80,8 @@ $('teacherForm').onsubmit=async e=>{
     fixedSalary:western($('fixedSalary').value),
     hourlyRate:western($('hourlyRate').value),
     startDate:$('teacherStart').value,
+    status:$('teacherStatus').value,
+    endDate:$('teacherEndDate').value,
     notes:$('teacherNotes').value
   };
   try{
@@ -127,17 +141,48 @@ function teacherMonthState(t,m){
 
 // --- Tableau des employés ---------------------------------------------------
 
+// Le registre se filtre par nom/téléphone, طبيعة العمل et statut ; le filtre
+// de statut montre les actifs par défaut pour que les anciens n'encombrent pas.
+function renderTeacherRoleFilter(){
+  const select=$('teacherRoleFilter'),current=select.value;
+  select.innerHTML='<option value="">الكل</option>'+staffRoleList().map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  select.value=[...select.options].some(o=>o.value===current)?current:'';
+}
+function lastPaymentOf(teacherId){
+  return state.data.teacherPayments.filter(p=>Number(p.teacherId)===Number(teacherId)).sort((a,b)=>Number(b.id)-Number(a.id))[0]||null;
+}
+function filteredTeachers(){
+  const query=western($('teacherSearch').value||'').trim().toLowerCase();
+  const role=$('teacherRoleFilter').value,status=$('teacherStatusFilter').value;
+  return state.data.teachers.filter(t=>(!role||t.role===role)
+    &&(!status||(t.status||'active')===status)
+    &&(!query||`${t.name} ${t.phone||''}`.toLowerCase().includes(query)));
+}
+$('teacherSearch').oninput=debounce(renderTeachers,150);
+$('teacherRoleFilter').onchange=renderTeachers;
+$('teacherStatusFilter').onchange=renderTeachers;
 function renderTeachers(){
-  const rows=state.data.teachers.map(t=>`<tr>
+  if(!state.data)return;
+  renderTeacherRoleFilter();
+  const list=filteredTeachers();
+  const fixedTotal=list.filter(t=>roleNeedsFixed(t.role)&&isActiveTeacher(t)).reduce((sum,t)=>sum+Number(t.fixedSalary||0),0);
+  $('teacherCount').innerHTML=`<span>عدد الموظفين المعروضين: ${money(list.length)} من ${money(state.data.teachers.length)}</span><span>النشطون: ${money(activeTeachers().length)}</span><span>مجموع الرواتب الثابتة الشهرية (المعروضون النشطون): ${money(fixedTotal)}</span>`;
+  const rows=list.map(t=>{
+    const last=lastPaymentOf(t.id);
+    return `<tr class="${isActiveTeacher(t)?'':'staff-row-stopped'}">
     <td>${esc(t.name)}</td>
     <td>${esc(t.role)}</td>
+    <td class="${isActiveTeacher(t)?'status-paid':'staff-status-stopped'}">${isActiveTeacher(t)?'نشط':`متوقف${t.endDate?` منذ ${western(t.endDate)}`:''}`}</td>
     <td>${esc(t.stage||'—')}</td>
     <td>${esc(t.subject||'—')}</td>
     <td>${roleNeedsFixed(t.role)?money(t.fixedSalary):'—'}</td>
     <td>${roleNeedsFixed(t.role)?'—':money(t.hourlyRate)}</td>
+    <td>${esc(western(t.phone||'—'))}</td>
+    <td>${last?`${esc(last.month)} — ${esc(western(last.date))}`:'—'}</td>
     <td class="actions"><button class="btn-edit" onclick="editTeacher(${t.id})">تعديل</button><button class="btn-delete" onclick="removeTeacher(${t.id})">حذف</button></td>
-  </tr>`).join('');
-  $('teachersTable').innerHTML=rows||'<tr><td colspan="7">لا يوجد موظفون مسجلون.</td></tr>';
+  </tr>`;
+  }).join('');
+  $('teachersTable').innerHTML=rows||`<tr><td colspan="10">${state.data.teachers.length?'لا يوجد موظف مطابق للتصفية.':'لا يوجد موظفون مسجلون.'}</td></tr>`;
   renderStaffRoleOptions();
   populateStaffSelects();
   updateSalaryHoursVisibility();
@@ -150,15 +195,16 @@ function populateStaffSelects(){
   const query=western($('salaryTeacherSearch').value||'').trim().toLowerCase();
   const month=$('salaryMonth').value;
   const previous=$('salaryTeacher').value;
-  const visible=state.data.teachers.filter(t=>!query||`${t.name} ${t.role} ${t.phone||''}`.toLowerCase().includes(query));
+  const visible=activeTeachers().filter(t=>!query||`${t.name} ${t.role} ${t.phone||''}`.toLowerCase().includes(query));
   $('salaryTeacher').innerHTML=visible.map(t=>{
     const st=month?teacherMonthState(t,month):null;
     const settled=!!st&&st.due>0&&st.rem<=0;
     return `<option value="${t.id}">${settled?'✓ ':''}${esc(t.name)} - ${esc(t.role)}</option>`;
   }).join('');
   if(visible.some(t=>String(t.id)===previous))$('salaryTeacher').value=previous;
-  const options=state.data.teachers.map(t=>`<option value="${t.id}">${esc(t.name)} - ${esc(t.role)}</option>`).join('');
-  $('advanceTeacher').innerHTML=options;
+  const advancePrevious=$('advanceTeacher').value;
+  $('advanceTeacher').innerHTML=activeTeachers().map(t=>`<option value="${t.id}">${esc(t.name)} - ${esc(t.role)}</option>`).join('');
+  if(activeTeachers().some(t=>String(t.id)===advancePrevious))$('advanceTeacher').value=advancePrevious;
   updateSalaryHint();
 }
 
@@ -175,10 +221,13 @@ window.editTeacher=id=>{
     fixedSalary:t.fixedSalary,
     hourlyRate:t.hourlyRate,
     teacherStart:t.startDate,
+    teacherStatus:t.status||'active',
+    teacherEndDate:t.endDate,
     teacherNotes:t.notes
   };
   renderStaffRoleOptions(t.role);
   for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value??'';
+  toggleTeacherStatusFields();
   toggleRoleFields();
   go('staff');
   openTeacherDialog(`تعديل بيانات ${t.name}`);
@@ -295,7 +344,7 @@ function payrollStatusOf(t,st){
   return st.paid>0||st.adv>0?'partial':'unpaid';
 }
 function monthlyPayroll(month){
-  return state.data.teachers.map(t=>{
+  return activeTeachers().map(t=>{
     const st=teacherMonthState(t,month);
     return {teacher:t,...st,status:payrollStatusOf(t,st)};
   });
@@ -531,7 +580,7 @@ function resetSalaryDates(){
 // Après un versement, la liste passe à l'employé suivant qui reste à payer pour
 // le mois, dans l'ordre de la liste : « payer tout le monde » s'enchaîne.
 function nextUnpaidTeacherId(afterId,month){
-  const list=state.data.teachers;
+  const list=activeTeachers();
   const start=list.findIndex(t=>Number(t.id)===Number(afterId));
   for(let i=1;i<=list.length;i++){
     const t=list[(start+i)%list.length];

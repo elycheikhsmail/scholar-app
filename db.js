@@ -667,13 +667,22 @@ function updateStudentPayment(id,p) {
 }
 function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filter(x=>Number(x.id)!==Number(id));save();}
 
+// An employee who left keeps every record and only drops out of the payment
+// lists: deleting a record would leave « محذوف » in the salary history.
+const TEACHER_STATUSES=['active','stopped'];
+function teacherStatusFields(t){
+  const status=TEACHER_STATUSES.includes(clean(t.status))?clean(t.status):'active';
+  const endDate=status==='stopped'?clean(t.endDate):'';
+  if(status==='stopped'&&endDate&&!/^\d{4}-\d{2}-\d{2}$/.test(endDate))throw new Error('تاريخ نهاية الخدمة غير صحيح.');
+  return {status,endDate};
+}
 function addTeacher(t) {
   const role=clean(t.role)||'أخرى';
   if(!staffRoles().includes(role))throw new Error('اختر طبيعة العمل من القائمة المحددة في الإعدادات.');
   const teacher={
     id:nextId('teachers'),name:clean(t.name),phone:clean(t.phone),role,
     stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),
-    startDate:clean(t.startDate)||new Date().toISOString().slice(0,10),notes:clean(t.notes)
+    startDate:clean(t.startDate)||new Date().toISOString().slice(0,10),notes:clean(t.notes),...teacherStatusFields(t)
   };
   if(!teacher.name)throw new Error('اسم الموظف مطلوب.');
   if(teacher.phone && !/^\d{8}$/.test(teacher.phone))throw new Error('الهاتف يجب أن يتكون من 8 أرقام.');
@@ -683,7 +692,7 @@ function updateTeacher(id,t){
   const teacher=data.teachers.find(x=>Number(x.id)===Number(id));if(!teacher)throw new Error('الموظف غير موجود.');
   const role=clean(t.role)||'أخرى';
   if(!staffRoles().includes(role))throw new Error('اختر طبيعة العمل من القائمة المحددة في الإعدادات.');
-  Object.assign(teacher,{name:clean(t.name),phone:clean(t.phone),role,stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),startDate:clean(t.startDate),notes:clean(t.notes)});
+  Object.assign(teacher,{name:clean(t.name),phone:clean(t.phone),role,stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),startDate:clean(t.startDate),notes:clean(t.notes),...teacherStatusFields(t)});
   save();return teacher;
 }
 function deleteTeacher(id){const n=Number(id);data.teachers=data.teachers.filter(x=>Number(x.id)!==n);data.teacherPayments=data.teacherPayments.filter(x=>Number(x.teacherId)!==n);data.teacherAdvances=data.teacherAdvances.filter(x=>Number(x.teacherId)!==n);save();}

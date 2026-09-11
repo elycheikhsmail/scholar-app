@@ -3,6 +3,20 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.28.0 — 2026-09-11
+
+- **سجل الموظفين** : recherche par nom/téléphone, filtre par طبيعة العمل et
+  par statut (النشطون par défaut), compteurs (affichés / total / actifs,
+  somme des salaires fixes mensuels), colonnes **الحالة**, **الهاتف** et
+  **آخر دفعة** (mois et date du dernier versement).
+- Statut de l'employé **نشط / متوقف عن العمل** avec date de fin de service
+  dans le formulaire ; un employé متوقف garde tout son historique mais
+  disparaît des listes de paie, de سلفة et du كشف du mois.
+- Technique : `status` / `endDate` validés dans `db.js`
+  (`teacherStatusFields`), `activeTeachers`, `filteredTeachers`,
+  `lastPaymentOf` dans `public/staff.js`.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.27.0 — 2026-09-11
 
 - Reçus imprimables : bouton **إيصال** dans سجل دفعات الرواتب (إيصال صرف

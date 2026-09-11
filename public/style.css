@@ -339,3 +339,6 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .payroll-summary-empty{color:var(--text-muted)}
 .salary-form #salaryTeacherSearch{flex:1.2}
 .salary-form #salaryTeacher{flex:1.6}
+.staff-toolbar{margin-bottom:10px;flex-wrap:wrap}
+.staff-toolbar label{width:220px}
+.staff-status-stopped{color:var(--status-exempt);font-weight:700}

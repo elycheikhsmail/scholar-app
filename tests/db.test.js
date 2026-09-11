@@ -83,6 +83,13 @@ test('invoice numbers are never reused after a receipt is deleted or a restart',
   assert.equal(salary.receiptNo, 'S-000001'); assert.equal(salaryAgain.receiptNo, 'S-000002');
   assert.match(salaryAgain.time, /^\d{2}:\d{2}$/);
   assert.equal(db.addTeacherAdvance({ teacherId: teacher.id, month: 'أكتوبر', amount: 500, salaryDue: 5000 }).receiptNo, 'A-000001');
+  // An employee who left keeps the records and a service end date.
+  assert.equal(teacher.status, 'active');
+  const stopped = db.updateTeacher(teacher.id, { name: 'م', role: 'معلم', fixedSalary: 5000, status: 'stopped', endDate: '2026-12-31' });
+  assert.deepEqual([stopped.status, stopped.endDate], ['stopped', '2026-12-31']);
+  assert.throws(() => db.updateTeacher(teacher.id, { name: 'م', role: 'معلم', status: 'stopped', endDate: '31/12/2026' }), /نهاية الخدمة/);
+  assert.equal(db.updateTeacher(teacher.id, { name: 'م', role: 'معلم', status: 'active', endDate: '2026-12-31' }).endDate, '', 'an active employee has no end date');
+  assert.equal(db.getData().teacherPayments.filter(p => p.teacherId === teacher.id).length, 1, 'records survive status changes');
   assert.match(third.date, /^\d{4}-\d{2}-\d{2}$/, 'the date stays comparable as text');
 });
 

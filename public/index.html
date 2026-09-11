@@ -240,6 +240,8 @@
     <label id="fixedSalaryWrap">الراتب الشهري الثابت<input id="fixedSalary" type="number" min="0"></label>
     <label id="hourlyRateWrap" class="hidden-field">سعر الساعة<input id="hourlyRate" type="number" min="0"></label>
     <label>تاريخ التوظيف<input id="teacherStart" type="date"></label>
+    <label>الحالة<select id="teacherStatus"><option value="active">نشط</option><option value="stopped">متوقف عن العمل</option></select></label>
+    <label id="teacherEndDateWrap" class="hidden-field">تاريخ نهاية الخدمة<input id="teacherEndDate" type="date"></label>
     <label class="notes-field">ملاحظات<textarea id="teacherNotes"></textarea></label>
     <div class="form-actions"><button class="primary">حفظ الموظف</button><button type="button" class="secondary" id="cancelTeacher">إلغاء</button></div>
   </form></dialog>
@@ -258,7 +260,14 @@
     <h3 class="table-title" id="payrollTitle">كشف رواتب الشهر</h3>
     <div class="table-scroll"><table aria-labelledby="payrollTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="payrollTable"></tbody></table></div>
   </div>
-  <div class="panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3><div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
+  <div class="panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3>
+    <div class="fee-toolbar staff-toolbar">
+      <label>بحث<input id="teacherSearch" type="search" placeholder="الاسم أو الهاتف"></label>
+      <label>طبيعة العمل<select id="teacherRoleFilter"><option value="">الكل</option></select></label>
+      <label>الحالة<select id="teacherStatusFilter"><option value="active">النشطون</option><option value="stopped">المتوقفون</option><option value="">الكل</option></select></label>
+    </div>
+    <p id="teacherCount" class="totals-line" role="status" aria-live="polite"></p>
+    <div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الحالة</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>الهاتف</th><th>آخر دفعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
   <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form">
     <input id="salaryTeacherSearch" type="search" placeholder="ابحث عن موظف بالاسم" aria-label="بحث عن موظف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>

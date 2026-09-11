@@ -139,7 +139,19 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#addTeacher').click();
   await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#teacherName')).toHaveValue('');
+  await expect(page.locator('#teacherEndDateWrap')).toBeHidden();
+  await page.locator('#teacherStatus').selectOption('stopped');
+  await expect(page.locator('#teacherEndDateWrap')).toBeVisible();
   await page.keyboard.press('Escape');
+  // The registry filters by name, role and status; active employees show by default.
+  await expect(page.locator('#teacherCount')).toContainText('عدد الموظفين المعروضين: 1 من 1');
+  await expect(page.locator('#teachersTable')).toContainText('أكتوبر — 2026-09-10');
+  await page.locator('#teacherStatusFilter').selectOption('stopped');
+  await expect(page.locator('#teachersTable')).toContainText('لا يوجد موظف مطابق للتصفية.');
+  await page.locator('#teacherStatusFilter').selectOption('active');
+  await page.locator('#teacherSearch').fill('تجريبي');
+  await expect(page.locator('#teachersTable tr')).toHaveCount(1);
+  await page.locator('#teacherSearch').fill('');
   // The monthly payroll sheet lists every employee with the state of the month
   // and pre-fills the payment form with the remaining amount.
   await page.locator('#payrollMonth').selectOption('أكتوبر');
