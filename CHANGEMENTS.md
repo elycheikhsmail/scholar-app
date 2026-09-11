@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.40.0 — 2026-09-11
+
+- Fiche employé (الموظفون) : même signalement visuel des erreurs que la fiche
+  élève — nom, طبيعة العمل, téléphone (8 chiffres), salaire ou taux horaire
+  négatif, date d'embauche requise ou incomplète, date de fin de service
+  requise pour un employé arrêté et postérieure à l'embauche. Corriger un champ
+  efface son signalement ; un refus du serveur est rattaché au champ nommé.
+- Technique : helpers partagés dans `core.js` (`showFormErrors`,
+  `clearFormErrors`, `clearFieldErrorOnEdit`, `dateFieldState`,
+  `serverErrorField`) utilisés par `students.js` et `staff.js` ; styles
+  `label.field-invalid` génériques ; `novalidate` sur `#teacherForm`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.39.0 — 2026-09-11
 
 - Fiche élève (الطلاب) : les erreurs de saisie sont signalées champ par champ

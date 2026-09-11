@@ -355,5 +355,5 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .due-info:empty{display:none}
 .report-tools{display:flex;align-items:end;gap:10px}.report-tools .secondary{white-space:nowrap}.report-period{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px;min-width:220px}.report-period select{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;outline:none;color:var(--text)}
 @media(max-width:700px){.report-tools{width:100%;flex-wrap:wrap}.report-period{width:100%}}
-/* Champ de la fiche élève refusé : bordure et libellé rouges, message dessous. */
-.student-label.field-invalid{color:var(--red-ink)}.student-label.field-invalid input,.student-label.field-invalid select,.student-label.field-invalid textarea,.student-label.field-invalid .dmy-part{border-color:var(--red);background:#fff6f5;box-shadow:0 0 0 3px #b4161618}.field-error{color:var(--red-ink);font-size:12px;font-weight:800;line-height:1.4}
+/* Champ de formulaire refusé (fiche élève, fiche employé…) : bordure et libellé rouges, message dessous. */
+label.field-invalid{color:var(--red-ink)}label.field-invalid input,label.field-invalid select,label.field-invalid textarea,label.field-invalid .dmy-part{border-color:var(--red);background:#fff6f5;box-shadow:0 0 0 3px #b4161618}.field-error{color:var(--red-ink);font-size:12px;font-weight:800;line-height:1.4}

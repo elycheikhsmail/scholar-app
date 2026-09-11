@@ -285,6 +285,54 @@ function createTabs({nav,tabAttr,panelAttr,storageKey}){
   return {show,get current(){return current}};
 }
 
+// Erreurs de saisie signalées champ par champ : le libellé du champ fautif
+// passe en rouge avec son message dessous, le premier reçoit le focus, et
+// corriger un champ efface aussitôt son signalement. `errors` associe l'id du
+// contrôle à son message ; les formulaires `novalidate` s'en servent à la place
+// des bulles du navigateur.
+function clearFormErrors(form){
+  form.querySelectorAll('.field-invalid').forEach(label=>label.classList.remove('field-invalid'));
+  form.querySelectorAll('.field-error').forEach(note=>note.remove());
+  form.querySelectorAll('[aria-invalid]').forEach(control=>control.removeAttribute('aria-invalid'));
+}
+function showFormErrors(form,errors){
+  clearFormErrors(form);
+  for(const [id,message] of Object.entries(errors)){
+    const label=$(id).closest('label');
+    label.classList.add('field-invalid');
+    $(id).setAttribute('aria-invalid','true');
+    const note=document.createElement('small');
+    note.className='field-error';note.setAttribute('role','alert');note.textContent=message;
+    label.append(note);
+  }
+  const first=Object.keys(errors)[0];
+  if(!first)return;
+  const control=$(first).dmyGroup?$(first).dmyGroup.querySelector('.dmy-part'):$(first);
+  control.focus();
+  control.scrollIntoView?.({block:'center',behavior:'smooth'});
+}
+function clearFieldErrorOnEdit(form){
+  const clear=e=>{
+    const label=e.target.closest('label.field-invalid');
+    if(!label)return;
+    label.classList.remove('field-invalid');
+    label.querySelectorAll('.field-error').forEach(note=>note.remove());
+    label.querySelectorAll('[aria-invalid]').forEach(control=>control.removeAttribute('aria-invalid'));
+  };
+  form.addEventListener('input',clear);
+  form.addEventListener('change',clear);
+}
+// Une date saisie à moitié (jour sans année…) vaut '' pour le formulaire : on la distingue d'un champ vide.
+function dateFieldState(id){
+  if($(id).value)return 'complete';
+  const parts=[...($(id).dmyGroup?.querySelectorAll('.dmy-part')||[])];
+  return parts.some(part=>part.value)?'partial':'empty';
+}
+// Le champ visé par un refus du serveur se reconnaît à son libellé dans le message.
+function serverErrorField(message,rules){
+  return (rules.find(([text])=>String(message||'').includes(text))||[])[1];
+}
+
 function showEditForm(sectionId,formId,focusId){
   if(!$(sectionId)?.classList.contains('active-section'))go(sectionId);
   requestAnimationFrame(()=>{

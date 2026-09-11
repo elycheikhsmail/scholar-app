@@ -230,7 +230,7 @@
   <div class="section-head"><div><h2>الموظفون والرواتب</h2><p>المعلمون والأساتذة والمحاسب والمراقب والعامل اليدوي</p></div><button type="button" class="primary" id="addTeacher">+ إضافة موظف</button></div>
   <dialog id="teacherDialog" class="app-dialog staff-dialog" aria-labelledby="teacherDialogTitle">
     <div class="app-dialog-head sticky-head"><h3 id="teacherDialogTitle">إضافة موظف</h3><button type="button" class="secondary" id="closeTeacherDialog" aria-label="إغلاق استمارة الموظف">إغلاق ✕</button></div>
-    <form id="teacherForm" class="staff-grid">
+    <form id="teacherForm" class="staff-grid" novalidate>
     <input type="hidden" id="teacherId">
     <label>اسم الموظف<input id="teacherName" required></label>
     <label>طبيعة العمل<select id="teacherRole"></select></label>

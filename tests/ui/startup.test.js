@@ -237,7 +237,19 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#teacherEndDateWrap')).toBeHidden();
   await page.locator('#teacherStatus').selectOption('stopped');
   await expect(page.locator('#teacherEndDateWrap')).toBeVisible();
+  // Invalid entries are flagged on their own fields before anything is sent.
+  await page.locator('#teacherPhone').fill('123');
+  await page.locator('#teacherEndDate').fill('');
+  await page.locator('#teacherForm button.primary').click();
+  await expect(page.locator('#teacherForm .field-invalid')).toHaveCount(3);
+  await expect(page.locator('#teacherForm .field-error').first()).toHaveText('اسم الموظف مطلوب.');
+  await expect(page.locator('#teacherPhone').locator('xpath=..')).toContainText('8 أرقام');
+  await expect(page.locator('#teacherEndDateWrap')).toContainText('نهاية الخدمة');
+  await expect(page.locator('#teacherName')).toBeFocused();
+  await page.locator('#teacherName').fill('موظف جديد');
+  await expect(page.locator('#teacherForm .field-invalid')).toHaveCount(2);
   await page.keyboard.press('Escape');
+  await expect(page.locator('#teacherForm .field-invalid')).toHaveCount(0);
   // The registry filters by name, role and status; active employees show by default.
   await expect(page.locator('#teacherCount')).toContainText('عدد الموظفين المعروضين: 1 من 1');
   await expect(page.locator('#teachersTable')).toContainText('أكتوبر — 2026-10-31');

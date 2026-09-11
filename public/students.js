@@ -30,7 +30,7 @@ function toggleLeaveField(){
 $('studentStatus').onchange=toggleLeaveField;
 function resetStudent(){
   if(!$('studentForm'))return;
-  clearStudentErrors();
+  clearFormErrors($('studentForm'));
   $('studentForm').reset();
   $('studentId').value='';
   $('registrationDate').value=today();
@@ -44,15 +44,8 @@ $('cancelStudent').onclick=resetStudent;
 $('className').addEventListener('change',()=>{
   $('callNo').value=$('className').value?firstCallNo($('className').value,$('studentId').value||null):'';
 });
-// Erreurs de saisie signalées champ par champ : le champ fautif passe en rouge
-// avec son message dessous, le premier reçoit le focus, et le refus du serveur
-// (NNI déjà pris, numéro scolaire utilisé…) est rattaché au champ qu'il nomme.
-// Les règles reprennent celles de `validateStudent` (db.js).
-function dateFieldState(id){
-  if($(id).value)return 'complete';
-  const parts=[...($(id).dmyGroup?.querySelectorAll('.dmy-part')||[])];
-  return parts.some(part=>part.value)?'partial':'empty';
-}
+// Contrôles de la fiche élève, repris de `validateStudent` (db.js), signalés
+// champ par champ avant l'envoi (helpers de core.js).
 function studentFieldErrors(payload){
   const errors={};
   if(!payload.className)errors.className='اختر القسم.';
@@ -72,43 +65,8 @@ function studentFieldErrors(payload){
   }
   return errors;
 }
-function clearStudentErrors(){
-  const form=$('studentForm');
-  form.querySelectorAll('.field-invalid').forEach(label=>label.classList.remove('field-invalid'));
-  form.querySelectorAll('.field-error').forEach(note=>note.remove());
-  form.querySelectorAll('[aria-invalid]').forEach(control=>control.removeAttribute('aria-invalid'));
-}
-function showStudentErrors(errors){
-  clearStudentErrors();
-  for(const [id,message] of Object.entries(errors)){
-    const label=$(id).closest('label');
-    label.classList.add('field-invalid');
-    $(id).setAttribute('aria-invalid','true');
-    const note=document.createElement('small');
-    note.className='field-error';note.setAttribute('role','alert');note.textContent=message;
-    label.append(note);
-  }
-  const first=Object.keys(errors)[0];
-  if(!first)return;
-  const control=$(first).dmyGroup?$(first).dmyGroup.querySelector('.dmy-part'):$(first);
-  control.focus();
-  control.scrollIntoView?.({block:'center',behavior:'smooth'});
-}
-// Corriger un champ efface son signalement aussitôt (saisie ou choix dans une liste).
-function clearFieldError(e){
-  const label=e.target.closest('label.field-invalid');
-  if(!label)return;
-  label.classList.remove('field-invalid');
-  label.querySelectorAll('.field-error').forEach(note=>note.remove());
-  label.querySelectorAll('[aria-invalid]').forEach(control=>control.removeAttribute('aria-invalid'));
-}
-$('studentForm').addEventListener('input',clearFieldError);
-$('studentForm').addEventListener('change',clearFieldError);
-// Le champ visé par un refus du serveur se reconnaît à son libellé dans le message.
-function serverErrorField(message){
-  const rules=[['NNI','nni'],['الرقم المدرسي','schoolNo'],['القسم','className'],['اسم الطالب','studentName'],['جنس','gender'],['هاتف ولي الأمر','guardianPhone'],['المغادرة','studentLeaveDate'],['التسجيل','registrationDate']];
-  return (rules.find(([text])=>message.includes(text))||[])[1];
-}
+const STUDENT_SERVER_ERROR_FIELDS=[['NNI','nni'],['الرقم المدرسي','schoolNo'],['القسم','className'],['اسم الطالب','studentName'],['جنس','gender'],['هاتف ولي الأمر','guardianPhone'],['المغادرة','studentLeaveDate'],['التسجيل','registrationDate']];
+clearFieldErrorOnEdit($('studentForm'));
 $('studentForm').addEventListener('submit',async e=>{
   e.preventDefault();
   const payload={
@@ -129,10 +87,10 @@ $('studentForm').addEventListener('submit',async e=>{
   };
   const errors=studentFieldErrors(payload);
   if(Object.keys(errors).length){
-    showStudentErrors(errors);
+    showFormErrors($('studentForm'),errors);
     return toast(`صحّح الحقول المحددة باللون الأحمر: ${Object.values(errors)[0]}`);
   }
-  clearStudentErrors();
+  clearFormErrors($('studentForm'));
   try{
     const id=$('studentId').value;
     if(id){
@@ -149,8 +107,8 @@ $('studentForm').addEventListener('submit',async e=>{
     renderPaymentHistory();
     toast('تم حفظ الطالب.');
   }catch(error){
-    const field=serverErrorField(error.message||'');
-    if(field)showStudentErrors({[field]:error.message});
+    const field=serverErrorField(error.message,STUDENT_SERVER_ERROR_FIELDS);
+    if(field)showFormErrors($('studentForm'),{[field]:error.message});
     toast(error.message);
   }
 });

@@ -68,6 +68,7 @@ const isActiveTeacher=t=>(t.status||'active')!=='stopped';
 const activeTeachers=()=>state.data.teachers.filter(isActiveTeacher);
 
 function resetTeacher(){
+  clearFormErrors($('teacherForm'));
   $('teacherForm').reset();
   $('teacherId').value='';
   renderStaffRoleOptions('معلم');
@@ -90,6 +91,26 @@ $('closeTeacherDialog').onclick=()=>$('teacherDialog').close();
 $('teacherDialog').onclick=event=>{if(event.target===$('teacherDialog'))$('teacherDialog').close()};
 $('teacherDialog').onclose=resetTeacher;
 
+// Contrôles de la fiche employé, repris de `addTeacher` (db.js), signalés
+// champ par champ avant l'envoi (helpers de core.js).
+function teacherFieldErrors(payload){
+  const errors={};
+  if(!payload.name.trim())errors.teacherName='اسم الموظف مطلوب.';
+  if(!payload.role)errors.teacherRole='اختر طبيعة العمل من القائمة المحددة في الإعدادات.';
+  if(payload.phone.trim()&&!/^\d{8}$/.test(payload.phone.trim()))errors.teacherPhone='الهاتف يجب أن يتكون من 8 أرقام.';
+  if(payload.role==='أستاذ'){
+    if(payload.hourlyRate!==''&&!(Number(payload.hourlyRate)>=0))errors.hourlyRate='أدخل سعر ساعة صحيحًا لا يقل عن صفر.';
+  }else if(payload.fixedSalary!==''&&!(Number(payload.fixedSalary)>=0))errors.fixedSalary='أدخل راتبًا شهريًا صحيحًا لا يقل عن صفر.';
+  for(const id of ['teacherStart','teacherEndDate'])if(dateFieldState(id)==='partial')errors[id]='أكمل التاريخ: اليوم والشهر والسنة.';
+  if(!errors.teacherStart&&!payload.startDate)errors.teacherStart='تاريخ التوظيف مطلوب.';
+  if(payload.status==='stopped'&&!errors.teacherEndDate){
+    if(!payload.endDate)errors.teacherEndDate='حدد تاريخ نهاية الخدمة عند إيقاف الموظف.';
+    else if(payload.startDate&&payload.endDate<payload.startDate)errors.teacherEndDate='تاريخ نهاية الخدمة يجب أن يكون بعد تاريخ التوظيف.';
+  }
+  return errors;
+}
+const TEACHER_SERVER_ERROR_FIELDS=[['اسم الموظف','teacherName'],['طبيعة العمل','teacherRole'],['الهاتف','teacherPhone'],['نهاية الخدمة','teacherEndDate']];
+clearFieldErrorOnEdit($('teacherForm'));
 $('teacherForm').onsubmit=async e=>{
   e.preventDefault();
   const payload={
@@ -105,6 +126,12 @@ $('teacherForm').onsubmit=async e=>{
     endDate:$('teacherEndDate').value,
     notes:$('teacherNotes').value
   };
+  const errors=teacherFieldErrors(payload);
+  if(Object.keys(errors).length){
+    showFormErrors($('teacherForm'),errors);
+    return toast(`صحّح الحقول المحددة باللون الأحمر: ${Object.values(errors)[0]}`);
+  }
+  clearFormErrors($('teacherForm'));
   // Un salaire ou un taux à zéro donne une estimation nulle : on le signale avant d'enregistrer.
   if(payload.role==='أستاذ'&&!(Number(payload.hourlyRate)>0)){
     if(!(await askConfirm('سعر الساعة غير محدد (0). سيكون استحقاق الأستاذ صفرًا حتى يُضبط. هل تريد الحفظ على هذا النحو؟')))return;
@@ -127,6 +154,8 @@ $('teacherForm').onsubmit=async e=>{
     renderAdvances();
     toast('تم حفظ الموظف.');
   }catch(error){
+    const field=serverErrorField(error.message,TEACHER_SERVER_ERROR_FIELDS);
+    if(field)showFormErrors($('teacherForm'),{[field]:error.message});
     toast(error.message);
   }
 };
