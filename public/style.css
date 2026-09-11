@@ -287,6 +287,8 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .fee-preview-totals b{font-size:15px;color:var(--text)}
 .fee-entry-form{display:grid;gap:14px}
 .fee-payment-controls{display:grid;grid-template-columns:repeat(2,minmax(240px,460px));gap:12px;align-items:start}
+.fee-payment-entry{display:grid;gap:10px}
+.fee-payment-entry .form-actions{margin:0}
 .fee-entry-amount-total{display:flex;flex-direction:column;gap:8px;font-weight:900;font-size:14px;padding:14px;border:2px solid var(--nav-fees);border-radius:var(--radius-lg);background:var(--green-tint-soft)}
 .fee-entry-amount-total input{width:100%;box-sizing:border-box;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:12px;font:inherit;font-size:18px;font-weight:900;background:#fff}
 .fee-entry-amount-total small{color:var(--text-muted);font-size:11px}

@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.19.1 — 2026-09-11
+
+- Les boutons **تسجيل الدفعة** et **مسح المبلغ** sont maintenant placés
+  directement sous le champ **المبلغ المدفوع** et avant les lignes détaillant
+  l'état de paiement des mois.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.19.0 — 2026-09-11
 
 - La fiche financière reçoit désormais un montant global dans un seul champ et

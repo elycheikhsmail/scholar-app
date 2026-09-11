@@ -237,6 +237,13 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page).toHaveURL(/#student-fees$/);
   await expect(page.locator('#studentFeesPanel')).toBeVisible();
   await expect(page.locator('#studentFeesPanel')).not.toHaveClass(/app-dialog/);
+  const [paymentAmountBox,savePaymentBox,feeEntriesBox]=await Promise.all([
+    page.locator('#studentFeePaymentAmount').boundingBox(),
+    page.locator('#saveStudentFees').boundingBox(),
+    page.locator('#studentFeeEntries').boundingBox()
+  ]);
+  assert.ok(savePaymentBox.y>paymentAmountBox.y+paymentAmountBox.height,'save follows the amount field');
+  assert.ok(savePaymentBox.y+savePaymentBox.height<feeEntriesBox.y,'save stays above the payment status rows');
   const paymentDate=page.locator('.fee-entry-date .dmy-group');
   await expect(paymentDate.getByText('اليوم',{exact:true})).toBeVisible();
   await expect(paymentDate.getByText('الشهر',{exact:true})).toBeVisible();
