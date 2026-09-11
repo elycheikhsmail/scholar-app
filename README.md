@@ -244,6 +244,18 @@ laissés tels quels et listés dans le rapport (`kept`). Sauvegarde préalable d
 `database/backups/before-fees-….sqlite`. L'application peut rester ouverte ; recharger la
 page ensuite. Le générateur de test réutilise la même liste.
 
+Pour repartir de la liste officielle seule :
+
+```bash
+npm run fees:clear -- --dry-run   # aperçu
+npm run fees:clear                # vide les niveaux, puis : npm run fees:apply
+```
+
+`scripts/clear-fees.js` supprime chaque niveau sans élève ; un niveau qui a encore des élèves
+ne peut pas l'être (ils y sont rattachés) : son frais mensuel est mis à zéro et il est listé
+(`zeroed`). Élèves, reçus, personnel et paramètres sont intacts ; sauvegarde préalable dans
+`database/backups/before-clear-fees-….sqlite`.
+
 ### Base de test : une année en cours (fin février)
 
 ```bash

@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.43.0 — 2026-09-11
+
+- Nouveau `npm run fees:clear` (`scripts/clear-fees.js`) : vide les niveaux et
+  frais mensuels de la base de production pour les remplacer par la liste
+  officielle (`npm run fees:apply`) — niveau sans élève supprimé, niveau avec
+  élèves conservé à frais zéro et listé ; élèves, reçus, personnel et
+  paramètres intacts ; sauvegarde préalable ; `--dry-run` pour l'aperçu.
+- Vérification : `npm run check`, `npm test`.
+
 ## 1.42.0 — 2026-09-11
 
 - Nouveau `npm run fees:apply` (`scripts/apply-fees.js`) : charge les frais

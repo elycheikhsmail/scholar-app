@@ -34,7 +34,7 @@ No bundler or framework. UI text is Arabic (RTL); preserve existing wording.
 | Desktop lifecycle / bridge | `main.js` / `preload.js` |
 | Demo data (production) | `scripts/seed-demo.js`, `tests/seed-demo.test.js` |
 | Test database, February in progress | `scripts/seed-testing.js`, `tests/seed-testing.test.js` |
-| Official levels and fees; production loader | `scripts/official-fees.js`, `scripts/apply-fees.js`, `tests/apply-fees.test.js` |
+| Official levels and fees; production loader / reset | `scripts/official-fees.js`, `scripts/apply-fees.js`, `scripts/clear-fees.js`, `tests/apply-fees.test.js`, `tests/clear-fees.test.js` |
 
 Browser files are classic scripts sharing global bindings. Preserve the explicit
 order in `index.html`: fees engine, core, feature scripts, app startup last.

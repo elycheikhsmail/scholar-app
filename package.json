@@ -1,6 +1,6 @@
 {
   "name": "school-accounts",
-  "version": "1.42.0",
+  "version": "1.43.0",
   "description": "نظام حسابات المدرسة وإدارة الطلاب والرسوم والمدرسين والرواتب والمصروفات",
   "main": "main.js",
   "author": "ely cheikh smail",
@@ -12,9 +12,10 @@
     "test": "node --test tests/*.test.js",
     "test:fees": "node --test tests/fees.test.js",
     "test:db": "node --test tests/db.test.js",
-    "test:seed": "node --test tests/seed-demo.test.js tests/seed-testing.test.js tests/apply-fees.test.js",
+    "test:seed": "node --test tests/seed-demo.test.js tests/seed-testing.test.js tests/apply-fees.test.js tests/clear-fees.test.js",
     "seed:testing": "node scripts/seed-testing.js",
     "fees:apply": "node scripts/apply-fees.js",
+    "fees:clear": "node scripts/clear-fees.js",
     "test:ui": "node --test tests/ui/*.test.js",
     "check": "node scripts/check-syntax.js"
   },
