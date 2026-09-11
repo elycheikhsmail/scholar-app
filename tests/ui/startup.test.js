@@ -60,10 +60,14 @@ test('browser scripts support login, all sections, student fees and session rest
     return route.fulfill({ path: path.join(publicDir, name), contentType });
   });
   await page.goto('http://school.test/#students');
-  await page.locator('#loginUsername').fill('test');
-  await page.locator('#loginPassword').fill('test');
-  await page.locator('#loginForm button').click();
-  await expect(page.locator('#app')).toBeVisible();
+  // The mocked API keeps no session cookie: every reload lands on the login form.
+  const login=async()=>{
+    await page.locator('#loginUsername').fill('test');
+    await page.locator('#loginPassword').fill('test');
+    await page.locator('#loginForm button').click();
+    await expect(page.locator('#app')).toBeVisible();
+  };
+  await login();
   await expect(page.locator('.topbar .app-icon')).toBeVisible();
   assert.ok(await page.locator('.topbar .app-icon').evaluate(image=>image.complete&&image.naturalWidth===1080));
   await expect(page.locator('#appVersion')).toHaveText(require('../../package.json').version);
@@ -117,6 +121,23 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.deepEqual(await page.locator('#teacherRole option').allTextContents(),['أستاذ','معلم','محاسب','مراقب','عامل يدوي','أخرى']);
   await page.locator('#settings .settings-tab.active').press('ArrowLeft');
   await expect(page.locator('#setSchoolName')).toBeVisible();
+  // A test date (mode tab) makes the app behave as on that day on this device:
+  // top-bar warning, current month, default form dates; clearing it restores today.
+  await page.locator('[data-settings-tab="mode"]').click();
+  await expect(page.locator('#simulatedDateInfo')).toContainText('التاريخ الحقيقي');
+  await expect(page.locator('#clearSimulatedDate')).toBeHidden();
+  await page.locator('#simulatedDate').fill('2026-12-15');
+  await page.locator('#simulatedDateForm button.primary').click();
+  await login();
+  await expect(page.locator('#today')).toHaveText('⚠️ تاريخ تجريبي: الثلاثاء، 15 ديسمبر 2026');
+  await expect(page.locator('#feeMonth')).toHaveValue('ديسمبر');
+  await expect(page.locator('#salaryDate')).toHaveValue('2026-12-15');
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await expect(page.locator('#simulatedDateInfo')).toContainText('الشهر الجاري المعتمد: ديسمبر');
+  await page.locator('#clearSimulatedDate').click();
+  await login();
+  await expect(page.locator('#today')).not.toContainText('تاريخ تجريبي');
+  assert.equal(await page.evaluate(() => localStorage.getItem('simulatedDate')), null);
   await page.locator('.nav-item[data-section="dashboard"]').click();
   await expect(page.locator('#sStudents')).toHaveText('1');
   await page.locator('.nav-item[data-section="students"]').click();

@@ -84,7 +84,8 @@ $('studentSearch').oninput=debounce(renderStudents);
 $('studentDepartmentFilter').onchange=renderStudents;
 // Fees live in the settings and in the departments, so the dues engine is
 // handed both together wherever a ledger is computed.
-function feeSettings(){return {...(state.settings||{}),departments:state.departments||[]}}
+// asOf : les relevés suivent la date de test quand elle est active.
+function feeSettings(){return {...(state.settings||{}),departments:state.departments||[],asOf:today()}}
 let ledgerCache=null,ledgerData=null,ledgerSettings=null,ledgerDepartments=null;
 // Les relevés sont recalculés pour tous les élèves d'un coup et gardés en cache :
 // chaque écran les interroge des dizaines de fois par rendu. Le cache tombe dès

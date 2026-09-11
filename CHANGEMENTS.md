@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.33.0 — 2026-09-11
+
+- الإعدادات ← وضع الاستخدام : « تاريخ الاختبار ». L'application se comporte
+  comme si l'on était ce jour-là (mois courant, échéances des frais,
+  استحقاق الرواتب, dates proposées dans les formulaires) pour tester octobre,
+  novembre, etc. Réglage propre à l'appareil, avertissement permanent dans le
+  bandeau supérieur, retour au vrai jour en un clic.
+- Technique : `now()` / `today()` dans `public/core.js` lisent
+  `localStorage.simulatedDate` ; les relevés reçoivent `asOf` (`students.js`).
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.32.0 — 2026-09-11
 
 - La date du bandeau supérieur s'affiche en arabe (jour de la semaine, mois en

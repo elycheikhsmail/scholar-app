@@ -58,8 +58,20 @@ function showInputDialog(message, defaultValue = '', confirmation = false) {
 const askInput = (message, value = '') => showInputDialog(message, value);
 const askConfirm = message => showInputDialog(message, '', true);
 
-const today=()=>new Date().toISOString().slice(0,10);
-const currentMonth=()=>{const m=new Date().getMonth()+1;return m>=10?months[m-10]:m<=6?months[m+2]:months[0]};
+// Date de test (الإعدادات ← وضع الاستخدام) : l'application se comporte comme si
+// l'on était ce jour-là, sur cet appareil seulement. Tout ce qui dépend du jour
+// (échéances, mois courant, dates proposées) passe par now()/today().
+const SIMULATED_DATE_KEY='simulatedDate';
+const simulatedDate=(()=>{try{const v=localStorage.getItem(SIMULATED_DATE_KEY)||'';return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:''}catch{return ''}})();
+function now(){
+  const real=new Date();
+  if(!simulatedDate)return real;
+  const d=new Date(`${simulatedDate}T00:00:00`);
+  d.setHours(real.getHours(),real.getMinutes(),real.getSeconds());
+  return d;
+}
+const today=()=>simulatedDate||new Date().toISOString().slice(0,10);
+const currentMonth=()=>{const m=now().getMonth()+1;return m>=10?months[m-10]:m<=6?months[m+2]:months[0]};
 const debounce=(fn,ms=200)=>{let timer;return(...args)=>{clearTimeout(timer);timer=setTimeout(()=>fn(...args),ms)}};
 // The total view is an extra entry in the fee selector only; the selectors that
 // pick which fee a payment settles must stay a plain list of months.
@@ -166,8 +178,8 @@ function setupDateFields(root=document){
   }
 }
 setupDateFields();
-function tick(){const d=new Date();$('clock').textContent=western(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d));// La date du bandeau se lit en arabe (jour, mois en toutes lettres) avec des chiffres occidentaux.
-$('today').textContent=western(new Intl.DateTimeFormat('ar-EG-u-nu-latn',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(d))}
+function tick(){const d=now();$('clock').textContent=western(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d));// La date du bandeau se lit en arabe (jour, mois en toutes lettres) avec des chiffres occidentaux.
+$('today').textContent=(simulatedDate?'⚠️ تاريخ تجريبي: ':'')+western(new Intl.DateTimeFormat('ar-EG-u-nu-latn',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(d));document.querySelector('.top-date').classList.toggle('simulated',!!simulatedDate)}
 setInterval(tick,1000);tick();
 document.addEventListener('input',e=>{if(e.target.matches('input[type=number],input[inputmode="numeric"]'))e.target.value=western(e.target.value)});
 

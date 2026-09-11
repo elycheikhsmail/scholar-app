@@ -39,6 +39,7 @@ $('settingsForm').onsubmit=async e=>{
 // même imprimer un en-tête complet.
 function renderSettings(){
   settingsTabs.show();
+  renderSimulatedDate();
   const fields={
     applicationMode:state.settings.applicationMode||'production',
     setSchoolName:state.settings.schoolName,
@@ -211,6 +212,27 @@ async function checkApplicationMode() {
     applyApplicationMode(info.mode);
   } catch { /* Keep the last confirmed label while disconnected. */ }
 }
+// Date de test : mémorisée sur l'appareil, l'écran se recharge pour que tout
+// (mois par défaut, échéances, bandeau) reparte de cette date.
+function renderSimulatedDate() {
+  $('simulatedDate').value = simulatedDate;
+  $('clearSimulatedDate').classList.toggle('hidden', !simulatedDate);
+  $('simulatedDateInfo').textContent = simulatedDate
+    ? `⚠️ التطبيق يعمل الآن بتاريخ تجريبي: ${western(simulatedDate)}. الشهر الجاري المعتمد: ${currentMonth()}.`
+    : 'التطبيق يعمل بالتاريخ الحقيقي للجهاز.';
+}
+$('simulatedDateForm').onsubmit = event => {
+  event.preventDefault();
+  const value = $('simulatedDate').value;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return toast('اختر تاريخًا صحيحًا.');
+  if (value === simulatedDate) return toast('هذا هو التاريخ التجريبي الحالي بالفعل.');
+  try { localStorage.setItem(SIMULATED_DATE_KEY, value); } catch { return toast('تعذر حفظ التاريخ على هذا الجهاز.'); }
+  location.reload();
+};
+$('clearSimulatedDate').onclick = () => {
+  try { localStorage.removeItem(SIMULATED_DATE_KEY); } catch {}
+  location.reload();
+};
 $('applicationModeForm').onsubmit = async event => {
   event.preventDefault();
   const button = event.submitter;

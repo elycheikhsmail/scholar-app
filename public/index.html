@@ -430,6 +430,14 @@
       <label>الوضع<select id="applicationMode"><option value="production">وضع الإنتاج</option><option value="test">وضع التجريب — نسخة للتجريب فقط</option></select></label>
       <button class="primary">تبديل الوضع</button>
     </form>
+    <h3>تاريخ الاختبار</h3>
+    <p>لتجربة سلوك التطبيق كما لو كنا في يوم آخر (مثلًا في أكتوبر أو نوفمبر): الشهر الجاري، آجال الرسوم، استحقاق الرواتب والتواريخ المقترحة في الاستمارات. يُطبَّق على هذا الجهاز فقط، ويظهر تنبيه في الشريط العلوي ما دام مفعّلًا.</p>
+    <form id="simulatedDateForm" class="inline-form">
+      <label>التاريخ<input id="simulatedDate" type="date"></label>
+      <button class="primary">تطبيق التاريخ</button>
+      <button type="button" class="secondary" id="clearSimulatedDate">العودة إلى التاريخ الحقيقي</button>
+    </form>
+    <p id="simulatedDateInfo" class="hint-box" role="status"></p>
   </div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-data" data-settings-panel="data" aria-labelledby="settingsTab-data" class="hidden panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
 </section>
