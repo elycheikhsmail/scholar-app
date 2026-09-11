@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.32.0 — 2026-09-11
+
+- La date du bandeau supérieur s'affiche en arabe (jour de la semaine, mois en
+  toutes lettres) avec des chiffres occidentaux, au lieu de l'anglais.
+- Le bandeau supérieur prend la couleur du bouton de rubrique ouvert (élèves en
+  bleu, frais en vert, employés en violet, etc.), avec une transition douce.
+- Technique : `.topbar[data-section]` (`public/style.css`) piloté par `go()`
+  dans `public/core.js`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.31.0 — 2026-09-11
 
 - Règle métier : le salaire d'un mois n'est dû qu'à son dernier jour. Une

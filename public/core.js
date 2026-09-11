@@ -166,7 +166,8 @@ function setupDateFields(root=document){
   }
 }
 setupDateFields();
-function tick(){const d=new Date();$('clock').textContent=western(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d));$('today').textContent=western(new Intl.DateTimeFormat('en-GB',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(d))}
+function tick(){const d=new Date();$('clock').textContent=western(new Intl.DateTimeFormat('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d));// La date du bandeau se lit en arabe (jour, mois en toutes lettres) avec des chiffres occidentaux.
+$('today').textContent=western(new Intl.DateTimeFormat('ar-EG-u-nu-latn',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}).format(d))}
 setInterval(tick,1000);tick();
 document.addEventListener('input',e=>{if(e.target.matches('input[type=number],input[inputmode="numeric"]'))e.target.value=western(e.target.value)});
 
@@ -201,6 +202,8 @@ function go(id,{historyMode='push'}={}){
   }
   const navSection=DETAIL_SECTIONS.has(id)?'fees':id;
   document.querySelectorAll('.nav-item').forEach(x=>x.classList.toggle('active',x.dataset.section===navSection));
+  // Le bandeau supérieur prend la couleur de la rubrique ouverte (voir .topbar[data-section] dans style.css).
+  document.querySelector('.topbar').dataset.section=navSection;
   document.querySelectorAll('.section').forEach(x=>x.classList.toggle('active-section',x.id===id));
   if(id==='dashboard')renderDashboard();
   if(id==='students')renderStudents();

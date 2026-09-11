@@ -91,7 +91,15 @@ test('browser scripts support login, all sections, student fees and session rest
     await page.locator(`.nav-item[data-section="${section}"]`).click();
     await expect(page.locator(`#${section}`)).toHaveClass(/active-section/);
     await expect(page).toHaveURL(new RegExp(`#${section}$`));
+    // The top bar takes the colour of the open section's menu button.
+    await expect(page.locator('.topbar')).toHaveAttribute('data-section', section);
+    await expect.poll(() => page.evaluate(s => {
+      const colour = element => getComputedStyle(element).backgroundColor;
+      return colour(document.querySelector('.topbar')) === colour(document.querySelector(`.nav-item[data-section="${s}"]`));
+    }, section), { message: `top bar colour follows the ${section} button` }).toBe(true);
   }
+  // The date in the top bar reads in Arabic with western digits.
+  await expect(page.locator('#today')).toHaveText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)، \d{2} \S+ \d{4}$/);
   // The settings screen shows one form at a time, behind its own tab list.
   await page.locator('.nav-item[data-section="settings"]').click();
   await expect(page.locator('[data-settings-tab]')).toHaveCount(6);
