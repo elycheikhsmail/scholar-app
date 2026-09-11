@@ -187,7 +187,7 @@ function allocate(charges, payments) {
       row.paid = round2(row.paid + take);
       row.remaining = round2(row.remaining - take);
       left = round2(left - take);
-      row.allocations.push({ paymentId: payment.id, invoiceNo: payment.invoiceNo, date: payment.date, amount: take });
+      row.allocations.push({ paymentId: payment.id, invoiceNo: payment.invoiceNo, date: payment.date, time: payment.time, amount: take });
       if (row.remaining <= 0) index++;
     }
     credit = round2(credit + left);

@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.22.0 — 2026-09-11
+
+- Chaque reçu enregistre l'heure et la minute de saisie ; elles s'affichent
+  après la date dans le tableau **الفواتير** du formulaire de frais, le
+  détail d'un frais, le tableau des encaissements et le reçu imprimé
+  (« 2026-09-11 14:05 »). Les reçus antérieurs n'affichent que la date.
+- Technique : `db.js` ajoute le champ `time` (HH:MM, heure locale) aux
+  `studentPayments` ; `date` reste `AAAA-MM-JJ` pour les filtres. Helper
+  `dateTime` dans `public/core.js`, `time` propagé aux allocations de `fees.js`.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.21.3 — 2026-09-11
 
 - Le tableau **الفواتير** du formulaire de frais de l'élève (`#student-fees`)

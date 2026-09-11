@@ -74,6 +74,8 @@ test('invoice numbers are never reused after a receipt is deleted or a restart',
   const issued = [first, second, third].map(p => p.invoiceNo);
   assert.equal(new Set(issued).size, 3, `duplicated invoice numbers: ${issued}`);
   assert.equal(third.invoiceNo, 'F-000003');
+  assert.match(third.time, /^\d{2}:\d{2}$/, 'receipts record the entry time');
+  assert.match(third.date, /^\d{4}-\d{2}-\d{2}$/, 'the date stays comparable as text');
 });
 
 test('databases without an invoice sequence resume after the highest number issued', () => {

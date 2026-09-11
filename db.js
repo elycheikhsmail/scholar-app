@@ -275,6 +275,12 @@ function nextId(collection) {
   return data[collection].reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) + 1;
 }
 
+// Receipts keep `date` as YYYY-MM-DD (filters compare it as text) and record
+// the local time of entry separately, for display next to the invoice.
+function currentTime() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+}
 function invoiceSequenceOf(invoiceNo) {
   const match = /^F-(\d+)$/.exec(String(invoiceNo || ''));
   return match ? Number(match[1]) : 0;
@@ -478,6 +484,7 @@ function addStudent(s) {
       paymentType: 'registration',
       amount: registrationPaid,
       date: paymentDate,
+      time: currentTime(),
       notes: 'دفعة رسوم التسجيل عند تسجيل الطالب'
     });
   }
@@ -490,6 +497,7 @@ function addStudent(s) {
       paymentType: 'monthly',
       amount: monthlyPaid,
       date: paymentDate,
+      time: currentTime(),
       notes: 'دفعة الرسوم الشهرية عند تسجيل الطالب'
     });
   }
@@ -548,7 +556,7 @@ function assertWithinOutstanding(student, amount, excludePaymentId = null) {
 // enters several at once and must weigh them against the balance together.
 function pushStudentPayment(student, month, amount, date, notes) {
   const payment = { id:nextId('studentPayments'), invoiceNo:nextInvoiceNo(), studentId:Number(student.id), month,
-    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, notes };
+    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, time: currentTime(), notes };
   data.studentPayments.push(payment);
   return payment;
 }

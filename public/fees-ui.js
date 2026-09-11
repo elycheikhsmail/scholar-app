@@ -279,7 +279,7 @@ function renderPaymentHistory() {
       <td>${esc(student?.name||'محذوف')}</td>
       <td>${esc(paymentLabel(p))}</td>
       <td>${money(p.amount)}</td>
-      <td>${esc(western(p.date))}</td>
+      <td>${esc(dateTime(p))}</td>
       <td class="actions"><button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td>
     </tr>`;
   }).join('') || `<tr><td colspan="6">${invalidRange?'صحّح الفترة الزمنية لعرض الدفعات.':'لا توجد دفعات مطابقة للتصفية.'}</td></tr>`;
@@ -314,7 +314,7 @@ function printStudentReceipt(paymentId){
     +`<div class="line"></div>`
     +`<div class="center title">إيصال دفع</div>`
     +line('رقم الفاتورة',esc(invoiceNo(payment)))
-    +line('التاريخ',western(payment.date||today()))
+    +line('التاريخ',dateTime(payment)||western(today()))
     +`<div class="line"></div>`
     +line('الطالب',esc(student.name))
     +line('القسم',esc(student.className))

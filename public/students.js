@@ -406,7 +406,7 @@ function openStudentChargeDetails(index){
   const invoiceRows=row.allocations.map(allocation=>{
     const payment=payments.get(Number(allocation.paymentId));
     if(!payment)return '';
-    return `<tr><td>${esc(invoiceNo(payment))}</td><td>${esc(paymentLabel(payment))}</td><td>${money(allocation.amount)}</td><td>${money(payment.amount)}</td><td>${esc(western(payment.date))}</td>`
+    return `<tr><td>${esc(invoiceNo(payment))}</td><td>${esc(paymentLabel(payment))}</td><td>${money(allocation.amount)}</td><td>${money(payment.amount)}</td><td>${esc(dateTime(payment))}</td>`
       + `<td class="actions"><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${payment.id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${payment.id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${payment.id})">حذف</button></td></tr>`;
   }).join('');
   $('studentChargeDetailsBody').innerHTML=`<div class="charge-detail-summary">
@@ -477,7 +477,7 @@ function refreshStudentFeeDetails() {
     const periodKey=ledgerPeriodFor(row);
     const period={past:'سابقة',current:'جارية',future:'قادمة'}[periodKey];
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
-    const invoiceDates=[...new Set(row.allocations.map(a=>western(a.date)).filter(Boolean))].map(esc).join('<br>')||'—';
+    const invoiceDates=[...new Set(row.allocations.map(a=>dateTime(a)).filter(Boolean))].map(esc).join('<br>')||'—';
     const invoiceActions=[...new Map(row.allocations.map(a=>[Number(a.paymentId),a])).values()].map(a=>{
       const number=esc(a.invoiceNo||`F-${String(a.paymentId||0).padStart(6,'0')}`);
       return `<div class="ledger-invoice-actions"><small>${number}</small><span><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${Number(a.paymentId)})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${Number(a.paymentId)})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${Number(a.paymentId)})">حذف</button></span></div>`;
