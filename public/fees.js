@@ -171,11 +171,13 @@ function chargesFor(student, settings) {
   return charges;
 }
 
-// Payments settle charges oldest first, in the order the money came in.
-// Whatever is left over stays on the account as a credit.
+// Payments settle charges oldest first, in the order the receipts were issued
+// (invoice sequence = id). A month only starts receiving money once the one
+// before it is fully paid. Ordering by id rather than by the entered date keeps
+// what an already printed receipt covers stable when a later receipt is edited
+// or backdated. Whatever is left over stays on the account as a credit.
 function allocate(charges, payments) {
-  const ordered = (payments || []).slice().sort((a,b) =>
-    String(a.date || '').localeCompare(String(b.date || '')) || (Number(a.id) || 0) - (Number(b.id) || 0));
+  const ordered = (payments || []).slice().sort((a,b) => (Number(a.id) || 0) - (Number(b.id) || 0));
   const rows = charges.map(charge => ({ ...charge, paid: 0, remaining: charge.amount, allocations: [] }));
   let index = 0, credit = 0;
   for (const payment of ordered) {

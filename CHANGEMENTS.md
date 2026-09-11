@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.24.1 — 2026-09-11
+
+- Répartition des paiements : les factures sont affectées aux frais dans
+  l'ordre de leur numéro (ordre d'émission) et non plus selon la date saisie.
+  Un mois ne reçoit de l'argent qu'une fois le précédent entièrement soldé,
+  et modifier la date d'une facture (ou la dater dans le passé) ne rebrasse
+  plus les mois couverts par les factures déjà émises et imprimées.
+- Le tableau **الفواتير** suit le même ordre (dernière facture en premier).
+- Technique : `allocate` dans `public/fees.js` trie par `id` ; tests ajoutés
+  dans `tests/fees.test.js`.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.24.0 — 2026-09-11
 
 - Le tableau **الفواتير** du formulaire de frais est simplifié : une ligne par

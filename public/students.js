@@ -463,7 +463,7 @@ function refreshStudentFeeDetails() {
     }
   }
   const invoices = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id))
-    .sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')) || String(b.time||'').localeCompare(String(a.time||'')) || Number(b.id) - Number(a.id));
+    .sort((a,b) => Number(b.id) - Number(a.id)); // newest receipt first, in issue order like the allocation
   $('studentLedgerRows').innerHTML = invoices.map(p => {
     const id = Number(p.id);
     const note = (settledByInvoice.get(id) || []).join('<br>') || 'لم تُخصَّص لأي رسم بعد (رصيد دائن)';

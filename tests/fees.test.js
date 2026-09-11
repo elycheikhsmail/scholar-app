@@ -104,17 +104,29 @@ test('surplus beyond every charge stays on the account as a credit', () => {
   assert.equal(ledger.totalPaid, 12000);
 });
 
-test('allocation follows payment date then id, and records which invoice paid what', () => {
+test('allocation follows the invoice sequence, not the entered date, and records which invoice paid what', () => {
   const student = enrolled({ registrationDate: '2026-10-01' });
+  // F-000001 was backdated after F-000002 existed: the order of allocation must not change.
   const ledger = dues.ledgerFor(student, [
-    { id: 2, invoiceNo: 'F-000002', amount: 6000, date: '2026-11-02' },
-    { id: 1, invoiceNo: 'F-000001', amount: 3000, date: '2026-10-02' }
+    { id: 2, invoiceNo: 'F-000002', amount: 6000, date: '2026-10-01' },
+    { id: 1, invoiceNo: 'F-000001', amount: 3000, date: '2026-11-02' }
   ], withFees(0, 5000));
   const june = ledger.byMonth.get('يونيو'), october = ledger.byMonth.get('أكتوبر'), november = ledger.byMonth.get('نوفمبر');
   assert.deepEqual(june.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000001', 3000], ['F-000002', 2000]]);
   assert.deepEqual(october.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000002', 4000]]);
   assert.equal(october.remaining, 1000);
   assert.equal(november.paid, 0);
+});
+
+test('editing the date of a later receipt never changes what an earlier receipt covers', () => {
+  const student = enrolled({ registrationDate: '2026-09-11' });
+  const first = { id: 1, invoiceNo: 'F-000001', amount: 30000, date: '2026-09-11' };
+  const before = dues.ledgerFor(student, [first, { id: 2, invoiceNo: 'F-000002', amount: 18000, date: '2026-09-11' }], withFees(200, 13000));
+  const after = dues.ledgerFor(student, [first, { id: 2, invoiceNo: 'F-000002', amount: 18000, date: '2026-09-01' }], withFees(200, 13000));
+  const coveredBy = (ledger, id) => ledger.rows.flatMap(row => row.allocations.filter(a => a.paymentId === id).map(a => [row.month, a.amount]));
+  assert.deepEqual(coveredBy(before, 1), [[dues.REGISTRATION, 200], ['يونيو', 13000], ['أكتوبر', 13000], ['نوفمبر', 3800]]);
+  assert.deepEqual(coveredBy(after, 1), coveredBy(before, 1));
+  assert.deepEqual(coveredBy(after, 2), [['نوفمبر', 9200], ['ديسمبر', 8800]]);
 });
 
 test('decimal amounts allocate without leaving rounding dust', () => {
