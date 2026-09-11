@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.21.3 — 2026-09-11
+
+- Le tableau **الفواتير** du formulaire de frais de l'élève (`#student-fees`)
+  n'affiche plus la colonne **نوع الرسوم / الشهر**.
+- Technique : le mois reste porté par l'attribut `data-month` de chaque ligne
+  (`public/students.js`) ; le test UI s'appuie dessus.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.21.2 — 2026-09-11
 
 - Le numéro de facture (**رقم الفاتورة**) est désormais unique : après la

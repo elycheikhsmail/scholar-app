@@ -473,7 +473,7 @@ function refreshStudentFeeDetails() {
     + `.`;
   $('studentLedgerRows').innerHTML = [REGISTRATION,...months].map(month => {
     const row = ledger.byMonth.get(month);
-    if (!row) return `<tr data-ledger-period="outside"><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
+    if (!row) return `<tr data-ledger-period="outside" data-month="${esc(month)}"><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
     const periodKey=ledgerPeriodFor(row);
     const period={past:'سابقة',current:'جارية',future:'قادمة'}[periodKey];
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
@@ -482,8 +482,7 @@ function refreshStudentFeeDetails() {
       const number=esc(a.invoiceNo||`F-${String(a.paymentId||0).padStart(6,'0')}`);
       return `<div class="ledger-invoice-actions"><small>${number}</small><span><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${Number(a.paymentId)})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${Number(a.paymentId)})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${Number(a.paymentId)})">حذف</button></span></div>`;
     }).join('')||'—';
-    return `<tr data-ledger-period="${periodKey}">
-      <td>${esc(month)}</td>
+    return `<tr data-ledger-period="${periodKey}" data-month="${esc(month)}">
       <td>${invoiceDates}</td>
       <td>${period}</td>
       <td>${money(row.gross)}</td>
