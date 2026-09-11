@@ -142,7 +142,7 @@ function renderStudents(){
       <td>${esc(s.gender||'')}</td>
       <td>${esc(s.nni)}</td>
       <td class="${status===ACTIVE_STATUS?'':'status-exempt'}">${esc(status)}${s.leaveDate?' — '+esc(s.leaveDate):''}</td>
-      <td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">رسوم الطالب</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td>
+      <td class="actions"><button class="btn-pay" onclick="openStudentFees(${s.id})">المالية</button><button class="btn-edit" onclick="editStudent(${s.id})">تعديل</button><button class="btn-delete" onclick="removeStudent(${s.id})">حذف</button></td>
     </tr>`;
   }).join('');
   $('studentsTable').innerHTML=rows||'<tr><td colspan="8">لا يوجد طلاب مطابقون للتصفية.</td></tr>';

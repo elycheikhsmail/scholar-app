@@ -225,6 +225,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('.nav-item[data-section="students"]').click();
   await page.locator('#studentsTable .btn-edit').click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');
+  await expect(page.locator('#studentsTable .btn-pay')).toHaveText('المالية');
   await page.locator('#studentsTable .btn-pay').click();
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
   await expect(page).toHaveURL(/#student-fees$/);

@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.15.1 — 2026-09-11
+
+- Dans le registre des élèves, le bouton **رسوم الطالب** est renommé
+  **المالية** afin de mieux représenter l'accès à l'ensemble du dossier
+  financier de l'élève.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.15.0 — 2026-09-11
 
 - Fusion de **استمارة رسوم الطالب** et du relevé mensuel dans un écran unique,
