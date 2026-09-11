@@ -139,7 +139,7 @@ function feeRowHtml(row,month){
 function renderFees(){
   const month=$('feeMonth').value;
   const dep=$('feeDepartment').value;
-  const query=$('feeSearch').value.toLowerCase().trim();
+  const query=western($('feeSearch').value).toLowerCase().trim();
   const status=$('feeStatus').value;
   const minRemaining=Number($('feeMinRemaining').value)||0;
 
@@ -147,7 +147,7 @@ function renderFees(){
   // Les puces de filtrage rapide comptent sur cet ensemble, le tableau sur le
   // sous-ensemble que le filtre d'état retient.
   const candidates=state.data.students
-    .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo].join(' ').toLowerCase().includes(query))
+    .filter(s=>(!dep||s.className===dep)&&[s.name,s.schoolNo,s.callNo,s.guardianName,s.guardianPhone].join(' ').toLowerCase().includes(query))
     .map(s=>feeRowFor(s,month));
   const rows=sortFeeRows(candidates.filter(row=>passesFeeFilter(row,status,minRemaining)));
   feeView={month,rows};

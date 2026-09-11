@@ -123,12 +123,13 @@ function paymentLabel(p){return p.month==='رسوم التسجيل'?'رسوم ا
 function invoiceNo(p){return p?.invoiceNo||`F-${String(p?.id||0).padStart(6,'0')}`}
 function lateFor(student,month){const row=chargeOf(student,month);return !!row&&row.remaining>0&&today()>row.dueDate}
 function statusFor(student,month){return feeStatusOf(chargeOf(student,month),today())}
-// La recherche porte sur le département, le nom, le numéro scolaire et le NNI.
+// La recherche porte sur le département, le nom, le numéro scolaire, le NNI,
+// et le parent (nom et téléphone) : un numéro tapé retrouve ses enfants.
 function filteredStudents(){
-  const query=$('studentSearch').value.toLowerCase().trim();
+  const query=western($('studentSearch').value).toLowerCase().trim();
   const dep=$('studentDepartmentFilter').value;
   return state.data.students.filter(s=>(!dep||s.className===dep)
-    &&[s.className,s.name,s.schoolNo,s.nni].join(' ').toLowerCase().includes(query));
+    &&[s.className,s.name,s.schoolNo,s.nni,s.guardianName,s.guardianPhone].join(' ').toLowerCase().includes(query));
 }
 function renderStudents(){
   const list=filteredStudents();

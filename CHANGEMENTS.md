@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.38.0 — 2026-09-11
+
+- Recherche par téléphone : dans الطلاب et الرسوم, le nom ou le téléphone du
+  parent (ولي الأمر) retrouve ses enfants ; les chiffres arabes sont acceptés.
+  La recherche du personnel (الموظفون, paie) trouvait déjà par téléphone.
+- Technique : `filteredStudents()` (`students.js`) et la recherche des frais
+  (`fees-ui.js`) incluent `guardianName` / `guardianPhone` et passent par `western()`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.37.0 — 2026-09-11
 
 - المصروفات : filtre « تصفية حسب الشهر » au-dessus du registre — tous les mois

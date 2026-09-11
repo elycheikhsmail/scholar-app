@@ -10,8 +10,8 @@ test('browser scripts support login, all sections, student fees and session rest
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'school-ui-'));
   t.after(() => { db.close(); fs.rmSync(directory, { recursive: true, force: true }); });
   db.init(directory);
-  db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر' });
-  const teacher=db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000 });
+  db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر', guardianName: 'ولي الأمر', guardianPhone: '22334455' });
+  const teacher=db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000, phone: '33445566' });
   db.addTeacherPayment({ teacherId:teacher.id, month:'أكتوبر', amount:3000, date:'2026-10-31', salaryDue:5000 });
   const settings = { ...db.publicSettings(), applicationMode: 'production', version:require('../../package.json').version };
   const responses = {
@@ -246,6 +246,12 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#teacherStatusFilter').selectOption('active');
   await page.locator('#teacherSearch').fill('تجريبي');
   await expect(page.locator('#teachersTable tr')).toHaveCount(1);
+  // A phone number (even in Arabic digits) finds the employee.
+  await page.locator('#teacherSearch').fill('٣٣٤٤٥٥');
+  await expect(page.locator('#teachersTable tr')).toHaveCount(1);
+  await expect(page.locator('#teachersTable')).toContainText('موظف تجريبي');
+  await page.locator('#teacherSearch').fill('99999999');
+  await expect(page.locator('#teachersTable')).toContainText('لا يوجد موظف مطابق للتصفية.');
   await page.locator('#teacherSearch').fill('');
   // The monthly payroll sheet lists every employee with the state of the month
   // and pre-fills the payment form with the remaining amount.
@@ -353,6 +359,9 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#feesHead [data-fee-column="discount"]')).toBeVisible();
   await page.locator('#feeSearch').fill('غير موجود');
   await expect(page.locator('#feesFilterSummary')).toContainText('0');
+  // The guardian's phone finds the pupils of that family.
+  await page.locator('#feeSearch').fill('٢٢٣٣٤٤٥٥');
+  await expect(page.locator('#feesTable')).toContainText('طالب تجريبي');
   await page.locator('#resetFeeFilters').click();
   await expect(page.locator('#feeSearch')).toHaveValue('');
   await expect(page.locator('#feesTable')).toContainText('طالب تجريبي');
@@ -407,6 +416,14 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('.nav-item[data-section="expenses"]').click();
   await expect(page.locator('#expensesTable')).toContainText('لا توجد مصروفات مسجلة');
   await page.locator('.nav-item[data-section="students"]').click();
+  // The guardian's phone or name finds the pupils of that family.
+  await page.locator('#studentSearch').fill('22334455');
+  await expect(page.locator('#studentsTable')).toContainText('طالب تجريبي');
+  await page.locator('#studentSearch').fill('99999999');
+  await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(0);
+  await page.locator('#studentSearch').fill('ولي الأمر');
+  await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(1);
+  await page.locator('#studentSearch').fill('');
   await page.locator('#studentsTable .btn-edit').click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');
   await expect(page.locator('#studentsTable .btn-pay')).toHaveText('المالية');
