@@ -117,40 +117,6 @@
 
 <section id="fees" class="section">
   <div class="section-head"><div><h2>الرسوم الشهرية</h2><p>اختر الشهر والقسم ثم سجّل الدفعات</p></div></div>
-  <dialog id="studentFeesPanel" class="app-dialog fee-form-dialog" aria-labelledby="studentFeesTitle">
-    <div class="app-dialog-head sticky-head">
-      <div><h3 id="studentFeesTitle">استمارة رسوم الطالب</h3><p id="studentFeesIdentity"></p></div>
-      <button type="button" class="secondary" id="closeStudentFees" aria-label="إغلاق استمارة الرسوم">إغلاق ✕</button>
-    </div>
-    <p id="studentFeeRates" class="hint-box"></p>
-    <p id="studentPaidSummary" class="hint-box"></p>
-    <form id="studentFeesForm" class="fee-entry-form">
-      <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
-      <div id="studentFeeEntries" class="fee-entries"></div>
-      <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
-      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعات</button><button type="button" class="secondary" id="resetStudentFees">استعادة الحالة المحفوظة</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button></div>
-    </form>
-    <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
-    <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
-    <form id="studentDiscountForm" class="form-grid" aria-labelledby="studentDiscountTitle">
-      <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
-      <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
-      <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
-      <div class="form-actions"><button class="primary" id="saveStudentDiscount">حفظ الخصم</button></div>
-    </form>
-  </dialog>
-  <dialog id="studentLedgerDialog" class="app-dialog ledger-dialog" aria-labelledby="studentLedgerTitle">
-    <div class="app-dialog-head sticky-head">
-      <div><h3 class="table-title" id="studentLedgerTitle">كشف مستحقات الطالب حسب الشهر</h3><p id="studentLedgerIdentity"></p></div>
-      <button type="button" class="secondary" id="closeStudentLedger" aria-label="إغلاق كشف الحساب">إغلاق ✕</button>
-    </div>
-    <div id="studentLedger">
-      <p>يُحتسب الاستحقاق من شهر التسجيل حتى شهر المغادرة، بالرسوم التي كانت سارية في كل شهر. وتُوزَّع الدفعات تلقائيًا على أقدم استحقاق غير مسدَّد، ويبقى الفائض رصيدًا دائنًا للطالب.</p>
-      <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>الرسوم</th><th>الخصم</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الدفعات المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
-      <h3 class="table-title" id="studentLedgerPaymentsTitle">تفاصيل دفعات الطالب</h3>
-      <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>
-    </div>
-  </dialog>
   <div class="panel fee-toolbar">
     <label>نوع الرسوم<select id="feeMonth"><option value="رسوم التسجيل">رسوم التسجيل</option></select></label>
     <label>القسم<select id="feeDepartment"></select></label>
@@ -176,6 +142,44 @@
     <p id="feesFilterSummary" class="fee-filter-summary" role="status" aria-live="polite"></p>
     <div class="table-scroll fees-scroll"><table aria-labelledby="feesTableTitle"><thead><tr id="feesHead"></tr></thead><tbody id="feesTable"></tbody></table></div>
     <p id="feesRowNotice" class="hint-box hidden"></p>
+  </div>
+</section>
+
+<section id="student-fees" class="section detail-page" aria-labelledby="studentFeesTitle">
+  <div class="section-head detail-page-head">
+    <div><h2 id="studentFeesTitle">استمارة رسوم الطالب</h2><p id="studentFeesIdentity"></p></div>
+    <button type="button" class="secondary" id="closeStudentFees" aria-label="الرجوع من استمارة الرسوم">الرجوع إلى الصفحة السابقة</button>
+  </div>
+  <div id="studentFeesPanel" class="panel fee-form-page">
+    <p id="studentFeeRates" class="hint-box"></p>
+    <p id="studentPaidSummary" class="hint-box"></p>
+    <form id="studentFeesForm" class="fee-entry-form">
+      <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
+      <div id="studentFeeEntries" class="fee-entries"></div>
+      <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
+      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعات</button><button type="button" class="secondary" id="resetStudentFees">استعادة الحالة المحفوظة</button><button type="button" class="secondary" id="showStudentLedger">تفاصيل المدفوعات والمستحقات السابقة</button></div>
+    </form>
+    <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
+    <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
+    <form id="studentDiscountForm" class="form-grid" aria-labelledby="studentDiscountTitle">
+      <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
+      <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
+      <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
+      <div class="form-actions"><button class="primary" id="saveStudentDiscount">حفظ الخصم</button></div>
+    </form>
+  </div>
+</section>
+
+<section id="student-ledger" class="section detail-page" aria-labelledby="studentLedgerTitle">
+  <div class="section-head detail-page-head">
+    <div><h2 id="studentLedgerTitle" tabindex="-1">كشف مستحقات الطالب حسب الشهر</h2><p id="studentLedgerIdentity"></p></div>
+    <button type="button" class="secondary" id="closeStudentLedger" aria-label="الرجوع من كشف الحساب">الرجوع إلى الصفحة السابقة</button>
+  </div>
+  <div id="studentLedger" class="panel ledger-page">
+    <p>يُحتسب الاستحقاق من شهر التسجيل حتى شهر المغادرة، بالرسوم التي كانت سارية في كل شهر. وتُوزَّع الدفعات تلقائيًا على أقدم استحقاق غير مسدَّد، ويبقى الفائض رصيدًا دائنًا للطالب.</p>
+    <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>الرسوم</th><th>الخصم</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الدفعات المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
+    <h3 class="table-title" id="studentLedgerPaymentsTitle">تفاصيل دفعات الطالب</h3>
+    <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>
   </div>
 </section>
 

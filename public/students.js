@@ -238,13 +238,11 @@ window.openStudentFees = (id, showLedger = false) => {
   selectedFeeStudentId = Number(id);
   const student = selectedFeeStudent();
   if (!student) return;
-  go('fees');
-  if(!showLedger&&!$('studentFeesPanel').open)$('studentFeesPanel').showModal();
   $('studentFeeEntryDate').value = today();
   fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
-  if(showLedger)openStudentLedgerDialog();
-  else showEditForm('fees','studentFeesForm','firstFeeChoice');
+  if(showLedger)openStudentLedgerPage();
+  else showEditForm('student-fees','studentFeesForm','firstFeeChoice');
 };
 function fillStudentDiscountForm(student) {
   $('studentDiscountType').value = student.discountType || '';
@@ -388,15 +386,17 @@ $('studentFeesForm').onsubmit = async event => {
     toast(`تم تسجيل ${money(paying.length)} دفعة بإجمالي ${money(total)} أوقية.`);
   } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };
-function openStudentLedgerDialog(){
+function openStudentLedgerPage(){
   refreshStudentFeeDetails();
-  const dialog=$('studentLedgerDialog');
-  if(!dialog.open)dialog.showModal();
-  $('closeStudentLedger').focus();
+  go('student-ledger');
+  requestAnimationFrame(()=>$('studentLedgerTitle').focus());
 }
 function refreshStudentFeeDetails() {
   const student = selectedFeeStudent();
-  if (!student) { if($('studentFeesPanel').open)$('studentFeesPanel').close(); if($('studentLedgerDialog').open)$('studentLedgerDialog').close(); return; }
+  if (!student) {
+    if($('student-fees').classList.contains('active-section')||$('student-ledger').classList.contains('active-section'))go('fees',{historyMode:'replace'});
+    return;
+  }
   const identity=`${student.name} — القسم: ${student.className} — الرقم المدرسي: ${student.schoolNo}`;
   $('studentFeesIdentity').textContent=identity;
   $('studentLedgerIdentity').textContent=identity;
@@ -446,11 +446,9 @@ function toggleDiscountFields(){
   if(!on){$('studentDiscountValue').value='';$('studentDiscountReason').value=''}
 }
 $('studentDiscountType').onchange=toggleDiscountFields;
-$('showStudentLedger').onclick=openStudentLedgerDialog;
-$('closeStudentLedger').onclick=()=>$('studentLedgerDialog').close();
-$('studentLedgerDialog').onclick=event=>{if(event.target===$('studentLedgerDialog'))$('studentLedgerDialog').close()};
-$('closeStudentFees').onclick = () => { if($('studentLedgerDialog').open)$('studentLedgerDialog').close(); $('studentFeesPanel').close(); selectedFeeStudentId = null; };
-$('studentFeesPanel').onclick=event=>{if(event.target===$('studentFeesPanel'))$('closeStudentFees').click()};
+$('showStudentLedger').onclick=openStudentLedgerPage;
+$('closeStudentLedger').onclick=goToPreviousPage;
+$('closeStudentFees').onclick=goToPreviousPage;
 $('studentDiscountForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();

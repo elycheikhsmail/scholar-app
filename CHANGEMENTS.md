@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.13.0 — 2026-09-11
+
+- **استمارة رسوم الطالب** et **كشف مستحقات الطالب حسب الشهر** ne sont plus
+  des fenêtres modales : chacune dispose désormais de son propre écran complet.
+- Les deux écrans participent à l'historique interne, conservent le contexte de
+  l'élève et proposent un retour explicite vers l'écran précédent. La rubrique
+  **الرسوم الشهرية** reste sélectionnée dans la barre latérale pour préserver
+  le repère de navigation.
+- Une adresse d'écran détaillé rechargée sans élève sélectionné revient de façon
+  sûre à la liste des frais.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.12.0 — 2026-09-11
 
 - Ajout de deux boutons **الصفحة السابقة**, en haut à droite et en bas à

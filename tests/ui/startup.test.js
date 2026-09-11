@@ -211,8 +211,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#feeStatus option')).toHaveCount(5);
   await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');
   await expect(page.locator('#feeQuickFilters button').nth(2)).toContainText('متأخر');
-  // Every modal is built from the shared dialog system.
-  for (const id of ['studentFeesPanel', 'studentLedgerDialog', 'studentExportDialog', 'teacherDialog']) {
+  // The remaining modals are built from the shared dialog system.
+  for (const id of ['studentExportDialog', 'teacherDialog']) {
     await expect(page.locator(`#${id}`)).toHaveClass(/app-dialog/);
   }
   // One colour per screen: the tokens keep two sections from sharing a value.
@@ -226,8 +226,10 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentsTable .btn-edit').click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');
   await page.locator('#studentsTable .btn-pay').click();
-  await expect(page.locator('#studentFeesPanel')).toHaveAttribute('open', '');
+  await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
+  await expect(page).toHaveURL(/#student-fees$/);
   await expect(page.locator('#studentFeesPanel')).toBeVisible();
+  await expect(page.locator('#studentFeesPanel')).not.toHaveClass(/app-dialog/);
   // The form states the school's fees and asks only what the family has paid.
   await expect(page.locator('#studentFeeRates')).toContainText('رسم التسجيل');
   await expect(page.locator('#studentFeeEntries .fee-entry')).toHaveCount(10);
@@ -250,14 +252,23 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#resetStudentFees').click();
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
   await page.locator('#showStudentLedger').click();
-  await expect(page.locator('#studentLedgerDialog')).toHaveAttribute('open', '');
+  await expect(page.locator('#student-ledger')).toHaveClass(/active-section/);
+  await expect(page).toHaveURL(/#student-ledger$/);
   await expect(page.locator('#studentLedger')).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.locator('#studentLedgerDialog')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#student-ledger')).toHaveClass(/active-section/);
+  await page.locator('#closeStudentLedger').click();
+  await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
   await page.locator('#closeStudentFees').click();
-  await expect(page.locator('#studentFeesPanel')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#students')).toHaveClass(/active-section/);
+  await page.locator('.nav-item[data-section="fees"]').click();
+  await page.locator('#feesTable .fee-row-actions .btn-edit').first().click();
+  await expect(page.locator('#student-ledger')).toHaveClass(/active-section/);
+  await expect(page.locator('#studentLedger')).not.toHaveClass(/app-dialog/);
+  await page.locator('#closeStudentLedger').click();
+  await expect(page.locator('#fees')).toHaveClass(/active-section/);
   await page.locator('#feesTable .fee-row-actions button').first().click();
-  await expect(page.locator('#studentFeesPanel')).toHaveAttribute('open', '');
+  await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
   await page.evaluate(() => sessionStorage.setItem('modeSwitchToken', 'replacement-token'));
   await page.reload();
   await expect(page.locator('#app')).toBeVisible();
