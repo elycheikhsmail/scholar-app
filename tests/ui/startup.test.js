@@ -134,6 +134,17 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#salaryDate')).toHaveValue('2026-12-15');
   // The expenses register filters by school month (all months by default).
   await page.locator('.nav-item[data-section="expenses"]').click();
+  // Invalid entries are flagged on their own fields before anything is sent.
+  await page.locator('#expenseAmount').fill('0');
+  await page.locator('#expenseForm button.primary').click();
+  await expect(page.locator('#expenseForm .field-invalid')).toHaveCount(2);
+  await expect(page.locator('#expenseForm .field-error').first()).toHaveText('نوع المصروف مطلوب.');
+  await expect(page.locator('#expenseAmount').locator('xpath=..')).toContainText('أكبر من صفر');
+  await expect(page.locator('#expenseCategory')).toBeFocused();
+  await page.locator('#expenseCategory').fill('إيجار');
+  await expect(page.locator('#expenseForm .field-invalid')).toHaveCount(1);
+  await page.locator('#cancelExpense').click();
+  await expect(page.locator('#expenseForm .field-invalid')).toHaveCount(0);
   assert.deepEqual(await page.locator('#expenseMonth option').allTextContents(), ['كل الأشهر', 'أكتوبر', 'نوفمبر', 'ديسمبر']);
   await expect(page.locator('#expenseMonth')).toHaveValue('__all__');
   await expect(page.locator('#expenseCount')).toHaveText('0');

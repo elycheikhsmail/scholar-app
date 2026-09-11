@@ -4,6 +4,19 @@
 
 // --- Dépenses ---------------------------------------------------------------
 
+// Contrôles de la dépense, repris de `addExpense` (db.js), signalés champ par
+// champ avant l'envoi (helpers de core.js).
+function expenseFieldErrors(payload){
+  const errors={};
+  if(!payload.category.trim())errors.expenseCategory='نوع المصروف مطلوب.';
+  if(payload.amount.trim()==='')errors.expenseAmount='المبلغ مطلوب.';
+  else if(!(Number(payload.amount)>0))errors.expenseAmount='أدخل مبلغًا صحيحًا أكبر من صفر.';
+  if(dateFieldState('expenseDate')==='partial')errors.expenseDate='أكمل التاريخ: اليوم والشهر والسنة.';
+  else if(!payload.date)errors.expenseDate='تاريخ المصروف مطلوب.';
+  return errors;
+}
+const EXPENSE_SERVER_ERROR_FIELDS=[['نوع المصروف','expenseCategory'],['المبلغ','expenseAmount'],['التاريخ','expenseDate']];
+clearFieldErrorOnEdit($('expenseForm'));
 $('expenseForm').onsubmit=async e=>{
   e.preventDefault();
   const id=$('expenseId').value;
@@ -11,10 +24,16 @@ $('expenseForm').onsubmit=async e=>{
     category:$('expenseCategory').value,
     description:$('expenseDescription').value,
     amount:western($('expenseAmount').value),
-    date:$('expenseDate').value||today(),
+    date:$('expenseDate').value,
     beneficiary:$('expenseBeneficiary').value,
     notes:$('expenseNotes').value
   };
+  const errors=expenseFieldErrors(payload);
+  if(Object.keys(errors).length){
+    showFormErrors($('expenseForm'),errors);
+    return toast(`صحّح الحقول المحددة باللون الأحمر: ${Object.values(errors)[0]}`);
+  }
+  clearFormErrors($('expenseForm'));
   try{
     if(id){
       // Modifier une dépense déjà enregistrée demande la confirmation du mot de passe.
@@ -29,6 +48,8 @@ $('expenseForm').onsubmit=async e=>{
     renderDashboard();
     toast('تم حفظ المصروف.');
   }catch(error){
+    const field=serverErrorField(error.message,EXPENSE_SERVER_ERROR_FIELDS);
+    if(field)showFormErrors($('expenseForm'),{[field]:error.message});
     toast(error.message);
   }
 };
@@ -36,6 +57,7 @@ $('expenseForm').onsubmit=async e=>{
 $('cancelExpense').onclick=resetExpense;
 
 function resetExpense(){
+  clearFormErrors($('expenseForm'));
   $('expenseForm').reset();
   $('expenseId').value='';
   $('expenseDate').value=today();

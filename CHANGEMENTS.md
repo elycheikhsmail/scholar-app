@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.41.0 — 2026-09-11
+
+- Formulaire des dépenses (المصروفات) : même signalement visuel des erreurs —
+  nature du مصروف requise, montant requis et supérieur à zéro, date requise ou
+  incomplète. Corriger un champ efface son signalement ; un refus du serveur est
+  rattaché au champ nommé. La date n'est plus remplacée en silence par
+  aujourd'hui quand elle manque.
+- Technique : `expenseFieldErrors()` dans `reports.js`, `novalidate` sur `#expenseForm`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.40.0 — 2026-09-11
 
 - Fiche employé (الموظفون) : même signalement visuel des erreurs que la fiche
