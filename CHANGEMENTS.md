@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.14.0 — 2026-09-11
+
+- Le **تاريخ الدفع** de la fiche des frais est désormais présenté dans un bloc
+  clairement lisible avec trois contrôles nommés : jour, mois et année. Le mois
+  s'affiche par son nom arabe au lieu d'un nombre ambigu.
+- La liste des jours s'adapte automatiquement au mois et à l'année : 28 ou 29
+  jours pour février selon l'année bissextile, et 30 ou 31 pour les autres mois.
+  Si un changement rend le jour impossible, le formulaire l'efface et explique
+  immédiatement quelle correction est attendue.
+- Le composant amélioré reste synchronisé avec la valeur ISO utilisée par la
+  validation et la persistance, sans modifier le format enregistré.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.13.0 — 2026-09-11
 
 - **استمارة رسوم الطالب** et **كشف مستحقات الطالب حسب الشهر** ne sont plus

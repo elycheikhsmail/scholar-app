@@ -230,6 +230,26 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page).toHaveURL(/#student-fees$/);
   await expect(page.locator('#studentFeesPanel')).toBeVisible();
   await expect(page.locator('#studentFeesPanel')).not.toHaveClass(/app-dialog/);
+  const paymentDate=page.locator('.fee-entry-date .dmy-group');
+  await expect(paymentDate.getByText('اليوم',{exact:true})).toBeVisible();
+  await expect(paymentDate.getByText('الشهر',{exact:true})).toBeVisible();
+  await expect(paymentDate.getByText('السنة',{exact:true})).toBeVisible();
+  await paymentDate.locator('.dmy-year').fill('2024');
+  await paymentDate.locator('.dmy-month').selectOption('2');
+  await expect(paymentDate.locator('.dmy-day option')).toHaveCount(30);
+  await paymentDate.locator('.dmy-day').selectOption('29');
+  assert.equal(await page.locator('#studentFeeEntryDate').inputValue(),'2024-02-29');
+  await paymentDate.locator('.dmy-year').fill('2025');
+  await expect(paymentDate.locator('.dmy-day option')).toHaveCount(29);
+  await expect(paymentDate.locator('.dmy-day')).toHaveValue('');
+  await expect(paymentDate.locator('.dmy-error')).toContainText('28 يومًا فقط');
+  assert.equal(await page.locator('#studentFeeEntryDate').inputValue(),'');
+  await paymentDate.locator('.dmy-month').selectOption('4');
+  await expect(paymentDate.locator('.dmy-day option')).toHaveCount(31);
+  await paymentDate.locator('.dmy-month').selectOption('3');
+  await expect(paymentDate.locator('.dmy-day option')).toHaveCount(32);
+  await page.locator('#resetStudentFees').click();
+  assert.notEqual(await page.locator('#studentFeeEntryDate').inputValue(),'');
   // The form states the school's fees and asks only what the family has paid.
   await expect(page.locator('#studentFeeRates')).toContainText('رسم التسجيل');
   await expect(page.locator('#studentFeeEntries .fee-entry')).toHaveCount(10);

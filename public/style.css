@@ -75,9 +75,14 @@
 .date-dmy{display:none}
 .student-grid .date-label{grid-column:span 2}
 .student-grid .notes-field{grid-column:1/-1}
-.dmy-group{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:5px;direction:ltr}
-.dmy-group .dmy-part{text-align:center;padding-left:4px;padding-right:4px}
-.dmy-group .dmy-part::placeholder{font-size:12px;color:var(--text-muted)}
+.dmy-group{display:grid;grid-template-columns:1fr 1.65fr 1.25fr;gap:8px;direction:rtl;width:100%}
+.dmy-field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.dmy-field>small{color:var(--text-muted);font-size:11px;font-weight:800}
+.dmy-group .dmy-part{width:100%;min-height:44px;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:9px 8px;background:#fff;color:var(--text);font:inherit;font-weight:800;outline:none}
+.dmy-group .dmy-part:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1769aa14}
+.dmy-group .dmy-year{text-align:center;direction:ltr}
+.dmy-group .dmy-year::placeholder{font-size:11px;color:var(--text-muted)}
+.dmy-error{grid-column:1/-1;color:var(--red-ink);font-size:12px;font-weight:800;line-height:1.6}
 @media(max-width:1150px){.expenses-form{grid-template-columns:repeat(5,minmax(0,1fr))}.department-form{grid-template-columns:1fr 1fr auto}.expenses-form label:nth-of-type(1),.expenses-form label:nth-of-type(2),.expenses-form label:nth-of-type(3),.expenses-form label:nth-of-type(4),.expenses-form label:nth-of-type(5){grid-column:span 1}.sidebar{width:190px;flex-basis:190px}.cards{grid-template-columns:repeat(3,1fr)}.student-grid{grid-template-columns:repeat(4,minmax(130px,1fr))}.name-field{grid-column:span 2}.form-grid,.staff-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:700px){.manager-info{grid-template-columns:1fr}.expenses-form input,.expenses-form textarea{max-width:100%}.department-form{display:grid;grid-template-columns:1fr}.expenses-form{grid-template-columns:1fr}.expenses-form .wide-field{grid-column:auto}body{overflow:auto}.topbar{height:auto;min-height:72px;flex-wrap:wrap;padding:10px 12px}.top-date{display:none}.layout{height:auto;display:block}.sidebar{width:100%;display:flex;overflow-x:auto;gap:7px;padding:8px;position:sticky;top:0;z-index:6}.nav-item{min-width:128px;justify-content:center;margin:0;padding:10px 8px}.nav-item span{font-size:12px}.content{overflow:visible;padding:12px}.cards{grid-template-columns:repeat(2,1fr)}.summary-grid{grid-template-columns:repeat(2,1fr)}.student-grid,.form-grid,.staff-grid{grid-template-columns:1fr}.name-field,.notes-field{grid-column:auto}.fee-toolbar,.inline-form{display:grid;grid-template-columns:1fr}.fee-toolbar label{width:auto}.table-scroll{max-height:55vh}.section-head{align-items:flex-start}.topbar h1{font-size:18px}}
 @media(max-width:700px){.student-grid .date-label{grid-column:auto}}
@@ -267,7 +272,7 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .fee-preview-totals small{color:var(--text-muted);font-size:11px}
 .fee-preview-totals b{font-size:15px;color:var(--text)}
 .fee-entry-form{display:grid;gap:14px}
-.fee-entry-date{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px;max-width:260px}
+.fee-entry-date{display:flex;flex-direction:column;gap:8px;font-weight:900;font-size:14px;max-width:460px;padding:14px;border:1px solid var(--border-panel);border-radius:var(--radius-lg);background:var(--surface-soft)}
 /* One due per line, each month under the one before it, so the form reads
    down the school year the way the ledger does. */
 .fee-entries{display:flex;flex-direction:column;gap:10px}

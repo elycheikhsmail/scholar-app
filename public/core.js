@@ -72,7 +72,7 @@ function setDate(id){if($(id)&&!$(id).value)$(id).value=today()}
 // fields in the order the school writes dates: اليوم ثم الشهر ثم السنة. The
 // original input keeps the ISO value, so code reading or writing `.value`
 // (resetStudent, editStudent, the submit handlers) stays unchanged.
-const DMY_PARTS=[['day','يوم',2],['month','شهر',2],['year','سنة',4]];
+const GREGORIAN_MONTHS=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 function isoFromDmy(day,month,year){
   if(!day||!month||year.length!==4)return '';
   const iso=`${year}-${month.padStart(2,'0')}-${day.padStart(2,'0')}`;
@@ -87,32 +87,66 @@ function setupDateFields(root=document){
     const group=document.createElement('span');
     group.className='dmy-group';
     const fieldName=native.closest('label')?.firstChild?.textContent?.trim()||'';
+    group.setAttribute('role','group');
+    if(fieldName)group.setAttribute('aria-label',fieldName);
+    const error=document.createElement('small');
+    error.className='dmy-error hidden';
+    error.setAttribute('role','alert');
     const writeBack=()=>{
       const iso=isoFromDmy(fields[0].value,fields[1].value,fields[2].value);
       if(valueProperty.get.call(native)===iso)return;
       valueProperty.set.call(native,iso);
       native.dispatchEvent(new Event('change',{bubbles:true}));
     };
-    const fields=DMY_PARTS.map(([key,label,size],index)=>{
-      const part=document.createElement('input');
-      part.className=`dmy-part dmy-${key}`;
-      part.inputMode='numeric';
-      part.maxLength=size;
-      part.placeholder=label;
-      part.setAttribute('aria-label',fieldName?`${label} - ${fieldName}`:label);
-      part.required=native.required;
-      part.addEventListener('input',()=>{
-        part.value=western(part.value).replace(/\D/g,'').slice(0,size);
-        if(part.value.length===size)fields[index+1]?.focus();
-        writeBack();
-      });
-      part.addEventListener('blur',()=>{if(part.value&&size===2)part.value=part.value.padStart(2,'0');writeBack()});
-      group.append(part);
-      return part;
+    const makeField=(key,label,control)=>{
+      const wrapper=document.createElement('span');
+      wrapper.className='dmy-field';
+      const caption=document.createElement('small');
+      caption.textContent=label;
+      control.className=`dmy-part dmy-${key}`;
+      control.setAttribute('aria-label',fieldName?`${label} - ${fieldName}`:label);
+      control.required=native.required;
+      wrapper.append(caption,control);
+      group.append(wrapper);
+      return control;
+    };
+    const day=makeField('day','اليوم',document.createElement('select'));
+    const month=makeField('month','الشهر',document.createElement('select'));
+    month.innerHTML='<option value="">اختر الشهر</option>'+GREGORIAN_MONTHS.map((name,index)=>`<option value="${index+1}">${name}</option>`).join('');
+    const yearInput=document.createElement('input');
+    yearInput.inputMode='numeric';
+    yearInput.maxLength=4;
+    yearInput.placeholder='مثال: 2026';
+    const year=makeField('year','السنة',yearInput);
+    const fields=[day,month,year];
+    const daysInSelectedMonth=()=>{
+      const typedYear=Number(year.value),typedMonth=Number(month.value);
+      return typedMonth>=1&&typedMonth<=12&&year.value.length===4?new Date(typedYear,typedMonth,0).getDate():31;
+    };
+    const updateDays=()=>{
+      const previous=Number(day.value),maximum=daysInSelectedMonth();
+      day.innerHTML='<option value="">اختر اليوم</option>'+Array.from({length:maximum},(_,index)=>`<option value="${index+1}">${index+1}</option>`).join('');
+      if(previous&&previous<=maximum)day.value=String(previous);
+      const invalidDay=previous>maximum;
+      error.textContent=invalidDay?`هذا الشهر يحتوي على ${maximum} يومًا فقط. اختر يومًا صالحًا.`:'';
+      error.classList.toggle('hidden',!invalidDay);
+      day.setCustomValidity(invalidDay?error.textContent:'');
+    };
+    day.addEventListener('change',()=>{day.setCustomValidity('');error.classList.add('hidden');writeBack()});
+    month.addEventListener('change',()=>{updateDays();writeBack()});
+    year.addEventListener('input',()=>{
+      year.value=western(year.value).replace(/\D/g,'').slice(0,4);
+      updateDays();
+      writeBack();
     });
     const paint=()=>{
       const [year,month,day]=String(valueProperty.get.call(native)||'').split('-');
-      fields[0].value=day||'';fields[1].value=month||'';fields[2].value=year||'';
+      fields[1].value=month?String(Number(month)):'';
+      fields[2].value=year||'';
+      updateDays();
+      fields[0].value=day?String(Number(day)):'';
+      error.classList.add('hidden');
+      fields[0].setCustomValidity('');
     };
     // The hidden input must not carry `required`: an invisible invalid control
     // blocks submission without showing a message, so the day field asks instead.
@@ -122,6 +156,7 @@ function setupDateFields(root=document){
     Object.defineProperty(native,'value',{configurable:true,
       get(){return valueProperty.get.call(native)},
       set(value){valueProperty.set.call(native,value);paint()}});
+    group.append(error);
     native.after(group);
     // form.reset() clears the hidden input without going through the setter.
     native.form?.addEventListener('reset',()=>setTimeout(paint));
