@@ -238,7 +238,6 @@ window.openStudentFees = (id, showLedger = false) => {
   selectedFeeStudentId = Number(id);
   const student = selectedFeeStudent();
   if (!student) return;
-  studentLedgerPeriodFilter='current';
   studentFeeEntryFilter={period:'all',status:'all'};
   $('studentFeePaymentAmount').value='';
   $('studentFeeEntryDate').value = today();
@@ -424,7 +423,6 @@ window.runChargeInvoiceAction=(action,id)=>{
   if(action==='edit')return editStudentPayment(id);
   if(action==='delete')return deleteStudentPayment(id);
 };
-let studentLedgerPeriodFilter='current';
 // Period follows the school-year timeline (October … June of the next calendar
 // year), not the due date: June is payable at enrolment yet still lies ahead
 // until June arrives. Registration alone is placed on its due date.
@@ -438,23 +436,6 @@ function ledgerPeriodFor(row){
   const month=ledgerPeriodMonthOf(row);
   return month<current?'past':month===current?'current':'future';
 }
-function applyStudentLedgerPeriodFilter(){
-  const rows=[...$('studentLedgerRows').querySelectorAll('tr[data-ledger-period]')];
-  let visible=0;
-  for(const row of rows){
-    const show=periodFilterMatches(studentLedgerPeriodFilter,row.dataset.ledgerPeriod);
-    row.hidden=!show;
-    if(show)visible++;
-  }
-  syncFilterButtons('#studentLedger [data-ledger-period]','ledgerPeriod',studentLedgerPeriodFilter);
-  $('studentLedgerFilterCount').textContent=`عرض ${money(visible)} من ${money(rows.length)} استحقاق`;
-}
-$('studentLedger').addEventListener('click',event=>{
-  const button=event.target.closest('[data-ledger-period]');
-  if(!button)return;
-  studentLedgerPeriodFilter=button.dataset.ledgerPeriod;
-  applyStudentLedgerPeriodFilter();
-});
 function refreshStudentFeeDetails() {
   const student = selectedFeeStudent();
   if (!student) {
@@ -471,32 +452,27 @@ function refreshStudentFeeDetails() {
     + ` أوقية`
     + (student.discountReason ? ` (${student.discountReason})` : '')
     + `.`;
-  // Only fees that already carry an invoice are listed: unpaid fees belong to
-  // the fee form above, not to the invoice table.
-  const invoiced = [REGISTRATION,...months].filter(month => ledger.byMonth.get(month)?.allocations.length);
-  $('studentLedgerRows').innerHTML = invoiced.map(month => {
-    const row = ledger.byMonth.get(month);
-    const periodKey=ledgerPeriodFor(row);
-    const period={past:'سابقة',current:'جارية',future:'قادمة'}[periodKey];
-    const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
-    const invoiceDates=[...new Set(row.allocations.map(a=>dateTime(a)).filter(Boolean))].map(esc).join('<br>')||'—';
-    const invoiceActions=[...new Map(row.allocations.map(a=>[Number(a.paymentId),a])).values()].map(a=>{
-      const number=esc(a.invoiceNo||`F-${String(a.paymentId||0).padStart(6,'0')}`);
-      return `<div class="ledger-invoice-actions"><small>${number}</small><span><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${Number(a.paymentId)})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${Number(a.paymentId)})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${Number(a.paymentId)})">حذف</button></span></div>`;
-    }).join('')||'—';
-    return `<tr data-ledger-period="${periodKey}" data-month="${esc(month)}">
-      <td>${invoiceDates}</td>
-      <td>${period}</td>
-      <td>${money(row.gross)}</td>
-      <td class="${row.discount > 0 ? 'status-exempt' : ''}">${row.discount > 0 ? money(row.discount) : '—'}</td>
-      <td>${money(row.amount)}</td>
-      <td>${money(row.paid)}</td>
-      <td class="${row.remaining > 0 ? 'overdue-soft' : 'status-paid'}">${money(row.remaining)}</td>
-      <td class="paid-months">${covered}</td>
-      <td class="actions ledger-actions-cell">${invoiceActions}</td>
+  // One row per invoice: the note lists the fees (registration and months)
+  // the receipt settled, fully or in part, as allocated by the fee engine.
+  const settledByInvoice = new Map();
+  for (const month of [REGISTRATION,...months]) {
+    for (const a of ledger.byMonth.get(month)?.allocations || []) {
+      const list = settledByInvoice.get(Number(a.paymentId)) || [];
+      list.push(`${esc(month)}: ${money(a.amount)}`);
+      settledByInvoice.set(Number(a.paymentId), list);
+    }
+  }
+  const invoices = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id))
+    .sort((a,b) => String(b.date||'').localeCompare(String(a.date||'')) || String(b.time||'').localeCompare(String(a.time||'')) || Number(b.id) - Number(a.id));
+  $('studentLedgerRows').innerHTML = invoices.map(p => {
+    const id = Number(p.id);
+    const note = (settledByInvoice.get(id) || []).join('<br>') || 'لم تُخصَّص لأي رسم بعد (رصيد دائن)';
+    return `<tr data-payment-id="${id}">
+      <td>${esc(dateTime(p)) || '—'}</td>
+      <td class="paid-months">${note}</td>
+      <td class="actions ledger-actions-cell"><div class="ledger-invoice-actions"><small>${esc(invoiceNo(p))}</small><span><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${id})">حذف</button></span></div></td>
     </tr>`;
-  }).join('') || '<tr class="ledger-empty"><td colspan="9">لا توجد فواتير مسجلة لهذا الطالب حتى الآن.</td></tr>';
-  applyStudentLedgerPeriodFilter();
+  }).join('') || '<tr class="ledger-empty"><td colspan="3">لا توجد فواتير مسجلة لهذا الطالب حتى الآن.</td></tr>';
   renderStudentFeeEntries();
 }
 function toggleDiscountFields(){

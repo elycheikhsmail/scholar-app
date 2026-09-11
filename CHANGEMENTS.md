@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.24.0 — 2026-09-11
+
+- Le tableau **الفواتير** du formulaire de frais est simplifié : une ligne par
+  facture avec trois colonnes — **تاريخ الفاتورة**, **ملاحظة** (liste des
+  frais réglés, en tout ou en partie, par la facture : رسوم التسجيل et les
+  mois concernés, avec le montant affecté) et **إجراء** (numéro, طباعة,
+  تعديل, حذف). Les filtres de période propres à ce tableau sont retirés ;
+  ceux de la liste des frais restent.
+- Technique : `refreshStudentFeeDetails` (`public/students.js`) inverse les
+  allocations du moteur de frais par facture ; suppression de
+  `applyStudentLedgerPeriodFilter` et du bloc `.ledger-period-tools` du tableau.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.23.0 — 2026-09-11
 
 - Le tableau **الفواتير** du formulaire de frais n'affiche plus que les frais
