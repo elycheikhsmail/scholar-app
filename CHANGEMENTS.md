@@ -3,6 +3,20 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.25.0 — 2026-09-11
+
+- Nouvel onglet **طبيعة العمل** dans **الإعدادات** : ajout, renommage et
+  suppression des valeurs proposées dans le champ « طبيعة العمل » du
+  formulaire d'ajout/modification d'un employé (**الموظفون والرواتب**).
+  « أستاذ » (payé à l'heure) et « أخرى » (valeur par défaut) sont fixes ;
+  une valeur liée à des employés ne peut pas être supprimée ; renommer une
+  valeur met à jour les employés concernés.
+- Technique : `settings.staffRoles` avec `addStaffRole` / `updateStaffRole` /
+  `deleteStaffRole` dans `db.js`, routes `/api/staff-roles` dans `server.js`,
+  validation du rôle à l'enregistrement d'un employé, `renderStaffRoles`
+  (`public/settings.js`) et `renderStaffRoleOptions` (`public/staff.js`).
+- Vérification : `npm run check`, `npm test` (test db ajouté) et `npm run test:ui`.
+
 ## 1.24.1 — 2026-09-11
 
 - Répartition des paiements : les factures sont affectées aux frais dans

@@ -181,6 +181,54 @@ window.editDepartment=async id=>{
 };
 window.deleteDepartment=async id=>{await deleteWithPassword(`/departments/${id}`,'هل تريد حذف هذا القسم؟','تم حذف القسم.');};
 
+// --- Liste « طبيعة العمل » ---------------------------------------------------
+// La liste vit dans les réglages ; le formulaire employé la relit à chaque rendu.
+function staffRoleList(){
+  const roles=Array.isArray(state.settings?.staffRoles)?state.settings.staffRoles:[];
+  return roles.length?roles:['أستاذ','معلم','محاسب','مراقب','عامل يدوي','أخرى'];
+}
+async function saveStaffRoles(request,message){
+  try{
+    const settings=await api(request.path,{method:request.method,body:request.body?JSON.stringify(request.body):undefined});
+    state.settings={...state.settings,...settings};
+    await load();
+    renderStaffRoles();
+    renderTeachers();
+    toast(message);
+  }catch(error){toast(error.message)}
+}
+$('staffRoleForm').onsubmit=async e=>{
+  e.preventDefault();
+  const name=$('staffRoleName').value.trim();
+  if(!name)return toast('أدخل اسم طبيعة العمل.');
+  await saveStaffRoles({path:'/staff-roles',method:'POST',body:{name}},'تمت إضافة طبيعة العمل.');
+  $('staffRoleName').value='';
+};
+function renderStaffRoles(){
+  const pinned=['أستاذ','أخرى'];
+  const rows=staffRoleList().map((role,index)=>{
+    const count=state.data.teachers.filter(t=>t.role===role).length;
+    const actions=pinned.includes(role)
+      ?'<small>ثابتة</small>'
+      :`<button class="btn-edit" onclick="editStaffRole(${index})">تعديل</button><button class="btn-delete" onclick="deleteStaffRole(${index})">حذف</button>`;
+    return `<tr><td>${esc(role)}</td><td>${money(count)}</td><td class="actions">${actions}</td></tr>`;
+  }).join('');
+  $('staffRolesTable').innerHTML=rows||'<tr><td colspan="3">لا توجد عناصر.</td></tr>';
+}
+window.editStaffRole=async index=>{
+  if(!(await requirePassword()))return;
+  const role=staffRoleList()[index];
+  if(role===undefined)return;
+  const name=await askInput('الاسم الجديد لطبيعة العمل',role);
+  if(name===null)return;
+  await saveStaffRoles({path:`/staff-roles/${index}`,method:'PUT',body:{name}},'تم تعديل طبيعة العمل.');
+};
+window.deleteStaffRole=async index=>{
+  if(!(await requirePassword()))return;
+  if(!(await askConfirm('هل تريد حذف طبيعة العمل هذه؟')))return;
+  await saveStaffRoles({path:`/staff-roles/${index}`,method:'DELETE'},'تم حذف طبيعة العمل.');
+};
+
 
 function applyApplicationMode(mode) {
   if (!['test','production'].includes(mode)) return;

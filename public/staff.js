@@ -5,6 +5,16 @@
 // `roleNeedsFixed` sépare les deux partout dans le fichier.
 
 function roleNeedsFixed(role){return role!=='أستاذ'}
+// Le champ « طبيعة العمل » relit la liste des réglages ; la valeur en cours
+// (ou le rôle d'une fiche ancienne absent de la liste) est conservée.
+function renderStaffRoleOptions(selected){
+  const select=$('teacherRole');
+  const current=selected??select.value;
+  const roles=staffRoleList().slice();
+  if(current&&!roles.includes(current))roles.push(current);
+  select.innerHTML=roles.map(r=>`<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  select.value=roles.includes(current)?current:(roles.includes('معلم')?'معلم':roles[0]);
+}
 
 // --- Fiche employé ----------------------------------------------------------
 
@@ -22,7 +32,7 @@ $('teacherRole').onchange=toggleRoleFields;
 function resetTeacher(){
   $('teacherForm').reset();
   $('teacherId').value='';
-  $('teacherRole').value='معلم';
+  renderStaffRoleOptions('معلم');
   $('teacherStart').value=today();
   toggleRoleFields();
 }
@@ -121,6 +131,7 @@ function renderTeachers(){
     <td class="actions"><button class="btn-edit" onclick="editTeacher(${t.id})">تعديل</button><button class="btn-delete" onclick="removeTeacher(${t.id})">حذف</button></td>
   </tr>`).join('');
   $('teachersTable').innerHTML=rows||'<tr><td colspan="7">لا يوجد موظفون مسجلون.</td></tr>';
+  renderStaffRoleOptions();
   populateStaffSelects();
   updateSalaryHoursVisibility();
 }
@@ -147,6 +158,7 @@ window.editTeacher=id=>{
     teacherStart:t.startDate,
     teacherNotes:t.notes
   };
+  renderStaffRoleOptions(t.role);
   for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value??'';
   toggleRoleFields();
   go('staff');

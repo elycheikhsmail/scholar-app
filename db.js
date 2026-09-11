@@ -99,7 +99,8 @@ const DEFAULT_DATA = {
     schoolPhone: '',
     republic: 'الجمهورية الإسلامية الموريتانية',
     ministry: 'وزارة التعليم',
-    regional: 'الإدارة الجهوية للتعليم'
+    regional: 'الإدارة الجهوية للتعليم',
+    staffRoles: ['أستاذ', 'معلم', 'محاسب', 'مراقب', 'عامل يدوي', 'أخرى']
   },
   departments: [
     { id: 1, name: 'Jardin', monthlyFee: 5000 },
@@ -307,7 +308,8 @@ function publicSettings() {
     schoolPhone: data.settings.schoolPhone || '',
     republic: data.settings.republic || 'الجمهورية الإسلامية الموريتانية',
     ministry: data.settings.ministry || 'وزارة التعليم',
-    regional: data.settings.regional || 'الإدارة الجهوية للتعليم'
+    regional: data.settings.regional || 'الإدارة الجهوية للتعليم',
+    staffRoles: staffRoles()
   };
 }
 
@@ -351,6 +353,51 @@ function feeSettings() { return { ...data.settings, departments: data.department
 
 // «إعدادات الرسوم» : one registration fee for the school, and the fee of a level
 // for any student whose department carries none.
+// « أستاذ » is paid by the hour and « أخرى » is the fallback role: both stay in
+// the list. Other roles are managed from the settings screen.
+const PINNED_STAFF_ROLES = ['أستاذ', 'أخرى'];
+function staffRoles() {
+  const roles = Array.isArray(data.settings.staffRoles) ? data.settings.staffRoles.map(clean).filter(Boolean) : [];
+  const list = roles.length ? [...new Set(roles)] : [...DEFAULT_DATA.settings.staffRoles];
+  for (const pinned of PINNED_STAFF_ROLES) if (!list.includes(pinned)) list.push(pinned);
+  return list;
+}
+function assertStaffRoleName(name, roles, except) {
+  if (!name) throw new Error('أدخل اسم طبيعة العمل.');
+  if (name.length > 40) throw new Error('اسم طبيعة العمل طويل جدًا.');
+  if (roles.some((role, i) => role === name && i !== except)) throw new Error('طبيعة العمل هذه موجودة بالفعل.');
+}
+function addStaffRole(input) {
+  const roles = staffRoles(), name = clean(input && input.name);
+  assertStaffRoleName(name, roles);
+  data.settings.staffRoles = [...roles, name];
+  save();
+  return publicSettings();
+}
+function updateStaffRole(index, input) {
+  const roles = staffRoles(), i = Number(index), name = clean(input && input.name);
+  if (!Number.isInteger(i) || i < 0 || i >= roles.length) throw new Error('طبيعة العمل غير موجودة.');
+  if (PINNED_STAFF_ROLES.includes(roles[i])) throw new Error(`لا يمكن تغيير «${roles[i]}» لأن التطبيق يعتمد عليها.`);
+  assertStaffRoleName(name, roles, i);
+  const previous = roles[i];
+  roles[i] = name;
+  data.settings.staffRoles = roles;
+  // Employees follow the renamed role so their records keep matching the list.
+  data.teachers.forEach(t => { if (clean(t.role) === previous) t.role = name; });
+  save();
+  return publicSettings();
+}
+function deleteStaffRole(index) {
+  const roles = staffRoles(), i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= roles.length) throw new Error('طبيعة العمل غير موجودة.');
+  if (PINNED_STAFF_ROLES.includes(roles[i])) throw new Error(`لا يمكن حذف «${roles[i]}» لأن التطبيق يعتمد عليها.`);
+  if (data.teachers.some(t => clean(t.role) === roles[i])) throw new Error('لا يمكن حذف طبيعة عمل مرتبطة بموظفين. عدِّل الموظفين أولًا.');
+  roles.splice(i, 1);
+  data.settings.staffRoles = roles;
+  save();
+  return publicSettings();
+}
+
 function updateFeeSettings(input) {
   for (const field of ['registrationFee', 'defaultMonthlyFee']) {
     const value = Number(input && input[field]);
@@ -609,6 +656,7 @@ function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filt
 
 function addTeacher(t) {
   const role=clean(t.role)||'أخرى';
+  if(!staffRoles().includes(role))throw new Error('اختر طبيعة العمل من القائمة المحددة في الإعدادات.');
   const teacher={
     id:nextId('teachers'),name:clean(t.name),phone:clean(t.phone),role,
     stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),
@@ -620,7 +668,9 @@ function addTeacher(t) {
 }
 function updateTeacher(id,t){
   const teacher=data.teachers.find(x=>Number(x.id)===Number(id));if(!teacher)throw new Error('الموظف غير موجود.');
-  Object.assign(teacher,{name:clean(t.name),phone:clean(t.phone),role:clean(t.role)||'أخرى',stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),startDate:clean(t.startDate),notes:clean(t.notes)});
+  const role=clean(t.role)||'أخرى';
+  if(!staffRoles().includes(role))throw new Error('اختر طبيعة العمل من القائمة المحددة في الإعدادات.');
+  Object.assign(teacher,{name:clean(t.name),phone:clean(t.phone),role,stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),startDate:clean(t.startDate),notes:clean(t.notes)});
   save();return teacher;
 }
 function deleteTeacher(id){const n=Number(id);data.teachers=data.teachers.filter(x=>Number(x.id)!==n);data.teacherPayments=data.teacherPayments.filter(x=>Number(x.teacherId)!==n);data.teacherAdvances=data.teacherAdvances.filter(x=>Number(x.teacherId)!==n);save();}
@@ -714,7 +764,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,updateFeeSettings,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,checkLogin,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

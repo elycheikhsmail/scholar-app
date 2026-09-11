@@ -94,13 +94,19 @@ test('browser scripts support login, all sections, student fees and session rest
   }
   // The settings screen shows one form at a time, behind its own tab list.
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]')).toHaveCount(5);
+  await expect(page.locator('[data-settings-tab]')).toHaveCount(6);
   await expect(page.locator('[data-settings-panel]:visible')).toHaveCount(1);
   await expect(page.locator('#setRegistrationFee')).toBeVisible();
   await page.locator('[data-settings-tab="departments"]').click();
   await expect(page.locator('#departmentsTable')).toBeVisible();
   await expect(page.locator('#setRegistrationFee')).toBeHidden();
   assert.equal(await page.evaluate(() => localStorage.getItem('settingsTab')), 'departments');
+  await page.locator('.settings-tab.active').press('ArrowLeft');
+  // The « طبيعة العمل » list feeds the employee form's role field.
+  await expect(page.locator('#staffRolesTable')).toBeVisible();
+  await expect(page.locator('#staffRolesTable tr')).toHaveCount(6);
+  await expect(page.locator('#staffRolesTable')).toContainText('معلم');
+  assert.deepEqual(await page.locator('#teacherRole option').allTextContents(),['أستاذ','معلم','محاسب','مراقب','عامل يدوي','أخرى']);
   await page.locator('.settings-tab.active').press('ArrowLeft');
   await expect(page.locator('#setSchoolName')).toBeVisible();
   await page.locator('.nav-item[data-section="dashboard"]').click();

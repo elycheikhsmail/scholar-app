@@ -224,6 +224,9 @@ async function api(req, res) {
     if (parts[1] === "exam-records" && method === "DELETE") { db.deleteExamRecord(parts[2]); return json(res, 200, { ok: true }); }
 
     if (parts[1] === "fee-settings" && method === "PUT") return json(res, 200, db.updateFeeSettings(await body(req)));
+    if (parts[1] === "staff-roles" && method === "POST") return json(res, 200, db.addStaffRole(await body(req)));
+    if (parts[1] === "staff-roles" && method === "PUT") return json(res, 200, db.updateStaffRole(parts[2], await body(req)));
+    if (parts[1] === "staff-roles" && method === "DELETE") return json(res, 200, db.deleteStaffRole(parts[2]));
 
     if (parts[1] === "departments" && method === "GET") return json(res, 200, db.getDepartments());
     if (parts[1] === "departments" && method === "POST") return json(res, 200, db.addDepartment(await body(req)));

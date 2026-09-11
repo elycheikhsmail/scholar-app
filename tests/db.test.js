@@ -94,6 +94,27 @@ test('databases without an invoice sequence resume after the highest number issu
   assert.equal(db.getData().invoiceSequence, 3);
 });
 
+test('staff roles are managed from the settings and validated on employees', () => {
+  const dir = temp(); db.init(dir);
+  assert.deepEqual(db.publicSettings().staffRoles, ['أستاذ', 'معلم', 'محاسب', 'مراقب', 'عامل يدوي', 'أخرى']);
+  assert.throws(() => db.addTeacher({ name: 'م', role: 'سائق', fixedSalary: 1000 }), /القائمة/);
+  const settings = db.addStaffRole({ name: ' سائق ' });
+  assert.equal(settings.staffRoles.at(-1), 'سائق');
+  assert.throws(() => db.addStaffRole({ name: 'سائق' }), /موجودة/);
+  assert.throws(() => db.addStaffRole({ name: '' }), /أدخل/);
+  const driver = db.addTeacher({ name: 'م', role: 'سائق', fixedSalary: 1000 });
+  const index = settings.staffRoles.indexOf('سائق');
+  assert.throws(() => db.deleteStaffRole(index), /مرتبطة بموظفين/);
+  db.updateStaffRole(index, { name: 'سائق الحافلة' });
+  assert.equal(db.getData().teachers.find(t => t.id === driver.id).role, 'سائق الحافلة', 'employees follow the renamed role');
+  assert.throws(() => db.updateStaffRole(0, { name: 'مدرس' }), /أستاذ/);
+  assert.throws(() => db.deleteStaffRole(db.publicSettings().staffRoles.indexOf('أخرى')), /أخرى/);
+  db.deleteTeacher(driver.id);
+  db.deleteStaffRole(db.publicSettings().staffRoles.indexOf('سائق الحافلة'));
+  db.close(); db.init(dir);
+  assert.deepEqual(db.publicSettings().staffRoles, ['أستاذ', 'معلم', 'محاسب', 'مراقب', 'عامل يدوي', 'أخرى']);
+});
+
 test('imports every collection once, preserves original JSON and optional fields', () => {
   const dir = temp(); db.init(dir);
   db.addStudent(student);

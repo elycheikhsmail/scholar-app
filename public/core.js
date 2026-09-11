@@ -210,7 +210,7 @@ function go(id,{historyMode='push'}={}){
   if(id==='expenses')renderExpenses();
   if(id==='exams')renderExamSection();
   if(id==='reports')renderReports();
-  if(id==='settings'){renderSettings();renderDepartments()}
+  if(id==='settings'){renderSettings();renderDepartments();renderStaffRoles()}
   updatePageBackButtons();
 }
 function updatePageBackButtons(){
@@ -256,6 +256,7 @@ async function refreshAll(){
   if($('settings')?.classList.contains('active-section')) {
     renderSettings();
     renderDepartments();
+    renderStaffRoles();
   }
 }
 async function deleteWithPassword(path, confirmMessage, successMessage){
