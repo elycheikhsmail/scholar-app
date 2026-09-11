@@ -132,6 +132,20 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#today')).toHaveText('⚠️ تاريخ تجريبي: الثلاثاء، 15 ديسمبر 2026');
   await expect(page.locator('#feeMonth')).toHaveValue('ديسمبر');
   await expect(page.locator('#salaryDate')).toHaveValue('2026-12-15');
+  // Reports are monthly: any month already begun can be chosen, the current one
+  // by default; income and outgoings follow the dates of the receipts.
+  await page.locator('.nav-item[data-section="reports"]').click();
+  assert.deepEqual(await page.locator('#reportMonth option').allTextContents(), ['أكتوبر', 'نوفمبر', 'ديسمبر', 'السنة الدراسية كاملة']);
+  await expect(page.locator('#reportMonth')).toHaveValue('ديسمبر');
+  await expect(page.locator('#rOut')).toHaveText('0');
+  await page.locator('#reportMonth').selectOption('أكتوبر');
+  await expect(page.locator('#rOut')).toHaveText('3,000');
+  await expect(page.locator('#rSalaries')).toHaveText('3,000');
+  await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-10-31');
+  await expect(page.locator('#departmentDuesInfo')).toContainText('2026-10-31');
+  await page.locator('#reportMonth').selectOption('__year__');
+  await expect(page.locator('#rOut')).toHaveText('3,000');
+  await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-12-15');
   await page.locator('.nav-item[data-section="settings"]').click();
   await expect(page.locator('#simulatedDateInfo')).toContainText('الشهر الجاري المعتمد: ديسمبر');
   await page.locator('#clearSimulatedDate').click();

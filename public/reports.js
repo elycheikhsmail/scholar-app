@@ -102,16 +102,50 @@ function renderDashboard(){
   $('dExpenses').textContent=money(sumAmount(d.expenses.filter(x=>x.date.slice(0,7)===thisMonth)));
 }
 
-// --- Rapports de créances ---------------------------------------------------
+// --- Rapports mensuels -------------------------------------------------------
+// Un rapport couvre un mois scolaire déjà commencé : ce qui est entré et sorti
+// pendant ce mois (d'après la date des reçus et des dépenses), et l'état des
+// créances à la fin du mois. Le mois courant s'arrête à aujourd'hui ; la
+// dernière option cumule l'année scolaire. Les inscriptions de septembre (avant
+// le premier mois) comptent dans le rapport d'octobre, comme dans les relevés.
+const YEAR_PERIOD='__year__';
+function reportPeriods(){
+  const startYear=startYearOf(state.settings?.schoolYear);
+  const last=monthIndexOf(today(),startYear)??0;
+  const periods=months.slice(0,last+1).map((month,i)=>{
+    const end=monthDate(month,startYear,31);
+    return {value:month,label:month,start:i?monthDate(month,startYear,1):'',end:end<today()?end:today()};
+  });
+  periods.push({value:YEAR_PERIOD,label:'السنة الدراسية كاملة',start:'',end:today()});
+  return periods;
+}
+function renderReportPeriods(){
+  const select=$('reportMonth');
+  const periods=reportPeriods();
+  const chosen=periods.some(p=>p.value===select.value)?select.value:currentMonth();
+  select.innerHTML=periods.map(p=>`<option value="${esc(p.value)}">${esc(p.label)}</option>`).join('');
+  select.value=periods.some(p=>p.value===chosen)?chosen:periods[periods.length-1].value;
+  return periods.find(p=>p.value===select.value);
+}
+$('reportMonth').onchange=renderReports;
 
-function renderDuesReports(){
-  const accounts=state.data.students.map(student=>({student,ledger:ledgerOf(student)}));
+function renderDuesReports(period){
+  // Les créances telles qu'elles se présentaient à la fin de la période : seuls
+  // les reçus datés avant cette fin comptent, et le mois suivant n'est pas encore dû.
+  const settings={...feeSettings(),asOf:period.end};
+  const byStudent=new Map();
+  for(const p of state.data.studentPayments){
+    if(p.date>period.end)continue;
+    const list=byStudent.get(Number(p.studentId));
+    if(list)list.push(p);else byStudent.set(Number(p.studentId),[p]);
+  }
+  const accounts=state.data.students.map(student=>({student,ledger:ledgerFor(student,byStudent.get(Number(student.id))||[],settings)}));
   const byDepartment=new Map();
   for(const account of accounts){
     const key=account.student.className||'—';
     const totals=byDepartment.get(key)||{count:0,due:0,paid:0,remaining:0,late:0};
     totals.count++;totals.due+=account.ledger.totalDue;totals.paid+=account.ledger.allocated;totals.remaining+=account.ledger.outstanding;
-    if(account.ledger.oldestUnpaid&&account.ledger.oldestUnpaid.dueDate<today())totals.late++;
+    if(account.ledger.oldestUnpaid&&account.ledger.oldestUnpaid.dueDate<period.end)totals.late++;
     byDepartment.set(key,totals);
   }
   const departments=[...byDepartment.entries()].sort((a,b)=>b[1].remaining-a[1].remaining);
@@ -133,6 +167,7 @@ function renderDuesReports(){
     <td>${money(grand.late)}</td>
   </tr>`:'<tr><td colspan="6">لا يوجد طلاب.</td></tr>';
   $('departmentDuesTable').innerHTML=departmentRows+grandRow;
+  $('departmentDuesInfo').textContent=`المستحقات كما كانت بتاريخ ${western(period.end)}: الرسوم المستحقة حتى ذلك اليوم والدفعات المسجلة قبله.`;
   // Les vingt comptes qui doivent le plus, du plus lourd au plus léger.
   const debtors=accounts.filter(a=>a.ledger.outstanding>0)
     .sort((a,b)=>b.ledger.outstanding-a.ledger.outstanding)
@@ -151,10 +186,22 @@ function renderDuesReports(){
 
 function renderReports(){
   const d=state.data;
-  const income=sumAmount(d.studentPayments);
-  const out=sumAmount(d.teacherPayments)+sumAmount(d.teacherAdvances)+sumAmount(d.expenses);
-  $('rIncome').textContent=money(income);
+  const period=renderReportPeriods();
+  const within=x=>x.date>=period.start&&x.date<=period.end;
+  const fees=sumAmount(d.studentPayments.filter(within));
+  const salaries=sumAmount(d.teacherPayments.filter(within));
+  const advances=sumAmount(d.teacherAdvances.filter(within));
+  const expenses=sumAmount(d.expenses.filter(within));
+  const out=salaries+advances+expenses;
+  $('rIncome').textContent=money(fees);
   $('rOut').textContent=money(out);
-  $('rNet').textContent=money(income-out);
-  renderDuesReports();
+  $('rNet').textContent=money(fees-out);
+  $('rFees').textContent=money(fees);
+  $('rSalaries').textContent=money(salaries);
+  $('rAdvances').textContent=money(advances);
+  $('rExpenses').textContent=money(expenses);
+  const isYear=period.value===YEAR_PERIOD;
+  $('reportBreakdownTitle').textContent=isYear?'تفصيل السنة الدراسية':`تفصيل شهر ${period.label}`;
+  $('reportPeriodInfo').textContent=`${isYear?'السنة الدراسية':`شهر ${period.label}`}: ${period.start?`من ${western(period.start)} `:'من بداية السنة '}إلى ${western(period.end)} — الدخل والخارج بحسب تاريخ التسجيل الفعلي للدفعات والمصروفات.`;
+  renderDuesReports(period);
 }

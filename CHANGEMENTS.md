@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.35.0 — 2026-09-11
+
+- التقارير : rapports mensuels. Un sélecteur « الشهر » propose chaque mois
+  scolaire déjà commencé (le mois courant par défaut) et « السنة الدراسية كاملة ».
+  Le dépôt, la sortie et le net portent sur les reçus, salaires, avances et
+  dépenses datés dans le mois choisi, avec un tableau de détail ; le mois courant
+  s'arrête à aujourd'hui. Les inscriptions de septembre comptent dans octobre.
+- Le ملخص المستحقات حسب القسم et أعلى المديونين montrent l'état des créances
+  à la fin du mois choisi (frais échus à cette date, reçus enregistrés avant).
+- Technique : `reportPeriods()` / `renderReports()` dans `public/reports.js`,
+  `#reportMonth` dans `index.html`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.34.0 — 2026-09-11
 
 - Nouveau générateur `npm run seed:testing` (`scripts/seed-testing.js`) : reconstruit

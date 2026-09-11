@@ -387,9 +387,15 @@
   </div>
 </section>
 
-<section id="reports" class="section"><div class="section-head"><div><h2>التقارير</h2><p>ملخص الدخل والخارج</p></div></div><div class="cards"><div class="stat-card"><b id="rIncome">0</b><span>إجمالي الدخل</span></div><div class="stat-card"><b id="rOut">0</b><span>إجمالي الخارج</span></div><div class="stat-card highlight"><b id="rNet">0</b><span>الصافي</span></div></div>
+<section id="reports" class="section"><div class="section-head"><div><h2>التقارير</h2><p>ملخص الدخل والخارج لشهر محدد</p></div><label class="report-period">الشهر<select id="reportMonth"></select></label></div>
+  <p id="reportPeriodInfo" class="hint-box" role="status"></p>
+  <div class="cards"><div class="stat-card"><b id="rIncome">0</b><span>إجمالي الدخل</span></div><div class="stat-card"><b id="rOut">0</b><span>إجمالي الخارج</span></div><div class="stat-card highlight"><b id="rNet">0</b><span>الصافي</span></div></div>
+  <div class="panel"><h3 id="reportBreakdownTitle">تفصيل الشهر</h3><div class="summary-grid">
+    <div><span>رسوم الطلاب المحصَّلة</span><b id="rFees">0</b></div><div><span>الرواتب المدفوعة</span><b id="rSalaries">0</b></div><div><span>السلف المصروفة</span><b id="rAdvances">0</b></div><div><span>المصروفات</span><b id="rExpenses">0</b></div>
+  </div></div>
   <div class="panel">
     <h3 class="table-title" id="departmentDuesTitle">ملخص المستحقات حسب القسم</h3>
+    <p class="hint-box" id="departmentDuesInfo"></p>
     <div class="table-scroll"><table aria-labelledby="departmentDuesTitle"><thead><tr><th>القسم</th><th>عدد الطلاب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>عدد المتأخرين</th></tr></thead><tbody id="departmentDuesTable"></tbody></table></div>
   </div>
   <div class="panel">
