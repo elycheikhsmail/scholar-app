@@ -1,6 +1,6 @@
 {
   "name": "school-accounts",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "نظام حسابات المدرسة وإدارة الطلاب والرسوم والمدرسين والرواتب والمصروفات",
   "main": "main.js",
   "author": "ely cheikh smail",

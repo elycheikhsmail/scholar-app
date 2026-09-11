@@ -439,7 +439,7 @@ function ledgerPeriodFor(row){
   return month<current?'past':month===current?'current':'future';
 }
 function applyStudentLedgerPeriodFilter(){
-  const rows=[...$('studentLedgerRows').querySelectorAll('tr')];
+  const rows=[...$('studentLedgerRows').querySelectorAll('tr[data-ledger-period]')];
   let visible=0;
   for(const row of rows){
     const show=periodFilterMatches(studentLedgerPeriodFilter,row.dataset.ledgerPeriod);
@@ -471,9 +471,11 @@ function refreshStudentFeeDetails() {
     + ` أوقية`
     + (student.discountReason ? ` (${student.discountReason})` : '')
     + `.`;
-  $('studentLedgerRows').innerHTML = [REGISTRATION,...months].map(month => {
+  // Only fees that already carry an invoice are listed: unpaid fees belong to
+  // the fee form above, not to the invoice table.
+  const invoiced = [REGISTRATION,...months].filter(month => ledger.byMonth.get(month)?.allocations.length);
+  $('studentLedgerRows').innerHTML = invoiced.map(month => {
     const row = ledger.byMonth.get(month);
-    if (!row) return `<tr data-ledger-period="outside" data-month="${esc(month)}"><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
     const periodKey=ledgerPeriodFor(row);
     const period={past:'سابقة',current:'جارية',future:'قادمة'}[periodKey];
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
@@ -493,7 +495,7 @@ function refreshStudentFeeDetails() {
       <td class="paid-months">${covered}</td>
       <td class="actions ledger-actions-cell">${invoiceActions}</td>
     </tr>`;
-  }).join('');
+  }).join('') || '<tr class="ledger-empty"><td colspan="9">لا توجد فواتير مسجلة لهذا الطالب حتى الآن.</td></tr>';
   applyStudentLedgerPeriodFilter();
   renderStudentFeeEntries();
 }

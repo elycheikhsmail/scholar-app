@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.23.0 — 2026-09-11
+
+- Le tableau **الفواتير** du formulaire de frais n'affiche plus que les frais
+  qui portent au moins une facture ; les frais encore sans facture restent
+  visibles dans la liste des frais au-dessus. Un message s'affiche lorsque
+  l'élève n'a aucune facture.
+- Technique : filtrage sur `allocations.length` dans `renderStudentLedger`
+  (`public/students.js`) ; le compteur de période ignore la ligne vide.
+- Vérification : `npm run check` et `npm run test:ui` (scénario mis à jour).
+
 ## 1.22.0 — 2026-09-11
 
 - Chaque reçu enregistre l'heure et la minute de saisie ; elles s'affichent
