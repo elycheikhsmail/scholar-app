@@ -60,6 +60,38 @@ test('splits the amount paid during registration between registration and monthl
   ]);
 });
 
+test('invoice numbers are never reused after a receipt is deleted or a restart', () => {
+  const dir = temp(); db.init(dir);
+  const s = db.addStudent(student);
+  const first = db.addStudentPayment({ studentId: s.id, amount: 100, month: 'أكتوبر' });
+  db.deleteStudentPayment(first.id);
+  const second = db.addStudentPayment({ studentId: s.id, amount: 100, month: 'أكتوبر' });
+  assert.equal(second.id, first.id, 'ids are recycled');
+  assert.notEqual(second.invoiceNo, first.invoiceNo);
+  db.deleteStudentPayment(second.id);
+  db.close(); db.init(dir);
+  const third = db.addStudentPayment({ studentId: s.id, amount: 100, month: 'أكتوبر' });
+  const issued = [first, second, third].map(p => p.invoiceNo);
+  assert.equal(new Set(issued).size, 3, `duplicated invoice numbers: ${issued}`);
+  assert.equal(third.invoiceNo, 'F-000003');
+});
+
+test('databases without an invoice sequence resume after the highest number issued', () => {
+  const dir = temp(); db.init(dir);
+  const s = db.addStudent(student);
+  db.addStudentPayment({ studentId: s.id, amount: 100, month: 'أكتوبر' });
+  db.addStudentPayment({ studentId: s.id, amount: 100, month: 'نوفمبر' });
+  db.close();
+  const sqlite = new DatabaseSync(database(dir));
+  sqlite.prepare("DELETE FROM settings WHERE key = 'invoiceSequence'").run();
+  sqlite.close();
+  db.init(dir);
+  assert.equal(db.getData().invoiceSequence, undefined);
+  const next = db.addStudentPayment({ studentId: s.id, amount: 100, month: 'ديسمبر' });
+  assert.equal(next.invoiceNo, 'F-000003');
+  assert.equal(db.getData().invoiceSequence, 3);
+});
+
 test('imports every collection once, preserves original JSON and optional fields', () => {
   const dir = temp(); db.init(dir);
   db.addStudent(student);

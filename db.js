@@ -255,7 +255,15 @@ function normalizeData() {
     if (typeof s.discountReason !== 'string') s.discountReason = '';
     dropLegacyStudentFees(s);
   });
-  data.studentPayments.forEach(p => { if (!p.invoiceNo) p.invoiceNo = `F-${String(Number(p.id)||0).padStart(6,'0')}`; if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly'; });
+  // Invoice numbers come from a sequence that never decreases: `nextId` reuses
+  // the id of a deleted receipt, which would print the same number twice.
+  data.invoiceSequence = Math.max(Number(data.invoiceSequence) || 0, highestInvoiceSequence());
+  const usedInvoiceNos = new Set();
+  data.studentPayments.forEach(p => {
+    if (!p.invoiceNo || usedInvoiceNos.has(p.invoiceNo)) p.invoiceNo = nextInvoiceNo();
+    usedInvoiceNos.add(p.invoiceNo);
+    if (!p.paymentType) p.paymentType = p.month === 'رسوم التسجيل' ? 'registration' : 'monthly';
+  });
   const feeMap = new Map(DEFAULT_DATA.departments.map(d => [d.name, d.monthlyFee]));
   data.departments = data.departments.map((d, i) => ({ ...d, id: Number(d.id) || i + 1, name: clean(d.name), monthlyFee: d.monthlyFee != null && Number.isFinite(Number(d.monthlyFee)) ? Math.max(0, Number(d.monthlyFee)) : Number(feeMap.get(clean(d.name)) || 0) }));
   const existingNames = new Set(data.departments.map(d => clean(d.name)));
@@ -265,6 +273,20 @@ function normalizeData() {
 
 function nextId(collection) {
   return data[collection].reduce((m, x) => Math.max(m, Number(x.id) || 0), 0) + 1;
+}
+
+function invoiceSequenceOf(invoiceNo) {
+  const match = /^F-(\d+)$/.exec(String(invoiceNo || ''));
+  return match ? Number(match[1]) : 0;
+}
+function highestInvoiceSequence() {
+  return data.studentPayments.reduce((m, p) => Math.max(m, invoiceSequenceOf(p.invoiceNo), Number(p.id) || 0), 0);
+}
+function nextInvoiceNo() {
+  // Databases created before the sequence existed resume after the highest number issued.
+  if (data.invoiceSequence == null) data.invoiceSequence = highestInvoiceSequence();
+  data.invoiceSequence = (Number(data.invoiceSequence) || 0) + 1;
+  return `F-${String(data.invoiceSequence).padStart(6, '0')}`;
 }
 
 function publicSettings() {
@@ -448,10 +470,9 @@ function addStudent(s) {
   const registrationPaid = Math.min(initialPaid, dues.registrationFeeFor(feeSettings()));
   const monthlyPaid = Math.max(0, initialPaid - registrationPaid);
   if (registrationPaid > 0) {
-    const paymentId = nextId('studentPayments');
     data.studentPayments.push({
-      id: paymentId,
-      invoiceNo: `F-${String(paymentId).padStart(6,'0')}`,
+      id: nextId('studentPayments'),
+      invoiceNo: nextInvoiceNo(),
       studentId: student.id,
       month: 'رسوم التسجيل',
       paymentType: 'registration',
@@ -461,10 +482,9 @@ function addStudent(s) {
     });
   }
   if (monthlyPaid > 0) {
-    const paymentId = nextId('studentPayments');
     data.studentPayments.push({
-      id: paymentId,
-      invoiceNo: `F-${String(paymentId).padStart(6,'0')}`,
+      id: nextId('studentPayments'),
+      invoiceNo: nextInvoiceNo(),
       studentId: student.id,
       month: clean(s.initialPaymentMonth) || currentPaymentMonth(),
       paymentType: 'monthly',
@@ -527,8 +547,7 @@ function assertWithinOutstanding(student, amount, excludePaymentId = null) {
 // One receipt. Callers check the cap first, then save: `addStudentPayments`
 // enters several at once and must weigh them against the balance together.
 function pushStudentPayment(student, month, amount, date, notes) {
-  const id = nextId('studentPayments');
-  const payment = { id, invoiceNo:`F-${String(id).padStart(6,'0')}`, studentId:Number(student.id), month,
+  const payment = { id:nextId('studentPayments'), invoiceNo:nextInvoiceNo(), studentId:Number(student.id), month,
     paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, notes };
   data.studentPayments.push(payment);
   return payment;
@@ -576,7 +595,7 @@ function updateStudentPayment(id,p) {
   const amount=Number(p.amount)||0, month=clean(p.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount, payment.id);
-  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:clean(p.date)||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=`F-${String(payment.id).padStart(6,'0')}`; save(); return payment;
+  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:clean(p.date)||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
 }
 function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filter(x=>Number(x.id)!==Number(id));save();}
 

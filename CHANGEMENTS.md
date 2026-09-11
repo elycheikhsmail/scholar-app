@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.21.2 — 2026-09-11
+
+- Le numéro de facture (**رقم الفاتورة**) est désormais unique : après la
+  suppression d'un reçu, le numéro libéré n'est plus réattribué au reçu suivant.
+- Technique : `db.js` tient une séquence persistante `invoiceSequence`
+  (`nextInvoiceNo`) qui ne redescend jamais ; les bases existantes reprennent
+  après le plus grand numéro déjà émis, et la migration JSON renumérote les
+  doublons éventuels.
+- Vérification : `npm run check`, `npm test` (deux tests ajoutés dans
+  `tests/db.test.js`) et `npm run test:ui`.
+
 ## 1.21.1 — 2026-09-11
 
 - Les filtres de période (**الفترة**) du formulaire de frais et du tableau
