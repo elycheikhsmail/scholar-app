@@ -211,6 +211,10 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .student-account-details>summary{cursor:pointer;padding:15px 18px;font-weight:900;color:var(--nav-fees);background:#fff}
 .student-account-details[open]>summary{border-bottom:1px solid var(--border-panel)}
 .student-account-details .ledger-page{padding:18px;border-top:0}
+.ledger-period-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.ledger-period-filters{display:flex;gap:8px;flex-wrap:wrap}
+.ledger-period-filters button.active{background:var(--nav-fees);border-color:var(--nav-fees);color:#fff}
+.ledger-filter-count{margin:0;color:var(--text-muted);font-size:13px;font-weight:800}
 .charge-details-dialog{--dialog-width:980px}
 .charge-detail-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:20px}
 .charge-detail-summary span{display:flex;flex-direction:column;gap:5px;padding:11px;border:1px solid var(--border-panel);border-radius:var(--radius-md);background:var(--surface-soft)}

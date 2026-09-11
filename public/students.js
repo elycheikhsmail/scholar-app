@@ -422,6 +422,34 @@ window.runChargeInvoiceAction=(action,id)=>{
   if(action==='edit')return editStudentPayment(id);
   if(action==='delete')return deleteStudentPayment(id);
 };
+let studentLedgerPeriodFilter='all';
+function ledgerPeriodFor(row){
+  if(!row)return 'outside';
+  const current=today().slice(0,7);
+  const dueMonth=row.dueDate.slice(0,7);
+  return dueMonth<current?'past':dueMonth===current?'current':'future';
+}
+function applyStudentLedgerPeriodFilter(){
+  const rows=[...$('studentLedgerRows').querySelectorAll('tr')];
+  let visible=0;
+  for(const row of rows){
+    const show=studentLedgerPeriodFilter==='all'||row.dataset.ledgerPeriod===studentLedgerPeriodFilter;
+    row.hidden=!show;
+    if(show)visible++;
+  }
+  for(const button of document.querySelectorAll('.ledger-period-filters [data-ledger-period]')){
+    const active=button.dataset.ledgerPeriod===studentLedgerPeriodFilter;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  }
+  $('studentLedgerFilterCount').textContent=`عرض ${money(visible)} من ${money(rows.length)} استحقاق`;
+}
+document.querySelector('.ledger-period-filters').addEventListener('click',event=>{
+  const button=event.target.closest('[data-ledger-period]');
+  if(!button)return;
+  studentLedgerPeriodFilter=button.dataset.ledgerPeriod;
+  applyStudentLedgerPeriodFilter();
+});
 function refreshStudentFeeDetails() {
   const student = selectedFeeStudent();
   if (!student) {
@@ -441,10 +469,11 @@ function refreshStudentFeeDetails() {
     + `.`;
   $('studentLedgerRows').innerHTML = [REGISTRATION,...months].map(month => {
     const row = ledger.byMonth.get(month);
-    if (!row) return `<tr><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
-    const period = row.dueDate < today().slice(0,7)+'-01' ? 'سابقة' : row.dueDate.slice(0,7) === today().slice(0,7) ? 'جارية' : 'قادمة';
+    if (!row) return `<tr data-ledger-period="outside"><td>${esc(month)}</td><td>—</td><td class="status-exempt">خارج فترة القيد</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
+    const periodKey=ledgerPeriodFor(row);
+    const period={past:'سابقة',current:'جارية',future:'قادمة'}[periodKey];
     const covered = row.allocations.map(a => `${esc(a.invoiceNo || `F-${String(a.paymentId||0).padStart(6,'0')}`)}: ${money(a.amount)}`).join('<br>') || '—';
-    return `<tr>
+    return `<tr data-ledger-period="${periodKey}">
       <td>${esc(month)}</td>
       <td>${esc(row.dueDate)}</td>
       <td>${period}</td>
@@ -456,6 +485,7 @@ function refreshStudentFeeDetails() {
       <td class="paid-months">${covered}</td>
     </tr>`;
   }).join('');
+  applyStudentLedgerPeriodFilter();
   renderStudentFeeEntries();
   // The ledger is where a wrong payment is noticed, so it edits and deletes in place.
   const paymentRows = payments.slice()

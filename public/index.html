@@ -172,6 +172,15 @@
       <div id="studentLedger" class="ledger-page">
         <p>يُحتسب الاستحقاق من شهر التسجيل حتى شهر المغادرة، وتُوزَّع الدفعات تلقائيًا على أقدم استحقاق غير مسدَّد.</p>
         <h3 class="table-title" id="studentLedgerTitle">المستحقات حسب الشهر</h3>
+        <div class="ledger-period-tools">
+          <div class="ledger-period-filters" role="group" aria-label="فلترة المستحقات حسب الفترة">
+            <button type="button" class="secondary active" data-ledger-period="all" aria-pressed="true">الكل</button>
+            <button type="button" class="secondary" data-ledger-period="past" aria-pressed="false">الماضي</button>
+            <button type="button" class="secondary" data-ledger-period="current" aria-pressed="false">الجاري</button>
+            <button type="button" class="secondary" data-ledger-period="future" aria-pressed="false">القادم</button>
+          </div>
+          <p id="studentLedgerFilterCount" class="ledger-filter-count" role="status" aria-live="polite"></p>
+        </div>
         <div class="table-scroll"><table aria-labelledby="studentLedgerTitle"><thead><tr><th>نوع الرسوم / الشهر</th><th>تاريخ الاستحقاق</th><th>الفترة</th><th>الرسوم</th><th>الخصم</th><th>المستحق</th><th>المخصَّص</th><th>المتبقي</th><th>الفواتير المخصَّصة</th></tr></thead><tbody id="studentLedgerRows"></tbody></table></div>
         <h3 class="table-title" id="studentLedgerPaymentsTitle">سجل دفعات الطالب</h3>
         <div class="table-scroll"><table aria-labelledby="studentLedgerPaymentsTitle"><thead><tr><th>رقم الفاتورة</th><th>نوع الرسوم / الشهر</th><th>المبلغ</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="studentLedgerPayments"></tbody></table></div>

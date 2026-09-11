@@ -291,6 +291,15 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentAccountDetails summary').click();
   await expect(page.locator('#studentLedger')).toBeVisible();
   await expect(page.locator('#studentLedgerPayments')).toContainText('F-000091');
+  await expect(page.locator('.ledger-period-filters [data-ledger-period]')).toHaveCount(4);
+  await page.locator('.ledger-period-filters [data-ledger-period="future"]').click();
+  assert.ok(await page.locator('#studentLedgerRows tr:visible').count()>0);
+  assert.deepEqual(await page.locator('#studentLedgerRows tr:visible').evaluateAll(rows=>[...new Set(rows.map(row=>row.dataset.ledgerPeriod))]),['future']);
+  await expect(page.locator('#studentLedgerFilterCount')).toContainText('عرض');
+  await page.locator('.ledger-period-filters [data-ledger-period="current"]').click();
+  assert.deepEqual(await page.locator('#studentLedgerRows tr:visible').evaluateAll(rows=>[...new Set(rows.map(row=>row.dataset.ledgerPeriod))]),['current']);
+  await page.locator('.ledger-period-filters [data-ledger-period="all"]').click();
+  await expect(page.locator('#studentLedgerRows tr:visible')).toHaveCount(10);
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
   await page.locator('#closeStudentFees').click();
   await expect(page.locator('#students')).toHaveClass(/active-section/);

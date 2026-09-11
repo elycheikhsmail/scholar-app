@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.16.0 — 2026-09-11
+
+- Le relevé des frais d'un élève propose maintenant quatre filtres immédiats :
+  **الكل**, **الماضي**, **الجاري** et **القادم**.
+- Le tableau se met à jour sans rechargement et annonce le nombre de lignes
+  visibles par rapport au nombre total d'échéances.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.15.1 — 2026-09-11
 
 - Dans le registre des élèves, le bouton **رسوم الطالب** est renommé
