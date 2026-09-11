@@ -275,7 +275,7 @@
     <p id="teacherCount" class="totals-line" role="status" aria-live="polite"></p>
     <div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الحالة</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>الهاتف</th><th>آخر دفعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
-  <div role="tabpanel" tabindex="0" id="staffPanel-salaries" data-staff-panel="salaries" aria-labelledby="staffTab-salaries" class="hidden panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form">
+  <div role="tabpanel" tabindex="0" id="staffPanel-salaries" data-staff-panel="salaries" aria-labelledby="staffTab-salaries" class="hidden panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form" novalidate>
     <input id="salaryTeacherSearch" type="search" placeholder="ابحث عن موظف بالاسم" aria-label="بحث عن موظف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>
   </form><div id="salaryDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3>
   <div class="fee-toolbar staff-toolbar">

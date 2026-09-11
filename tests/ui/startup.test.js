@@ -219,6 +219,11 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#salaryAmount')).toHaveValue('2000');
   await page.locator('#salaryTeacherSearch').fill('غير موجود');
   await expect(page.locator('#salaryTeacher option')).toHaveCount(0);
+  // A search with no match says so and the form refuses with a readable message.
+  await expect(page.locator('#salaryDueInfo')).toContainText('لا يوجد موظف مطابق للبحث «غير موجود»');
+  await page.locator('#salaryForm button.primary').click();
+  await expect(page.locator('#toast')).toContainText('لا يوجد موظف مطابق للبحث');
+  await expect(page.locator('#salaryTeacherSearch')).toBeFocused();
   await page.locator('#salaryTeacherSearch').fill('');
   await expect(page.locator('#salaryTeacher option')).toHaveCount(1);
   // Salary and advance receipts print through the shared receipt window.

@@ -3,6 +3,16 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.33.1 — 2026-09-11
+
+- Formulaire de paie : quand la recherche d'employé ne trouve personne (ou
+  qu'aucun employé n'est choisi), le rappel sous le formulaire le dit
+  clairement et « تسجيل دفعة » affiche un message lisible en replaçant le
+  curseur dans le champ de recherche, au lieu de la bulle du navigateur et
+  des montants périmés du dernier employé affiché.
+- Technique : `novalidate` sur `#salaryForm`, contrôle en JavaScript.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.33.0 — 2026-09-11
 
 - الإعدادات ← وضع الاستخدام : « تاريخ الاختبار ». L'application se comporte

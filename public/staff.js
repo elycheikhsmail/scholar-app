@@ -292,9 +292,16 @@ function updateSalaryHoursVisibility(){
   if(hideHours)$('salaryHours').value='';
 }
 
+// Aucun employé sélectionné (recherche sans résultat, liste vide) : le rappel
+// le dit clairement au lieu de garder les montants du dernier employé affiché.
+function missingSalaryTeacherText(){
+  const query=$('salaryTeacherSearch').value.trim();
+  if(query)return `⚠️ لا يوجد موظف مطابق للبحث «${query}». امسح حقل البحث أو اكتب اسم الموظف.`;
+  return activeTeachers().length?'⚠️ اختر الموظف من القائمة.':'⚠️ لا يوجد موظفون نشطون؛ أضف موظفًا أولًا.';
+}
 function updateSalaryHint(){
   const t=selectedSalaryTeacher();
-  if(!t)return;
+  if(!t){$('salaryDueInfo').textContent=missingSalaryTeacherText();return}
   const month=$('salaryMonth').value;
   const enteredHours=$('salaryHours').value;
   const due=salaryDue(t,month,enteredHours||null);
@@ -316,8 +323,9 @@ function updateSalaryHint(){
 
 $('salaryForm').onsubmit=async e=>{
   e.preventDefault();
-  const t=state.data.teachers.find(x=>x.id===Number($('salaryTeacher').value));
-  if(!t)return;
+  const t=selectedSalaryTeacher();
+  // Validation en JavaScript (novalidate) : un message lisible plutôt que la bulle du navigateur.
+  if(!t){toast(missingSalaryTeacherText());$($('salaryTeacherSearch').value.trim()?'salaryTeacherSearch':'salaryTeacher').focus();return}
   const month=$('salaryMonth').value;
   const isTeacher=!roleNeedsFixed(t.role);
   const hours=isTeacher?Number($('salaryHours').value)||0:0;
