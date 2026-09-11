@@ -239,6 +239,7 @@ window.openStudentFees = (id, showLedger = false) => {
   const student = selectedFeeStudent();
   if (!student) return;
   studentLedgerPeriodFilter='current';
+  studentFeeEntryFilter={period:'all',status:'all'};
   $('studentFeePaymentAmount').value='';
   $('studentFeeEntryDate').value = today();
   fillStudentDiscountForm(student);
@@ -257,7 +258,7 @@ function fillStudentDiscountForm(student) {
 // The cashier enters one amount. The same oldest-first order used on the server
 // previews how it will settle registration, June and the remaining months.
 function studentFeeRows(student) {
-  return ledgerOf(student).rows.map((row, index) => ({ index, month: row.month, amount: row.amount, paid: row.paid, remaining: row.remaining }));
+  return ledgerOf(student).rows.map((row, index) => ({ index, month: row.month, dueDate: row.dueDate, amount: row.amount, paid: row.paid, remaining: row.remaining }));
 }
 function enteredStudentPaymentAmount(){
   const value=Number(western($('studentFeePaymentAmount').value));
@@ -271,17 +272,22 @@ function previewStudentPayment(student,amount=enteredStudentPaymentAmount()){
     return {...row,allocated,afterPaid:round2(row.paid+allocated),afterRemaining:round2(row.remaining-allocated)};
   });
 }
+function feeEntryStatusFor(row){
+  if(!(row.amount>0))return 'exempt';
+  return row.paid<=0?'unpaid':row.remaining<=0?'paid':'partial';
+}
 function feeEntryHtml(row) {
+  const filterAttrs=`data-fee-period="${ledgerPeriodFor(row)}" data-fee-status="${feeEntryStatusFor(row)}"`;
   const head = `<div class="fee-entry-head"><b>${esc(row.month)}</b><span>المستحق: ${money(row.amount)} أوقية</span>`
     + (row.month === 'يونيو' ? '<span class="status-partial">يُدفع عند التسجيل</span>' : '')
     + '</div>';
   const details = `<button type="button" class="secondary fee-details-button" data-charge-details="${row.index}" aria-label="عرض تفاصيل وفواتير ${esc(row.month)}">تفاصيل</button>`;
-  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<div class="fee-entry-state status-exempt">بلا رسوم</div>${details}</div>`;
+  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}" ${filterAttrs}>${head}<div class="fee-entry-state status-exempt">بلا رسوم</div>${details}</div>`;
   const settled=row.afterRemaining<=0;
   const state=row.afterPaid<=0?'لم يُسدَّد':settled?'مسدَّد بالكامل':'مسدَّد جزئياً';
   const stateClass=row.afterPaid<=0?'status-unpaid':settled?'status-paid':'status-partial';
   const allocation=row.allocated>0?`<div class="fee-allocation-preview"><small>من الدفعة الجديدة</small><b>+ ${money(row.allocated)}</b><small>المتبقي بعدها: ${money(row.afterRemaining)}</small></div>`:'';
-  return `<div class="fee-entry${settled?' fee-entry-settled':''}${row.allocated>0?' fee-entry-previewed':''}" data-fee-entry="${row.index}">${head}`
+  return `<div class="fee-entry${settled?' fee-entry-settled':''}${row.allocated>0?' fee-entry-previewed':''}" data-fee-entry="${row.index}" ${filterAttrs}>${head}`
     + `<div class="fee-entry-state ${stateClass}"><b>${state}</b><small>المدفوع: ${money(row.afterPaid)} — المتبقي: ${money(row.afterRemaining)}</small></div>`
     + allocation+details+'</div>';
 }
@@ -298,8 +304,43 @@ function renderStudentFeeEntries() {
   $('studentFeeAmountLimit').textContent=`الحد الأقصى الممكن تسجيله: ${money(ledger.scheduledOutstanding)} أوقية`;
   $('studentFeeEntries').innerHTML = previewStudentPayment(student).map(feeEntryHtml).join('')
     || '<p>لا توجد رسوم مستحقة على هذا الطالب.</p>';
+  applyStudentFeeEntryFilter();
   updateStudentFeeSummary();
 }
+// The paid-status list shares the period buckets of the invoice table and adds
+// a payment-state filter. Filtering only hides entries; allocation stays oldest-first.
+let studentFeeEntryFilter={period:'all',status:'all'};
+function periodFilterMatches(filter,periodKey){
+  return filter==='all'||periodKey===filter||(filter==='past-current'&&['past','current'].includes(periodKey));
+}
+function syncFilterButtons(selector,dataKey,value){
+  for(const button of document.querySelectorAll(selector)){
+    const active=button.dataset[dataKey]===value;
+    button.classList.toggle('active',active);
+    button.setAttribute('aria-pressed',String(active));
+  }
+}
+function applyStudentFeeEntryFilter(){
+  const entries=[...$('studentFeeEntries').querySelectorAll('[data-fee-entry]')];
+  const {period,status}=studentFeeEntryFilter;
+  let visible=0;
+  for(const entry of entries){
+    const show=periodFilterMatches(period,entry.dataset.feePeriod)&&(status==='all'||entry.dataset.feeStatus===status);
+    entry.hidden=!show;
+    if(show)visible++;
+  }
+  syncFilterButtons('#studentFeeEntryFilters [data-fee-period]','feePeriod',period);
+  syncFilterButtons('#studentFeeEntryFilters [data-fee-status]','feeStatus',status);
+  $('studentFeeEntryFilterCount').textContent=entries.length?`عرض ${money(visible)} من ${money(entries.length)} رسم`:'';
+  $('studentFeeEntryFilterEmpty').hidden=!entries.length||visible>0;
+}
+$('studentFeeEntryFilters').addEventListener('click',event=>{
+  const button=event.target.closest('[data-fee-period],[data-fee-status]');
+  if(!button)return;
+  if(button.dataset.feePeriod)studentFeeEntryFilter.period=button.dataset.feePeriod;
+  if(button.dataset.feeStatus)studentFeeEntryFilter.status=button.dataset.feeStatus;
+  applyStudentFeeEntryFilter();
+});
 function updateStudentFeeSummary() {
   const box = $('studentFeeEntrySummary'), save = $('saveStudentFees');
   if (!selectedFeeStudent()) { box.textContent = ''; box.className = 'fee-preview hidden'; return; }
@@ -394,20 +435,14 @@ function applyStudentLedgerPeriodFilter(){
   const rows=[...$('studentLedgerRows').querySelectorAll('tr')];
   let visible=0;
   for(const row of rows){
-    const show=studentLedgerPeriodFilter==='all'
-      ||row.dataset.ledgerPeriod===studentLedgerPeriodFilter
-      ||(studentLedgerPeriodFilter==='past-current'&&['past','current'].includes(row.dataset.ledgerPeriod));
+    const show=periodFilterMatches(studentLedgerPeriodFilter,row.dataset.ledgerPeriod);
     row.hidden=!show;
     if(show)visible++;
   }
-  for(const button of document.querySelectorAll('.ledger-period-filters [data-ledger-period]')){
-    const active=button.dataset.ledgerPeriod===studentLedgerPeriodFilter;
-    button.classList.toggle('active',active);
-    button.setAttribute('aria-pressed',String(active));
-  }
+  syncFilterButtons('#studentLedger [data-ledger-period]','ledgerPeriod',studentLedgerPeriodFilter);
   $('studentLedgerFilterCount').textContent=`عرض ${money(visible)} من ${money(rows.length)} استحقاق`;
 }
-document.querySelector('.ledger-period-filters').addEventListener('click',event=>{
+$('studentLedger').addEventListener('click',event=>{
   const button=event.target.closest('[data-ledger-period]');
   if(!button)return;
   studentLedgerPeriodFilter=button.dataset.ledgerPeriod;

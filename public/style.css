@@ -215,6 +215,9 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .ledger-period-filters{display:flex;gap:8px;flex-wrap:wrap}
 .ledger-period-filters button.active{background:var(--nav-fees);border-color:var(--nav-fees);color:#fff}
 .ledger-filter-count{margin:0;color:var(--text-muted);font-size:13px;font-weight:800}
+.fee-entry-filters{margin-bottom:0;align-items:flex-start}
+.fee-entry-filter-groups{display:flex;flex-direction:column;gap:8px}
+.fee-entry-filter-label{align-self:center;font-size:12px;font-weight:900;color:var(--text-muted);min-width:78px}
 .charge-details-dialog{--dialog-width:980px}
 .charge-detail-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(135px,1fr));gap:10px;margin-bottom:20px}
 .charge-detail-summary span{display:flex;flex-direction:column;gap:5px;padding:11px;border:1px solid var(--border-panel);border-radius:var(--radius-md);background:var(--surface-soft)}
@@ -302,6 +305,7 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
    down the school year the way the ledger does. */
 .fee-entries{display:flex;flex-direction:column;gap:10px}
 .fee-entry{border:1px solid var(--border-panel);border-radius:var(--radius-md);padding:10px 12px;background:#fff;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.fee-entry[hidden]{display:none}
 .fee-entry-settled{background:var(--surface-soft)}
 .fee-entry-head{flex:0 0 230px;display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
 .fee-entry-head b{font-size:16px;color:var(--nav-fees)}

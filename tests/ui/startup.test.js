@@ -298,6 +298,28 @@ test('browser scripts support login, all sections, student fees and session rest
     refreshStudentFeeDetails();
   });
   await expect(page.locator('#studentFeeEntries [data-charge-details]')).toHaveCount(10);
+  // The paid-status list filters by period and payment state like the invoice table.
+  const entryFilters=page.locator('#studentFeeEntryFilters');
+  const visibleEntries=page.locator('#studentFeeEntries .fee-entry:visible');
+  await expect(entryFilters.locator('[data-fee-period="all"]')).toHaveAttribute('aria-pressed','true');
+  await expect(entryFilters.locator('[data-fee-status="all"]')).toHaveAttribute('aria-pressed','true');
+  await entryFilters.locator('[data-fee-status="paid"]').click();
+  await expect(visibleEntries).toHaveCount(1);
+  await expect(visibleEntries).toContainText('رسوم التسجيل');
+  await expect(page.locator('#studentFeeEntryFilterCount')).toContainText('عرض 1 من 10 رسم');
+  await entryFilters.locator('[data-fee-status="unpaid"]').click();
+  await expect(visibleEntries).toHaveCount(9);
+  await entryFilters.locator('[data-fee-status="all"]').click();
+  await entryFilters.locator('[data-fee-period="current"]').click();
+  assert.deepEqual(await visibleEntries.evaluateAll(rows=>[...new Set(rows.map(row=>row.dataset.feePeriod))]),['current']);
+  await entryFilters.locator('[data-fee-period="future"]').click();
+  await entryFilters.locator('[data-fee-status="paid"]').click();
+  await expect(visibleEntries).toHaveCount(0);
+  await expect(page.locator('#studentFeeEntryFilterEmpty')).toBeVisible();
+  await entryFilters.locator('[data-fee-period="all"]').click();
+  await entryFilters.locator('[data-fee-status="all"]').click();
+  await expect(visibleEntries).toHaveCount(10);
+  await expect(page.locator('#studentFeeEntryFilterEmpty')).toBeHidden();
   await page.locator('#studentFeeEntries .fee-entry').first().locator('[data-charge-details]').click();
   await expect(page.locator('#studentChargeDetailsDialog')).toHaveAttribute('open','');
   await expect(page.locator('#studentChargeDetailsTitle')).toContainText('التسجيل');

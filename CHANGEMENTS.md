@@ -3,6 +3,21 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.21.0 — 2026-09-11
+
+- Dans le formulaire de frais de l'élève (`#student-fees`), la liste des frais avec
+  leur état de paiement dispose de ses propres filtres, placés au-dessus des
+  lignes : **الفترة** (الكل / الماضي / الماضي والجاري / الجاري / القادم, mêmes
+  périodes que le tableau **الفواتير**) et **حالة السداد** (الكل / لم يُسدَّد /
+  مسدَّد جزئياً / مسدَّد بالكامل).
+- Un compteur `عرض N من M رسم` accompagne les filtres et un message s'affiche
+  quand aucun frais ne correspond. Les filtres sont remis à **الكل** à chaque
+  ouverture du formulaire ; l'état utilisé est celui réellement enregistré, la
+  saisie d'un montant ne masque donc aucune ligne.
+- Technique : `periodFilterMatches` et `syncFilterButtons` sont partagés avec
+  le filtre du tableau des factures ; règle `.fee-entry[hidden]`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.20.0 — 2026-09-11
 
 - Le tableau **المستحقات حسب الشهر** devient **الفواتير** et sa colonne

@@ -161,7 +161,28 @@
         </div>
         <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
       </div>
+      <div id="studentFeeEntryFilters" class="ledger-period-tools fee-entry-filters">
+        <div class="fee-entry-filter-groups">
+          <div class="ledger-period-filters" role="group" aria-label="فلترة الرسوم حسب الفترة">
+            <span class="fee-entry-filter-label">الفترة</span>
+            <button type="button" class="secondary active" data-fee-period="all" aria-pressed="true">الكل</button>
+            <button type="button" class="secondary" data-fee-period="past" aria-pressed="false">الماضي</button>
+            <button type="button" class="secondary" data-fee-period="past-current" aria-pressed="false">الماضي والجاري</button>
+            <button type="button" class="secondary" data-fee-period="current" aria-pressed="false">الجاري</button>
+            <button type="button" class="secondary" data-fee-period="future" aria-pressed="false">القادم</button>
+          </div>
+          <div class="ledger-period-filters" role="group" aria-label="فلترة الرسوم حسب حالة السداد">
+            <span class="fee-entry-filter-label">حالة السداد</span>
+            <button type="button" class="secondary active" data-fee-status="all" aria-pressed="true">الكل</button>
+            <button type="button" class="secondary" data-fee-status="unpaid" aria-pressed="false">لم يُسدَّد</button>
+            <button type="button" class="secondary" data-fee-status="partial" aria-pressed="false">مسدَّد جزئياً</button>
+            <button type="button" class="secondary" data-fee-status="paid" aria-pressed="false">مسدَّد بالكامل</button>
+          </div>
+        </div>
+        <p id="studentFeeEntryFilterCount" class="ledger-filter-count" role="status" aria-live="polite"></p>
+      </div>
       <div id="studentFeeEntries" class="fee-entries"></div>
+      <p id="studentFeeEntryFilterEmpty" class="hint-box" hidden>لا توجد رسوم مطابقة للتصفية المختارة.</p>
       <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
     </form>
     <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
