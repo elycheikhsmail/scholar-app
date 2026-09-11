@@ -291,7 +291,11 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentAccountDetails summary').click();
   await expect(page.locator('#studentLedger')).toBeVisible();
   await expect(page.locator('#studentLedgerPayments')).toContainText('F-000091');
-  await expect(page.locator('.ledger-period-filters [data-ledger-period]')).toHaveCount(4);
+  await expect(page.locator('.ledger-period-filters [data-ledger-period]')).toHaveCount(5);
+  await expect(page.locator('.ledger-period-filters [data-ledger-period="current"]')).toHaveAttribute('aria-pressed','true');
+  assert.deepEqual(await page.locator('#studentLedgerRows tr:visible').evaluateAll(rows=>[...new Set(rows.map(row=>row.dataset.ledgerPeriod))]),['current']);
+  await page.locator('.ledger-period-filters [data-ledger-period="past-current"]').click();
+  assert.ok(await page.locator('#studentLedgerRows tr:visible').evaluateAll(rows=>rows.every(row=>['past','current'].includes(row.dataset.ledgerPeriod))));
   await page.locator('.ledger-period-filters [data-ledger-period="future"]').click();
   assert.ok(await page.locator('#studentLedgerRows tr:visible').count()>0);
   assert.deepEqual(await page.locator('#studentLedgerRows tr:visible').evaluateAll(rows=>[...new Set(rows.map(row=>row.dataset.ledgerPeriod))]),['future']);

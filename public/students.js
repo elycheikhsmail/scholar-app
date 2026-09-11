@@ -238,6 +238,7 @@ window.openStudentFees = (id, showLedger = false) => {
   selectedFeeStudentId = Number(id);
   const student = selectedFeeStudent();
   if (!student) return;
+  studentLedgerPeriodFilter='current';
   $('studentFeeEntryDate').value = today();
   fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
@@ -422,7 +423,7 @@ window.runChargeInvoiceAction=(action,id)=>{
   if(action==='edit')return editStudentPayment(id);
   if(action==='delete')return deleteStudentPayment(id);
 };
-let studentLedgerPeriodFilter='all';
+let studentLedgerPeriodFilter='current';
 function ledgerPeriodFor(row){
   if(!row)return 'outside';
   const current=today().slice(0,7);
@@ -433,7 +434,9 @@ function applyStudentLedgerPeriodFilter(){
   const rows=[...$('studentLedgerRows').querySelectorAll('tr')];
   let visible=0;
   for(const row of rows){
-    const show=studentLedgerPeriodFilter==='all'||row.dataset.ledgerPeriod===studentLedgerPeriodFilter;
+    const show=studentLedgerPeriodFilter==='all'
+      ||row.dataset.ledgerPeriod===studentLedgerPeriodFilter
+      ||(studentLedgerPeriodFilter==='past-current'&&['past','current'].includes(row.dataset.ledgerPeriod));
     row.hidden=!show;
     if(show)visible++;
   }

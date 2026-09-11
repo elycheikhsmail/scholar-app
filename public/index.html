@@ -174,9 +174,10 @@
         <h3 class="table-title" id="studentLedgerTitle">المستحقات حسب الشهر</h3>
         <div class="ledger-period-tools">
           <div class="ledger-period-filters" role="group" aria-label="فلترة المستحقات حسب الفترة">
-            <button type="button" class="secondary active" data-ledger-period="all" aria-pressed="true">الكل</button>
+            <button type="button" class="secondary" data-ledger-period="all" aria-pressed="false">الكل</button>
             <button type="button" class="secondary" data-ledger-period="past" aria-pressed="false">الماضي</button>
-            <button type="button" class="secondary" data-ledger-period="current" aria-pressed="false">الجاري</button>
+            <button type="button" class="secondary" data-ledger-period="past-current" aria-pressed="false">الماضي والجاري</button>
+            <button type="button" class="secondary active" data-ledger-period="current" aria-pressed="true">الجاري</button>
             <button type="button" class="secondary" data-ledger-period="future" aria-pressed="false">القادم</button>
           </div>
           <p id="studentLedgerFilterCount" class="ledger-filter-count" role="status" aria-live="polite"></p>

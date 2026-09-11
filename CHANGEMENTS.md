@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.17.0 — 2026-09-11
+
+- Le filtre **الجاري** est désormais sélectionné automatiquement à chaque
+  ouverture du dossier financier d'un élève, afin de privilégier le travail du
+  mois en cours.
+- Ajout du filtre combiné **الماضي والجاري**, qui réunit les échéances passées
+  et courantes en un seul clic.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.16.0 — 2026-09-11
 
 - Le relevé des frais d'un élève propose maintenant quatre filtres immédiats :
