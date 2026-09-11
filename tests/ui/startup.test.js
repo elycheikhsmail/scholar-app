@@ -32,6 +32,7 @@ test('browser scripts support login, all sections, student fees and session rest
   const page = await browser.newPage();
   const errors = [];
   const salaryRequests = [];
+  const studentPaymentRequests = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('requestfailed', request => errors.push(request.url()));
   const publicDir = path.resolve(__dirname, '../../public');
@@ -43,6 +44,10 @@ test('browser scripts support login, all sections, student fees and session rest
     }
     if(/^\/api\/teacher-payments\/\d+$/.test(pathname)){
       salaryRequests.push({path:pathname,body:route.request().postDataJSON()});
+      return route.fulfill({json:{ok:true}});
+    }
+    if(pathname==='/api/student-payments'&&route.request().method()==='POST'){
+      studentPaymentRequests.push(route.request().postDataJSON());
       return route.fulfill({json:{ok:true}});
     }
     if (Object.hasOwn(responses, pathname)) return route.fulfill({ json: responses[pathname] });
@@ -257,21 +262,25 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#studentFeeEntries .fee-entry')).toHaveCount(10);
   const october = page.locator('#studentFeeEntries .fee-entry').filter({hasText:'أكتوبر'});
   await expect(october).toContainText('أكتوبر');
-  await expect(october.getByText('دفع جزء من المبلغ')).toBeVisible();
+  await expect(october).toContainText('لم يُسدَّد');
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
-  // A partial amount opens its own field, and must stay under the whole fee.
-  await expect(october.locator('.fee-entry-amount')).toBeHidden();
-  await october.getByText('دفع جزء من المبلغ').click();
-  await expect(october.locator('.fee-entry-amount')).toBeVisible();
-  await october.locator('[data-fee-amount]').fill('99999');
-  await expect(page.locator('#studentFeeEntrySummary')).toContainText('أكبر من صفر وأقل من');
+  // One amount is distributed over registration, compulsory June, then October.
+  await page.locator('#studentFeePaymentAmount').fill('999999');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('يتجاوز إجمالي المتبقي');
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
-  await october.locator('[data-fee-amount]').fill('4000');
-  await expect(page.locator('#studentFeeEntrySummary')).toContainText('4,000');
+  await page.locator('#studentFeePaymentAmount').fill('13200');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('رسوم التسجيل: 200');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('يونيو: 12,000');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('أكتوبر: 1,000');
+  await expect(page.locator('#studentFeeEntries .fee-entry').filter({hasText:'يونيو'})).toContainText('مسدَّد بالكامل');
+  await expect(october).toContainText('مسدَّد جزئياً');
+  await expect(october).toContainText('المتبقي بعدها: 11,000');
   await expect(page.locator('#saveStudentFees')).toBeEnabled();
-  await page.locator('#studentFeeEntries .fee-entry').nth(2).getByText('دفع المبلغ كاملا').click();
-  await expect(page.locator('#studentFeeEntrySummary')).toContainText('لم تُسدَّد بعد');
-  await page.locator('#resetStudentFees').click();
+  await page.locator('#saveStudentFees').click();
+  await expect.poll(()=>studentPaymentRequests.length).toBe(1);
+  assert.equal(studentPaymentRequests[0].amount,13200);
+  assert.equal(studentPaymentRequests[0].month,'رسوم التسجيل');
+  await expect(page.locator('#studentFeePaymentAmount')).toHaveValue('');
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
   // Each charge exposes its amounts and the invoices allocated to it without
   // leaving the unified fee form.

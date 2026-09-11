@@ -239,10 +239,11 @@ window.openStudentFees = (id, showLedger = false) => {
   const student = selectedFeeStudent();
   if (!student) return;
   studentLedgerPeriodFilter='current';
+  $('studentFeePaymentAmount').value='';
   $('studentFeeEntryDate').value = today();
   fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
-  showEditForm('student-fees','studentFeesForm','firstFeeChoice');
+  showEditForm('student-fees','studentFeesForm','studentFeePaymentAmount');
   $('studentAccountDetails').open = Boolean(showLedger);
   if(showLedger)requestAnimationFrame(()=>$('studentAccountDetails').scrollIntoView({block:'start'}));
 };
@@ -253,44 +254,36 @@ function fillStudentDiscountForm(student) {
   toggleDiscountFields();
 }
 
-// The fee form no longer asks what a student owes: the registration fee comes
-// from «إعدادات الرسوم» and the monthly fee from the level, so the form states
-// them and asks the one question left — what has the family paid?
-const FEE_CHOICES = [
-  { value: 'none', label: 'لم يدفع بعد' },
-  { value: 'full', label: 'دفع المبلغ كاملا' },
-  { value: 'partial', label: 'دفع جزء من المبلغ' }
-];
-// One line per charge: the registration fee, then every month the student is
-// enrolled in, with what the ledger has already settled on it.
+// The cashier enters one amount. The same oldest-first order used on the server
+// previews how it will settle registration, June and the remaining months.
 function studentFeeRows(student) {
   return ledgerOf(student).rows.map((row, index) => ({ index, month: row.month, amount: row.amount, paid: row.paid, remaining: row.remaining }));
+}
+function enteredStudentPaymentAmount(){
+  const value=Number(western($('studentFeePaymentAmount').value));
+  return Number.isFinite(value)&&value>0?round2(value):0;
+}
+function previewStudentPayment(student,amount=enteredStudentPaymentAmount()){
+  let left=amount;
+  return studentFeeRows(student).map(row=>{
+    const allocated=round2(Math.min(left,row.remaining));
+    left=round2(left-allocated);
+    return {...row,allocated,afterPaid:round2(row.paid+allocated),afterRemaining:round2(row.remaining-allocated)};
+  });
 }
 function feeEntryHtml(row) {
   const head = `<div class="fee-entry-head"><b>${esc(row.month)}</b><span>المستحق: ${money(row.amount)} أوقية</span>`
     + (row.month === 'يونيو' ? '<span class="status-partial">يُدفع عند التسجيل</span>' : '')
-    + (row.paid > 0 ? `<span class="status-partial">سبق تسديد ${money(row.paid)}</span>` : '') + '</div>';
-  const details = `<button type="button" class="secondary fee-details-button" data-charge-details="${row.index}" aria-label="عرض تفاصيل وفواتير ${esc(row.month)}">تفاصيل</button>`;
-  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<p class="status-exempt">بلا رسوم على هذا الشهر.</p>${details}</div>`;
-  const settled = row.remaining <= 0;
-  const selected = settled ? 'full' : row.paid > 0 ? 'partial' : 'none';
-  const choices = FEE_CHOICES.map((choice, position) => {
-    // A fee already settled, and the «لم يدفع بعد» of one partly settled, would
-    // both mean taking money back: that is a receipt to delete, not a choice here.
-    const disabled = settled || (choice.value === 'none' && row.paid > 0);
-    return `<label class="fee-choice${disabled ? ' fee-choice-locked' : ''}">`
-      + `<input type="radio" name="feeChoice${row.index}"${row.index === 0 && position === 0 ? ' id="firstFeeChoice"' : ''} value="${choice.value}"`
-      + `${choice.value === selected ? ' checked' : ''}${disabled ? ' disabled' : ''}>${esc(choice.label)}</label>`;
-  }).join('');
-  const amount = `<label class="fee-entry-amount${selected === 'partial' && !settled ? '' : ' hidden-field'}">المبلغ المدفوع من هذا الرسم`
-    + `<input type="number" data-fee-amount min="0.01" max="${round2(row.amount - 0.01)}" step="0.01"`
-    + ` value="${selected === 'partial' && !settled ? row.paid : ''}"${settled ? ' disabled' : ''}></label>`;
-  return `<div class="fee-entry${settled ? ' fee-entry-settled' : ''}" data-fee-entry="${row.index}">${head}`
-    + `<div class="fee-entry-choices" role="radiogroup" aria-label="حالة دفع ${esc(row.month)}">${choices}</div>`
-    + details
-    + amount
-    + (settled ? '<p class="status-paid">مسدَّد بالكامل. لتصحيحه احذف دفعته من كشف الحساب.</p>' : '')
     + '</div>';
+  const details = `<button type="button" class="secondary fee-details-button" data-charge-details="${row.index}" aria-label="عرض تفاصيل وفواتير ${esc(row.month)}">تفاصيل</button>`;
+  if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<div class="fee-entry-state status-exempt">بلا رسوم</div>${details}</div>`;
+  const settled=row.afterRemaining<=0;
+  const state=row.afterPaid<=0?'لم يُسدَّد':settled?'مسدَّد بالكامل':'مسدَّد جزئياً';
+  const stateClass=row.afterPaid<=0?'status-unpaid':settled?'status-paid':'status-partial';
+  const allocation=row.allocated>0?`<div class="fee-allocation-preview"><small>من الدفعة الجديدة</small><b>+ ${money(row.allocated)}</b><small>المتبقي بعدها: ${money(row.afterRemaining)}</small></div>`:'';
+  return `<div class="fee-entry${settled?' fee-entry-settled':''}${row.allocated>0?' fee-entry-previewed':''}" data-fee-entry="${row.index}">${head}`
+    + `<div class="fee-entry-state ${stateClass}"><b>${state}</b><small>المدفوع: ${money(row.afterPaid)} — المتبقي: ${money(row.afterRemaining)}</small></div>`
+    + allocation+details+'</div>';
 }
 function renderStudentFeeEntries() {
   const student = selectedFeeStudent();
@@ -301,99 +294,65 @@ function renderStudentFeeEntries() {
     + ` — الرسم الشهري لمستوى ${esc(student.className || '—')}: <b>${money(monthly)}</b> أوقية`
     + (discount > 0 ? ` — بعد الخصم: <b>${money(round2(monthly - discount))}</b> أوقية` : '')
     + `. رسم يونيو مستحق يوم التسجيل، وبقية الأشهر في اليوم الأول من شهرها. تُقرأ المبالغ من «إعدادات الرسوم» ولا تُدخَل هنا.`;
-  $('studentFeeEntries').innerHTML = studentFeeRows(student).map(feeEntryHtml).join('')
+  const ledger=ledgerOf(student);
+  $('studentFeeAmountLimit').textContent=`الحد الأقصى الممكن تسجيله: ${money(ledger.scheduledOutstanding)} أوقية`;
+  $('studentFeeEntries').innerHTML = previewStudentPayment(student).map(feeEntryHtml).join('')
     || '<p>لا توجد رسوم مستحقة على هذا الطالب.</p>';
   updateStudentFeeSummary();
-}
-// What the form says now, line by line: the total the charge should show, the
-// new money that implies, and the reason a line cannot be saved as entered.
-function readStudentFeeEntries() {
-  const student = selectedFeeStudent();
-  if (!student) return [];
-  return studentFeeRows(student).map(row => {
-    const box = $('studentFeeEntries').querySelector(`[data-fee-entry="${row.index}"]`);
-    const choice = box?.querySelector('input[type=radio]:checked')?.value || 'none';
-    if (!(row.amount > 0) || choice === 'none') return { ...row, choice, target: row.paid, delta: 0, error: '' };
-    if (choice === 'full') return { ...row, choice, target: row.amount, delta: round2(row.amount - row.paid), error: '' };
-    const typed = Number(western(box.querySelector('[data-fee-amount]').value));
-    if (!Number.isFinite(typed) || typed <= 0 || typed >= row.amount) {
-      return { ...row, choice, target: row.paid, delta: 0, error: `المبلغ الجزئي لـ«${row.month}» يجب أن يكون أكبر من صفر وأقل من ${money(row.amount)}.` };
-    }
-    if (typed < row.paid) return { ...row, choice, target: row.paid, delta: 0, error: `لا يمكن أن يقل المبلغ المدفوع لـ«${row.month}» عن ${money(row.paid)} المسدَّدة سابقًا؛ احذف دفعتها من كشف الحساب لتصحيحها.` };
-    return { ...row, choice, target: typed, delta: round2(typed - row.paid), error: '' };
-  });
-}
-// Payments settle the oldest open fee first, so a month marked paid over an
-// older unpaid one pays that older one instead. The form names them before it
-// saves, instead of letting the ledger surprise the reader afterwards.
-function skippedFeeMonths(entries) {
-  const lastPaid = entries.reduce((last, entry, index) => entry.delta > 0 ? index : last, -1);
-  return entries.slice(0, Math.max(lastPaid, 0)).filter(entry => entry.amount > 0 && entry.target < entry.amount).map(entry => entry.month);
 }
 function updateStudentFeeSummary() {
   const box = $('studentFeeEntrySummary'), save = $('saveStudentFees');
   if (!selectedFeeStudent()) { box.textContent = ''; box.className = 'fee-preview hidden'; return; }
-  const entries = readStudentFeeEntries();
-  const failed = entries.filter(entry => entry.error);
-  if (failed.length) {
+  const student=selectedFeeStudent(),amount=enteredStudentPaymentAmount(),ledger=ledgerOf(student);
+  const typed=$('studentFeePaymentAmount').value.trim();
+  if(typed&&amount<=0){
     box.className = 'fee-preview warn';
-    box.innerHTML = failed.map(entry => `<p>${esc(entry.error)}</p>`).join('');
+    box.textContent='أدخل مبلغاً صحيحاً أكبر من صفر.';
     save.disabled = true;
     return;
   }
-  const paying = entries.filter(entry => entry.delta > 0);
-  save.disabled = !paying.length;
-  if (!paying.length) {
-    box.className = 'fee-preview';
-    box.textContent = 'حدّد ما دفعه الطالب من كل رسم ثم سجّل الدفعات.';
+  if(amount>ledger.scheduledOutstanding){
+    box.className='fee-preview warn';
+    box.textContent=`المبلغ يتجاوز إجمالي المتبقي وهو ${money(ledger.scheduledOutstanding)} أوقية.`;
+    save.disabled=true;
     return;
   }
-  const total = round2(paying.reduce((sum, entry) => sum + entry.delta, 0));
-  const skipped = skippedFeeMonths(entries);
-  box.className = skipped.length ? 'fee-preview warn' : 'fee-preview';
-  box.innerHTML = '<div class="fee-preview-totals">'
-    + `<span><small>عدد الدفعات</small><b>${money(paying.length)}</b></span>`
-    + `<span><small>إجمالي ما سيُسجَّل</small><b>${money(total)} أوقية</b></span>`
-    + '</div><p>' + paying.map(entry => `${esc(entry.month)}: ${money(entry.delta)}`).join('، ') + '.</p>'
-    + (skipped.length ? `<p class="status-unpaid">تنبيه: ${esc(skipped.join('، '))} لم تُسدَّد بعد، وتُوزَّع الدفعات على أقدم رسم غير مسدَّد أولًا.</p>` : '');
-}
-$('studentFeeEntries').addEventListener('change', event => {
-  const box = event.target.closest('[data-fee-entry]');
-  if (box && event.target.matches('input[type=radio]')) {
-    const amount = box.querySelector('.fee-entry-amount');
-    amount.classList.toggle('hidden-field', event.target.value !== 'partial');
-    if (event.target.value === 'partial') amount.querySelector('[data-fee-amount]').focus();
+  save.disabled = !amount;
+  if (!amount) {
+    box.className = 'fee-preview';
+    box.textContent = 'أدخل المبلغ المدفوع، وسيظهر توزيعه على الرسوم تلقائياً هنا وفي القائمة.';
+    return;
   }
-  updateStudentFeeSummary();
-});
+  const allocations=previewStudentPayment(student,amount).filter(row=>row.allocated>0);
+  box.className='fee-preview';
+  box.innerHTML=`<div class="fee-preview-totals"><span><small>دفعة واحدة</small><b>${money(amount)} أوقية</b></span><span><small>عدد الرسوم المستفيدة</small><b>${money(allocations.length)}</b></span></div>`
+    +`<p>${allocations.map(row=>`${esc(row.month)}: ${money(row.allocated)}`).join('، ')}.</p>`;
+}
 $('studentFeeEntries').addEventListener('click', event => {
   const button = event.target.closest('[data-charge-details]');
   if(button)openStudentChargeDetails(Number(button.dataset.chargeDetails));
 });
-$('studentFeeEntries').addEventListener('input', event => { if (event.target.matches('[data-fee-amount]')) updateStudentFeeSummary(); });
-$('resetStudentFees').onclick = () => { $('studentFeeEntryDate').value = today(); renderStudentFeeEntries(); };
+$('studentFeePaymentAmount').addEventListener('input',()=>renderStudentFeeEntries());
+$('resetStudentFees').onclick = () => { $('studentFeeEntryDate').value = today(); $('studentFeePaymentAmount').value=''; renderStudentFeeEntries(); };
 $('studentFeesForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();
   if (!student) return;
-  const entries = readStudentFeeEntries();
-  const failed = entries.find(entry => entry.error);
-  if (failed) return toast(failed.error);
-  const paying = entries.filter(entry => entry.delta > 0);
-  if (!paying.length) return toast('لم تحدَّد أي دفعة جديدة لتسجيلها.');
+  const amount=enteredStudentPaymentAmount(),ledger=ledgerOf(student);
+  if(!amount)return toast('أدخل المبلغ المدفوع.');
+  if(amount>ledger.scheduledOutstanding)return toast(`المبلغ يتجاوز إجمالي المتبقي وهو ${money(ledger.scheduledOutstanding)} أوقية.`);
   const date = $('studentFeeEntryDate').value;
   if (!date) return toast('أدخل تاريخ الدفع.');
-  const skipped = skippedFeeMonths(entries);
-  if (skipped.length && !(await askConfirm(`رسوم ${skipped.join('، ')} لم تُسدَّد بعد، وتُوزَّع الدفعات على أقدم رسم غير مسدَّد أولًا، فقد تذهب المبالغ إليها. هل تريد المتابعة؟`))) return;
-  const total = round2(paying.reduce((sum, entry) => sum + entry.delta, 0));
+  const first=previewStudentPayment(student,amount).find(row=>row.allocated>0);
   const button = event.submitter;
   button.disabled = true;
   try {
-    await api('/student-payments/batch', {method:'POST',body:JSON.stringify({studentId:student.id,date,
-      entries:paying.map(entry => ({month:entry.month,amount:entry.delta}))})});
+    await api('/student-payments', {method:'POST',body:JSON.stringify({studentId:student.id,date,month:first.month,amount,notes:'دفعة موزعة تلقائيًا'})});
     await load(); renderFees(); renderPaymentHistory(); renderDashboard();
-    toast(`تم تسجيل ${money(paying.length)} دفعة بإجمالي ${money(total)} أوقية.`);
-  } catch(error) { toast(error.message); } finally { button.disabled = false; }
+    $('studentFeePaymentAmount').value='';
+    renderStudentFeeEntries();
+    toast(`تم تسجيل دفعة واحدة بقيمة ${money(amount)} أوقية وتوزيعها تلقائيًا.`);
+  } catch(error) { toast(error.message); } finally { updateStudentFeeSummary(); }
 };
 function openStudentChargeDetails(index){
   const student=selectedFeeStudent();

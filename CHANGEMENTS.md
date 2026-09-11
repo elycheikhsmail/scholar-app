@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.19.0 — 2026-09-11
+
+- La fiche financière reçoit désormais un montant global dans un seul champ et
+  le répartit automatiquement selon l'ordre comptable : inscription, juin,
+  puis les autres mois.
+- La liste complète des frais reste visible et indique pour chaque ligne son
+  état (**non payé**, **partiellement payé** ou **entièrement payé**), la part
+  de la nouvelle somme qui lui sera affectée et son solde après paiement.
+- Une prévisualisation récapitule la répartition avant validation. Une seule
+  saisie crée une seule facture, même lorsqu'elle couvre plusieurs échéances.
+- Le montant est refusé immédiatement s'il dépasse le solde annuel restant.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.18.0 — 2026-09-11
 
 - Les frais mensuels sont désormais payables d'avance et deviennent exigibles

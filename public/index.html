@@ -154,10 +154,13 @@
     <p id="studentFeeRates" class="hint-box"></p>
     <p id="studentPaidSummary" class="hint-box"></p>
     <form id="studentFeesForm" class="fee-entry-form">
-      <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
+      <div class="fee-payment-controls">
+        <label class="fee-entry-amount-total">المبلغ المدفوع<input id="studentFeePaymentAmount" type="number" min="0.01" step="0.01" inputmode="decimal" placeholder="أدخل المبلغ الإجمالي" required><small id="studentFeeAmountLimit"></small></label>
+        <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
+      </div>
       <div id="studentFeeEntries" class="fee-entries"></div>
       <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
-      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعات</button><button type="button" class="secondary" id="resetStudentFees">استعادة الحالة المحفوظة</button></div>
+      <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل الدفعة</button><button type="button" class="secondary" id="resetStudentFees">مسح المبلغ</button></div>
     </form>
     <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
     <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
