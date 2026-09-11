@@ -301,6 +301,10 @@ test('browser scripts support login, all sections, student fees and session rest
   // The paid-status list filters by period and payment state like the invoice table.
   const entryFilters=page.locator('#studentFeeEntryFilters');
   const visibleEntries=page.locator('#studentFeeEntries .fee-entry:visible');
+  // Periods follow the school-year timeline: June (payable at enrolment) still lies ahead.
+  await expect(page.locator('#studentFeeEntries .fee-entry').filter({hasText:'يونيو'})).toHaveAttribute('data-fee-period','future');
+  await expect(page.locator('#studentLedgerRows tr').filter({hasText:'يونيو'})).toHaveAttribute('data-ledger-period','future');
+  await expect(page.locator('#studentLedgerRows tr').filter({hasText:'يونيو'})).toContainText('قادمة');
   await expect(entryFilters.locator('[data-fee-period="all"]')).toHaveAttribute('aria-pressed','true');
   await expect(entryFilters.locator('[data-fee-status="all"]')).toHaveAttribute('aria-pressed','true');
   await entryFilters.locator('[data-fee-status="paid"]').click();

@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.21.1 — 2026-09-11
+
+- Les filtres de période (**الفترة**) du formulaire de frais et du tableau
+  **الفواتير**, ainsi que la colonne **الفترة** et le détail d'un frais, suivent
+  désormais la chronologie de l'année scolaire (octobre … juin de l'année
+  civile suivante) et non la date d'échéance : juin, exigible à l'inscription,
+  reste **قادمة** jusqu'à l'arrivée de juin. Le frais d'inscription garde sa
+  date d'échéance.
+- Technique : `ledgerPeriodMonthOf` dans `public/students.js` s'appuie sur
+  `monthDate` / `startYearOf` du moteur de frais.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.21.0 — 2026-09-11
 
 - Dans le formulaire de frais de l'élève (`#student-fees`), la liste des frais avec

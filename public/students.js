@@ -402,7 +402,7 @@ function openStudentChargeDetails(index){
   const payments=new Map(state.data.studentPayments.map(payment=>[Number(payment.id),payment]));
   $('studentChargeDetailsTitle').textContent=`تفاصيل ${row.month}`;
   $('studentChargeDetailsIdentity').textContent=`${student.name} — الرقم المدرسي: ${student.schoolNo}`;
-  const period=row.dueDate<today().slice(0,7)+'-01'?'سابقة':row.dueDate.slice(0,7)===today().slice(0,7)?'جارية':'قادمة';
+  const period={past:'سابقة',current:'جارية',future:'قادمة'}[ledgerPeriodFor(row)];
   const invoiceRows=row.allocations.map(allocation=>{
     const payment=payments.get(Number(allocation.paymentId));
     if(!payment)return '';
@@ -425,11 +425,18 @@ window.runChargeInvoiceAction=(action,id)=>{
   if(action==='delete')return deleteStudentPayment(id);
 };
 let studentLedgerPeriodFilter='current';
+// Period follows the school-year timeline (October … June of the next calendar
+// year), not the due date: June is payable at enrolment yet still lies ahead
+// until June arrives. Registration alone is placed on its due date.
+function ledgerPeriodMonthOf(row){
+  if(row.month===REGISTRATION||!MONTH_NUMBER[row.month])return String(row.dueDate||'').slice(0,7);
+  return monthDate(row.month,startYearOf(feeSettings().schoolYear),1).slice(0,7);
+}
 function ledgerPeriodFor(row){
   if(!row)return 'outside';
   const current=today().slice(0,7);
-  const dueMonth=row.dueDate.slice(0,7);
-  return dueMonth<current?'past':dueMonth===current?'current':'future';
+  const month=ledgerPeriodMonthOf(row);
+  return month<current?'past':month===current?'current':'future';
 }
 function applyStudentLedgerPeriodFilter(){
   const rows=[...$('studentLedgerRows').querySelectorAll('tr')];
