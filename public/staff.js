@@ -140,9 +140,21 @@ function renderTeachers(){
   updateSalaryHoursVisibility();
 }
 
+// La liste du formulaire de paie se filtre par le champ de recherche et marque
+// d'un ✓ les employés déjà soldés pour le mois choisi ; la sélection en cours
+// est conservée quand elle reste visible.
 function populateStaffSelects(){
+  const query=western($('salaryTeacherSearch').value||'').trim().toLowerCase();
+  const month=$('salaryMonth').value;
+  const previous=$('salaryTeacher').value;
+  const visible=state.data.teachers.filter(t=>!query||`${t.name} ${t.role} ${t.phone||''}`.toLowerCase().includes(query));
+  $('salaryTeacher').innerHTML=visible.map(t=>{
+    const st=month?teacherMonthState(t,month):null;
+    const settled=!!st&&st.due>0&&st.rem<=0;
+    return `<option value="${t.id}">${settled?'✓ ':''}${esc(t.name)} - ${esc(t.role)}</option>`;
+  }).join('');
+  if(visible.some(t=>String(t.id)===previous))$('salaryTeacher').value=previous;
   const options=state.data.teachers.map(t=>`<option value="${t.id}">${esc(t.name)} - ${esc(t.role)}</option>`).join('');
-  $('salaryTeacher').innerHTML=options;
   $('advanceTeacher').innerHTML=options;
   updateSalaryHint();
 }
@@ -178,8 +190,17 @@ window.removeTeacher=async id=>{
 const selectedSalaryTeacher=()=>state.data?.teachers.find(x=>Number(x.id)===Number($('salaryTeacher').value));
 
 $('salaryTeacher').onchange=()=>{updateSalaryHoursVisibility();updateSalaryHint()};
-$('salaryMonth').onchange=updateSalaryHint;
+$('salaryMonth').onchange=()=>{populateStaffSelects();updateSalaryHoursVisibility();updateSalaryHint()};
 $('salaryHours').oninput=updateSalaryHint;
+$('salaryTeacherSearch').oninput=debounce(()=>{populateStaffSelects();updateSalaryHoursVisibility();updateSalaryHint()},150);
+// Le montant est pré-rempli avec le reste du mois tant que le comptable ne l'a
+// pas saisi lui-même ; une saisie manuelle n'est plus écrasée.
+$('salaryAmount').oninput=()=>{$('salaryAmount').dataset.auto=$('salaryAmount').value?'0':'1'};
+function suggestSalaryAmount(remaining){
+  const field=$('salaryAmount');
+  if(field.dataset.auto==='0')return;
+  field.value=remaining>0?String(remaining):'';
+}
 
 // Le champ « heures » n'a de sens que pour un أستاذ.
 function updateSalaryHoursVisibility(){
@@ -197,6 +218,7 @@ function updateSalaryHint(){
   const due=salaryDue(t,month,enteredHours||null);
   const st=teacherMonthState(t,month);
   const remaining=Math.max(0,due-st.adv-st.paid);
+  suggestSalaryAmount(remaining);
   const tail=`السلف: ${money(st.adv)}. المتبقي قبل الدفعة: ${money(remaining)}.`;
   $('salaryDueInfo').textContent=roleNeedsFixed(t.role)
     ? `الراتب الثابت للشهر: ${money(due)}. ${tail}`
@@ -217,20 +239,33 @@ $('salaryForm').onsubmit=async e=>{
   const amount=Number($('salaryAmount').value)||0;
   if(amount<=0)return toast('أدخل المبلغ المدفوع.');
   // Une estimation nulle (heures non encore saisies) ne bloque pas la saisie.
-  if(due>0&&amount>available)return toast(`المتبقي المتاح هو ${money(available)}.`);
+  if(due>0&&available<=0){
+    // Mois déjà soldé : un versement supplémentaire (prime, rappel) reste possible après confirmation.
+    if(!(await askConfirm(`راتب ${t.name} لشهر ${month} مسدَّد بالكامل. هل تريد تسجيل دفعة إضافية؟`)))return;
+  }else if(due>0&&amount>available){
+    // Le reste disponible est placé dans le champ : plus besoin de le recopier.
+    $('salaryAmount').value=String(available);
+    $('salaryAmount').dataset.auto='0';
+    $('salaryAmount').focus();
+    return toast(`المتبقي المتاح هو ${money(available)} وقد وُضع في حقل المبلغ.`);
+  }
   try{
     await api('/teacher-payments',{method:'POST',body:JSON.stringify({
       teacherId:t.id,
       month,
       amount,
       date:$('salaryDate').value||today(),
+      notes:$('salaryNotes').value,
       hours,
       hourlyRate:rate,
       salaryDue:due
     })});
     await load();
+    const nextId=nextUnpaidTeacherId(t.id,month);
     resetSalaryDates();
+    $('salaryMonth').value=month;
     renderTeachers();
+    if(nextId){$('salaryTeacher').value=String(nextId);updateSalaryHoursVisibility();updateSalaryHint()}
     renderSalary();
     renderAdvances();
     renderDashboard();
@@ -238,6 +273,89 @@ $('salaryForm').onsubmit=async e=>{
   }catch(error){
     toast(error.message);
   }
+};
+
+// --- كشف رواتب الشهر ---------------------------------------------------------
+// Une ligne par employé pour le mois choisi : qui a été payé, qui reste, et les
+// totaux. Les boutons pré-remplissent les formulaires de paie et d'avance.
+
+let payrollStatusFilter='all';
+const PAYROLL_STATUS_LABELS={paid:'مسدَّد',partial:'جزئي',unpaid:'لم يُصرف',hours:'الساعات غير مدخلة',nodue:'بلا راتب محدد'};
+
+function payrollStatusOf(t,st){
+  if(st.due<=0&&st.paid<=0&&st.adv<=0)return t.role==='أستاذ'?'hours':'nodue';
+  if(st.rem<=0)return 'paid';
+  return st.paid>0||st.adv>0?'partial':'unpaid';
+}
+function monthlyPayroll(month){
+  return state.data.teachers.map(t=>{
+    const st=teacherMonthState(t,month);
+    return {teacher:t,...st,status:payrollStatusOf(t,st)};
+  });
+}
+function payrollFilterMatches(status){
+  if(payrollStatusFilter==='all')return true;
+  if(payrollStatusFilter==='unpaid')return status==='unpaid'||status==='hours';
+  return status===payrollStatusFilter;
+}
+function renderPayroll(){
+  if(!state.data)return;
+  const month=$('payrollMonth').value;
+  const rows=monthlyPayroll(month);
+  const totals=rows.reduce((a,r)=>({due:a.due+r.due,adv:a.adv+r.adv,paid:a.paid+r.paid,rem:a.rem+r.rem}),{due:0,adv:0,paid:0,rem:0});
+  const settled=rows.filter(r=>r.status==='paid').length;
+  $('payrollSummary').innerHTML=rows.length
+    ?`<span>الموظفون: ${money(rows.length)}</span><span>مسدَّد: ${money(settled)}</span><span>إجمالي الاستحقاق: ${money(totals.due)}</span><span>السلف: ${money(totals.adv)}</span><span>المدفوع: ${money(totals.paid)}</span><span class="${totals.rem>0?'overdue-soft':'status-paid'}">المتبقي: ${money(totals.rem)}</span>`
+    :'<span class="payroll-summary-empty">لا يوجد موظفون مسجلون.</span>';
+  const visible=rows.filter(r=>payrollFilterMatches(r.status));
+  $('payrollTable').innerHTML=visible.map(({teacher:t,due,adv,paid,rem,status})=>{
+    const actions=[];
+    if(status==='hours')actions.push(`<button class="btn-edit" onclick="prefillSalaryForm(${t.id},true)">أدخل الساعات</button>`);
+    else if(rem>0)actions.push(`<button class="btn-pay" onclick="prefillSalaryForm(${t.id})">صرف المتبقي</button>`);
+    actions.push(`<button class="btn-edit" onclick="prefillAdvanceForm(${t.id})">سلفة</button>`);
+    return `<tr data-payroll-status="${status}" data-teacher-id="${t.id}">
+      <td>${esc(t.name)}</td>
+      <td>${esc(t.role)}</td>
+      <td>${status==='hours'?'—':money(due)}</td>
+      <td>${money(adv)}</td>
+      <td>${money(paid)}</td>
+      <td class="${rem>0?'overdue-soft':'status-paid'}">${status==='hours'?'—':money(rem)}</td>
+      <td class="payroll-status ${status}">${PAYROLL_STATUS_LABELS[status]}</td>
+      <td class="actions">${actions.join('')}</td>
+    </tr>`;
+  }).join('')||`<tr><td colspan="8">${rows.length?'لا يوجد موظف بهذه الحالة لهذا الشهر.':'لا يوجد موظفون مسجلون.'}</td></tr>`;
+  syncFilterButtons('#payrollPanel [data-payroll-status]','payrollStatus',payrollStatusFilter);
+}
+$('payrollMonth').onchange=renderPayroll;
+$('payrollPanel').addEventListener('click',event=>{
+  const button=event.target.closest('[data-payroll-status]');
+  if(!button||!('payrollStatus' in button.dataset)||button.tagName!=='BUTTON')return;
+  payrollStatusFilter=button.dataset.payrollStatus;
+  renderPayroll();
+});
+// « صرف المتبقي » : le formulaire de paie reçoit l'employé, le mois du كشف, les
+// heures connues et le reste à payer, puis le curseur se place sur le montant.
+window.prefillSalaryForm=(teacherId,focusHours=false)=>{
+  const t=state.data.teachers.find(x=>Number(x.id)===Number(teacherId));
+  if(!t)return;
+  $('salaryTeacherSearch').value='';
+  $('salaryMonth').value=$('payrollMonth').value;
+  populateStaffSelects();
+  $('salaryTeacher').value=String(t.id);
+  $('salaryAmount').dataset.auto='1';
+  updateSalaryHoursVisibility();
+  if(t.role==='أستاذ')$('salaryHours').value=latestHours(t.id,$('salaryMonth').value)||'';
+  updateSalaryHint();
+  $('salaryForm').scrollIntoView({behavior:'smooth',block:'center'});
+  (focusHours&&t.role==='أستاذ'?$('salaryHours'):$('salaryAmount')).focus();
+};
+window.prefillAdvanceForm=teacherId=>{
+  const t=state.data.teachers.find(x=>Number(x.id)===Number(teacherId));
+  if(!t)return;
+  $('advanceTeacher').value=String(t.id);
+  $('advanceMonth').value=$('payrollMonth').value;
+  $('advanceForm').scrollIntoView({behavior:'smooth',block:'center'});
+  $('advanceAmount').focus();
 };
 
 // --- Tableau des versements de salaire ------------------------------------------
@@ -266,6 +384,7 @@ function renderSalary(){
     </tr>`;
   }).join('');
   $('salaryTable').innerHTML=rows||'<tr><td colspan="8">لا توجد دفعات رواتب.</td></tr>';
+  renderPayroll();
 }
 
 window.editSalaryPayment=id=>{
@@ -328,9 +447,23 @@ window.deleteSalaryPayment=async id=>{
 
 function resetSalaryDates(){
   $('salaryForm').reset();
+  $('salaryAmount').dataset.auto='1';
   $('salaryMonth').value=currentMonth();
   $('salaryDate').value=today();
   if(state.data)populateStaffSelects();
+}
+// Après un versement, la liste passe à l'employé suivant qui reste à payer pour
+// le mois, dans l'ordre de la liste : « payer tout le monde » s'enchaîne.
+function nextUnpaidTeacherId(afterId,month){
+  const list=state.data.teachers;
+  const start=list.findIndex(t=>Number(t.id)===Number(afterId));
+  for(let i=1;i<=list.length;i++){
+    const t=list[(start+i)%list.length];
+    if(Number(t.id)===Number(afterId))continue;
+    const st=teacherMonthState(t,month);
+    if(st.rem>0||(t.role==='أستاذ'&&st.due<=0&&st.paid<=0))return t.id;
+  }
+  return null;
 }
 
 // --- Avances ----------------------------------------------------------------
@@ -385,6 +518,7 @@ function renderAdvances(){
     </tr>`;
   }).join('');
   $('advanceTable').innerHTML=rows||'<tr><td colspan="6">لا توجد سلف.</td></tr>';
+  renderPayroll();
 }
 
 window.editAdvance=async id=>{

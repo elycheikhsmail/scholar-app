@@ -3,6 +3,24 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.26.0 — 2026-09-11
+
+- **كشف رواتب الشهر** en tête de **الموظفون والرواتب** : une ligne par employé
+  pour le mois choisi (الاستحقاق, السلف, المدفوع, المتبقي, الحالة), totaux du
+  mois, filtres الكل / لم يُصرف / جزئي / مسدَّد. Les boutons **صرف المتبقي**
+  (ou **أدخل الساعات** pour un أستاذ sans heures) et **سلفة** pré-remplissent
+  les formulaires correspondants.
+- Formulaire de paie : champ de recherche d'employé, montant pré-rempli avec le
+  reste du mois (une saisie manuelle n'est pas écrasée), champ **ملاحظات**,
+  ✓ devant les employés déjà soldés pour le mois, confirmation avant une
+  dépense supplémentaire sur un mois soldé, montant disponible placé
+  automatiquement quand la saisie le dépasse, et passage à l'employé suivant à
+  payer après chaque versement.
+- Technique : `monthlyPayroll`, `renderPayroll`, `prefillSalaryForm`,
+  `prefillAdvanceForm`, `nextUnpaidTeacherId` dans `public/staff.js` ;
+  `#payrollPanel` dans `public/index.html`.
+- Vérification : `npm run check` et `npm run test:ui` (scénario étendu).
+
 ## 1.25.1 — 2026-09-11
 
 - Formulaire employé : le champ **المادة** n'apparaît que lorsque la

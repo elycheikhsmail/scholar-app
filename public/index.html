@@ -243,10 +243,24 @@
     <label class="notes-field">ملاحظات<textarea id="teacherNotes"></textarea></label>
     <div class="form-actions"><button class="primary">حفظ الموظف</button><button type="button" class="secondary" id="cancelTeacher">إلغاء</button></div>
   </form></dialog>
+  <div class="panel" id="payrollPanel">
+    <div class="ledger-period-tools payroll-tools">
+      <label class="payroll-month">الشهر<select id="payrollMonth"></select></label>
+      <div class="ledger-period-filters" role="group" aria-label="تصفية كشف الرواتب حسب الحالة">
+        <button type="button" class="secondary active" data-payroll-status="all" aria-pressed="true">الكل</button>
+        <button type="button" class="secondary" data-payroll-status="unpaid" aria-pressed="false">لم يُصرف</button>
+        <button type="button" class="secondary" data-payroll-status="partial" aria-pressed="false">جزئي</button>
+        <button type="button" class="secondary" data-payroll-status="paid" aria-pressed="false">مسدَّد</button>
+      </div>
+    </div>
+    <p id="payrollSummary" class="totals-line" role="status" aria-live="polite"></p>
+    <h3 class="table-title" id="payrollTitle">كشف رواتب الشهر</h3>
+    <div class="table-scroll"><table aria-labelledby="payrollTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="payrollTable"></tbody></table></div>
+  </div>
   <div class="panel"><h3 class="table-title" id="teachersTableTitle">سجل الموظفين</h3><div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
-  <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form">
-    <select id="salaryTeacher" required></select><select id="salaryMonth" required></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date"><button class="primary">تسجيل دفعة</button>
+  <div class="panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" class="inline-form salary-form">
+    <input id="salaryTeacherSearch" type="search" placeholder="ابحث عن موظف بالاسم" aria-label="بحث عن موظف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>
   </form><div id="salaryDueInfo" class="hint-box"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3><div class="table-scroll"><table aria-labelledby="salaryTableTitle"><thead><tr><th>الموظف</th><th>الشهر</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody id="salaryTable"></tbody></table></div></div>
 
   <dialog id="salaryEditDialog" class="app-dialog payment-edit-dialog staff-payment-dialog" aria-labelledby="salaryEditTitle">

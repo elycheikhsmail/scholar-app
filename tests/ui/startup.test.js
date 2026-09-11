@@ -140,6 +140,24 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#teacherDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#teacherName')).toHaveValue('');
   await page.keyboard.press('Escape');
+  // The monthly payroll sheet lists every employee with the state of the month
+  // and pre-fills the payment form with the remaining amount.
+  await page.locator('#payrollMonth').selectOption('أكتوبر');
+  const payrollRow=page.locator('#payrollTable tr[data-teacher-id]');
+  await expect(payrollRow).toHaveCount(1);
+  await expect(payrollRow).toHaveAttribute('data-payroll-status','partial');
+  await expect(payrollRow).toContainText('2,000');
+  await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2,000');
+  await page.locator('#payrollPanel [data-payroll-status="paid"]').click();
+  await expect(page.locator('#payrollTable tr[data-teacher-id]')).toHaveCount(0);
+  await page.locator('#payrollPanel [data-payroll-status="all"]').click();
+  await payrollRow.getByText('صرف المتبقي').click();
+  await expect(page.locator('#salaryMonth')).toHaveValue('أكتوبر');
+  await expect(page.locator('#salaryAmount')).toHaveValue('2000');
+  await page.locator('#salaryTeacherSearch').fill('غير موجود');
+  await expect(page.locator('#salaryTeacher option')).toHaveCount(0);
+  await page.locator('#salaryTeacherSearch').fill('');
+  await expect(page.locator('#salaryTeacher option')).toHaveCount(1);
   await page.locator('#salaryTable .btn-edit').click();
   await expect(page.locator('#salaryEditDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#salaryEditIdentity')).toContainText('موظف تجريبي');

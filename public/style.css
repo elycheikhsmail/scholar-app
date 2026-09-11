@@ -326,3 +326,16 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .fee-entry p{margin:0;font-size:12px}
 @media(max-width:760px){.fee-payment-controls{grid-template-columns:1fr}.fee-entry-head{flex-basis:100%}}
 @media(max-width:700px){.fee-preview-totals span{flex-basis:100%}}
+
+/* كشف رواتب الشهر */
+.payroll-tools{align-items:end}
+.payroll-month{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px;width:200px}
+.payroll-month select{border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit}
+.payroll-status{font-weight:800;white-space:nowrap}
+.payroll-status.paid{color:var(--status-paid)}
+.payroll-status.partial{color:var(--status-partial)}
+.payroll-status.unpaid{color:var(--status-unpaid)}
+.payroll-status.hours,.payroll-status.nodue{color:var(--status-exempt)}
+.payroll-summary-empty{color:var(--text-muted)}
+.salary-form #salaryTeacherSearch{flex:1.2}
+.salary-form #salaryTeacher{flex:1.6}
