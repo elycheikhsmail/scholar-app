@@ -255,6 +255,7 @@ const selectedSalaryTeacher=()=>state.data?.teachers.find(x=>Number(x.id)===Numb
 $('salaryTeacher').onchange=()=>{updateSalaryHoursVisibility();updateSalaryHint()};
 $('salaryMonth').onchange=()=>{populateStaffSelects();updateSalaryHoursVisibility();updateSalaryHint()};
 $('salaryHours').oninput=updateSalaryHint;
+$('salaryForm').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();resetSalaryDates();updateSalaryHoursVisibility();updateSalaryHint()}});
 $('salaryTeacherSearch').oninput=debounce(()=>{populateStaffSelects();updateSalaryHoursVisibility();updateSalaryHint()},150);
 // Le montant est pré-rempli avec le reste du mois tant que le comptable ne l'a
 // pas saisi lui-même ; une saisie manuelle n'est plus écrasée.

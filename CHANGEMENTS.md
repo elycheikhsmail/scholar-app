@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.29.1 — 2026-09-11
+
+- Formulaire de paie : la touche `Esc` vide le formulaire et remet le mois et
+  la date du jour.
+- `PROPOSITIONS-UX-STAFF.md` : état d'avancement de chaque proposition.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.29.0 — 2026-09-11
 
 - سجل دفعات الرواتب et سجل السلف : filtres par employé, mois et plage de
