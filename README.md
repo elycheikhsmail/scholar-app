@@ -143,7 +143,7 @@ Le moteur de calcul est dans `public/fees.js`, partagé par l'interface et le se
 
 **Période d'inscription.** Un élève n'est facturé que des mois compris entre son mois d'inscription et son mois de départ. Un élève inscrit en février ne doit rien pour octobre à janvier ; ces mois apparaissent dans son relevé avec la mention « خارج فترة القيد ». Le champ **حالة الطالب** (نشط, منقطع, محوَّل, متخرج) et le champ **تاريخ المغادرة** arrêtent les frais mensuels : le mois du départ reste facturé, les suivants non. Un départ exige une date, et une date de départ exige un statut de départ.
 
-**Origine des frais.** Les frais ne sont plus saisis élève par élève : l'écran **الإعدادات** contient un bloc **إعدادات الرسوم** avec un frais d'inscription annuel unique pour l'école, et le tableau des niveaux fixe le frais mensuel de chaque classe, constant sur toute l'année. Chaque montant dû est relu depuis ces valeurs, donc corriger un tarif dans les réglages vaut immédiatement pour tous les élèves concernés, mois déjà facturés compris. Un niveau sans tarif retombe sur **الرسوم الشهرية الافتراضية**.
+**Origine des frais.** Les frais ne sont plus saisis élève par élève : l'écran **الإعدادات** s'ouvre sur l'onglet **الرسوم**, qui fixe un frais d'inscription annuel unique pour l'école, et l'onglet **الأقسام** fixe le frais mensuel de chaque niveau, constant sur toute l'année. Chaque montant dû est relu depuis ces valeurs, donc corriger un tarif dans les réglages vaut immédiatement pour tous les élèves concernés, mois déjà facturés compris. Un niveau sans tarif retombe sur **الرسوم الشهرية الافتراضية**.
 
 **Formulaire des frais de l'élève.** Le formulaire n'affiche plus de champ de tarif : il rappelle les frais lus dans les réglages, puis présente une ligne par montant dû — frais d'inscription, puis chaque mois d'inscription de l'élève — avec trois réponses : **لم يدفع بعد**, **دفع المبلغ كاملا**, **دفع جزء من المبلغ**. Le choix partiel ouvre un champ de montant, strictement supérieur à zéro et strictement inférieur au montant dû. L'enregistrement envoie `POST /api/student-payments/batch` : un reçu par montant dû, validés ensemble contre le solde. Un montant déjà soldé est verrouillé (se corrige en supprimant son reçu dans le relevé), et si un mois plus ancien reste impayé, le formulaire prévient que l'affectation FIFO servira d'abord ce mois-là.
 
@@ -192,7 +192,7 @@ public/students.js      Élèves, formulaire des frais et relevé individuel
 public/fees-ui.js       Tableau des frais, encaissements, exports et reçus
 public/staff.js         Personnel, salaires et avances
 public/reports.js       Dépenses, tableau de bord et rapports
-public/settings.js      Paramètres, classes et mode d'application
+public/settings.js      Onglets des réglages, frais, classes et mode
 public/exams.js         Examens, modèles et bulletins
 public/app.js           Démarrage et reprise de session
 public/style.css        Styles de l'application
@@ -229,7 +229,7 @@ Test du générateur et de la sauvegarde : `node tests/seed-demo.test.js`.
 
 ## Modes production et test
 
-Dans **الإعدادات → وضع استخدام التطبيق**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.
+Dans **الإعدادات → onglet وضع الاستخدام**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.
 
 - Production (mode initial) : `database/school-data.sqlite`. Les données déjà présentes restent à cet emplacement, y compris les éventuelles données de démonstration ajoutées auparavant.
 - Test : `database/testing/school-data.sqlite`, avec ses propres sauvegardes dans `database/testing/backups/`.

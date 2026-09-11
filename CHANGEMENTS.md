@@ -3,6 +3,21 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.11.0 — 2026-09-11
+
+- L'écran **الإعدادات** réunissait cinq formulaires sur une seule page à faire
+  défiler. Il présente désormais une liste d'onglets — **الرسوم**, **الأقسام**,
+  **المدرسة والدخول**, **وضع الاستخدام**, **البيانات** — et n'affiche qu'un
+  formulaire à la fois.
+- L'écran s'ouvre sur les frais. L'onglet consulté en dernier est retenu, et
+  retrouvé au retour sur l'écran.
+- Les onglets se parcourent aussi au clavier (flèches gauche/droite, Début,
+  Fin), et chaque panneau porte enfin un titre, y compris le formulaire de
+  l'école qui n'en avait pas.
+- Vérification : `npm run check`, `npm test` (34 tests) et `npm run test:ui`,
+  qui couvre désormais le changement d'onglet, la mémorisation du choix et la
+  navigation au clavier.
+
 ## 1.10.1 — 2026-09-11
 
 - **إعدادات الرسوم** ouvre désormais l'écran des réglages, suivi du tableau des

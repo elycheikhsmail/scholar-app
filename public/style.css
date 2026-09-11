@@ -236,6 +236,14 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .mode-badge{display:inline-block;margin:5px 10px;padding:4px 10px;border-radius:var(--radius-sm);background:var(--green-tint);color:#14532d;font-size:13px;font-weight:900;line-height:1.5;border:1px solid #86cda7}
 .mode-badge.test-mode{background:#fff3cd;color:#713f12;border:2px solid #c07810}
 #applicationModeForm{flex-wrap:wrap}#applicationModeForm label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+/* Onglets de l'écran « الإعدادات » : un formulaire à la fois. */
+.settings-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.settings-tab{border:1px solid var(--border-panel);background:#fff;color:var(--text-soft);border-radius:var(--radius-lg);padding:11px 18px;font:inherit;font-weight:800;cursor:pointer}
+.settings-tab:hover{border-color:var(--nav-settings);color:var(--nav-settings)}
+.settings-tab.active{background:var(--nav-settings);border-color:var(--nav-settings);color:#fff}
+.settings-tab:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+[data-settings-panel]:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+@media(max-width:700px){.settings-tabs{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}.settings-tab{white-space:nowrap}}
 
 /* The fee form: one line per due, three answers each, and what a save records. */
 .fee-preview{grid-column:1/-1;margin:0;padding:12px 14px;border:1px solid var(--border-panel);border-left:4px solid var(--nav-fees);border-radius:var(--radius-md);background:var(--surface-soft);color:var(--text-soft);font-size:13px;line-height:1.7}

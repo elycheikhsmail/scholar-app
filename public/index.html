@@ -317,9 +317,16 @@
   </div>
 </section>
 
-<section id="settings" class="section"><div class="section-head"><div><h2>الإعدادات</h2><p>بيانات المدرسة والدخول والرسوم والأقسام</p></div></div>
-  <div class="panel"><h3>إعدادات الرسوم</h3>
-    <p class="hint-box">تُحدَّد الرسوم هنا مرة واحدة: رسم تسجيل سنوي واحد للمدرسة، ورسم شهري ثابت لكل مستوى في جدول الأقسام أسفله. استمارة الطالب تقرأ هذه القيم ولا تطلب إدخالها، وأي تعديل هنا يسري على كل الطلاب.</p>
+<section id="settings" class="section"><div class="section-head"><div><h2>الإعدادات</h2><p>اختر ما تريد ضبطه من القائمة</p></div></div>
+  <nav class="settings-tabs" role="tablist" aria-label="أقسام الإعدادات">
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-fees" data-settings-tab="fees" aria-controls="settingsPanel-fees" aria-selected="false" tabindex="-1">الرسوم</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-departments" data-settings-tab="departments" aria-controls="settingsPanel-departments" aria-selected="false" tabindex="-1">الأقسام</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-school" data-settings-tab="school" aria-controls="settingsPanel-school" aria-selected="false" tabindex="-1">المدرسة والدخول</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-mode" data-settings-tab="mode" aria-controls="settingsPanel-mode" aria-selected="false" tabindex="-1">وضع الاستخدام</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-data" data-settings-tab="data" aria-controls="settingsPanel-data" aria-selected="false" tabindex="-1">البيانات</button>
+  </nav>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-fees" data-settings-panel="fees" aria-labelledby="settingsTab-fees" class="hidden panel"><h3>إعدادات الرسوم</h3>
+    <p class="hint-box">تُحدَّد الرسوم هنا مرة واحدة: رسم تسجيل سنوي واحد للمدرسة، ورسم شهري ثابت لكل مستوى يُضبط في تبويب «الأقسام». استمارة الطالب تقرأ هذه القيم ولا تطلب إدخالها، وأي تعديل هنا يسري على كل الطلاب.</p>
     <form id="feeSettingsForm" class="form-grid">
       <label>رسم التسجيل السنوي<input id="setRegistrationFee" type="number" min="0" step="0.01" required></label>
       <label>الرسوم الشهرية الافتراضية (لقسم بلا رسوم)<input id="setDefaultMonthlyFee" type="number" min="0" step="0.01" required></label>
@@ -327,9 +334,9 @@
     </form>
   </div>
 
-  <div class="panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
-  <div class="panel"><form id="settingsForm" class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
-  <div class="panel">
+  <div role="tabpanel" tabindex="0" id="settingsPanel-departments" data-settings-panel="departments" aria-labelledby="settingsTab-departments" class="hidden panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-school" data-settings-panel="school" aria-labelledby="settingsTab-school" class="hidden panel"><h3>بيانات المدرسة والدخول</h3><form id="settingsForm" class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-mode" data-settings-panel="mode" aria-labelledby="settingsTab-mode" class="hidden panel">
     <h3>وضع استخدام التطبيق</h3>
     <p>لكل وضع قاعدة بيانات ونسخ احتياطية مستقلة. البيانات الحالية محفوظة في وضع الإنتاج. يبدأ وضع التجريب بقاعدة جديدة دون نسخ الطلاب أو الحسابات.</p>
     <p>عند إنشاء قاعدة جديدة تُنسخ إعدادات المدرسة وبيانات الدخول الحالية فقط. التبديل مباشر دون كلمة مرور أو إعادة تسجيل الدخول، ويحتفظ كل وضع ببياناته عند العودة إليه.</p>
@@ -338,7 +345,7 @@
       <button class="primary">تبديل الوضع</button>
     </form>
   </div>
-  <div class="panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-data" data-settings-panel="data" aria-labelledby="settingsTab-data" class="hidden panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
 </section>
 </main></div>
 <footer class="app-footer">الإصدار <span id="appVersion">—</span></footer>

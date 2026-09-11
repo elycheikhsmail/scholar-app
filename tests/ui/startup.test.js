@@ -69,6 +69,18 @@ test('browser scripts support login, all sections, student fees and session rest
     await expect(page.locator(`#${section}`)).toHaveClass(/active-section/);
     await expect(page).toHaveURL(new RegExp(`#${section}$`));
   }
+  // The settings screen shows one form at a time, behind its own tab list.
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await expect(page.locator('[data-settings-tab]')).toHaveCount(5);
+  await expect(page.locator('[data-settings-panel]:visible')).toHaveCount(1);
+  await expect(page.locator('#setRegistrationFee')).toBeVisible();
+  await page.locator('[data-settings-tab="departments"]').click();
+  await expect(page.locator('#departmentsTable')).toBeVisible();
+  await expect(page.locator('#setRegistrationFee')).toBeHidden();
+  assert.equal(await page.evaluate(() => localStorage.getItem('settingsTab')), 'departments');
+  await page.locator('.settings-tab.active').press('ArrowLeft');
+  await expect(page.locator('#setSchoolName')).toBeVisible();
+  await page.locator('.nav-item[data-section="dashboard"]').click();
   await expect(page.locator('#sStudents')).toHaveText('1');
   await page.locator('.nav-item[data-section="students"]').click();
   await page.locator('#exportStudentsExcel').click();
