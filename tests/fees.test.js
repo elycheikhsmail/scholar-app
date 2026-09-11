@@ -26,13 +26,13 @@ test('charges only cover the months between enrolment and departure', () => {
   const school = withFees(5000, 10000);
   const midYear = enrolled({ registrationDate: '2027-02-10' });
   const months = dues.chargesFor(midYear, school).map(c => c.month);
-  assert.deepEqual(months, [dues.REGISTRATION, 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو']);
+  assert.deepEqual(months, [dues.REGISTRATION, 'يونيو', 'فبراير', 'مارس', 'أبريل', 'مايو']);
   // The old behaviour billed all nine months: 5000 + 9 * 10000.
   assert.equal(dues.ledgerFor(midYear, [], school).totalDue, 55000);
 
   const left = { ...midYear, leaveDate: '2027-04-03', status: 'منقطع' };
-  assert.deepEqual(dues.chargesFor(left, school).map(c => c.month), [dues.REGISTRATION, 'فبراير', 'مارس', 'أبريل']);
-  assert.equal(dues.ledgerFor(left, [], school).totalDue, 35000);
+  assert.deepEqual(dues.chargesFor(left, school).map(c => c.month), [dues.REGISTRATION, 'يونيو', 'فبراير', 'مارس', 'أبريل']);
+  assert.equal(dues.ledgerFor(left, [], school).totalDue, 45000);
 
   const early = enrolled({ registrationDate: '2026-09-01' });
   assert.equal(dues.chargesFor(early, withFees(0, 1000)).length, 1 + dues.MONTHS.length, 'enrolment before October covers the whole year');
@@ -42,38 +42,40 @@ test('current balance excludes future months while keeping them available for ad
   const school = withFees(3000, 10000);
   const student = enrolled({ registrationDate:'2026-09-01' });
   const september = dues.ledgerFor(student, [], { ...school, asOf:'2026-09-10' });
-  assert.equal(september.totalDue, 3000, 'before October only registration is currently due');
-  assert.equal(september.outstanding, 3000);
+  assert.equal(september.totalDue, 13000, 'registration and the final June fee are immediately due');
+  assert.equal(september.outstanding, 13000);
   assert.equal(september.scheduledOutstanding, 93000, 'the school-year schedule remains available for prepayment');
-  assert.deepEqual(september.accruedRows.map(row=>row.month), [dues.REGISTRATION]);
+  assert.deepEqual(september.accruedRows.map(row=>row.month), [dues.REGISTRATION,'يونيو']);
   assert.ok(september.byMonth.has('نوفمبر'), 'a future month can still be selected and paid');
 
   const november = dues.ledgerFor(student, [], { ...school, asOf:'2026-11-01' });
-  assert.deepEqual(november.accruedRows.map(row=>row.month), [dues.REGISTRATION,'أكتوبر','نوفمبر']);
-  assert.equal(november.totalDue, 23000, 'the whole current month counts even before its exact due day');
+  assert.deepEqual(november.accruedRows.map(row=>row.month), [dues.REGISTRATION,'يونيو','أكتوبر','نوفمبر']);
+  assert.equal(november.totalDue, 33000, 'June stays due alongside monthly fees due on their first day');
 
   const prepaid = dues.ledgerFor(student,[
     {id:1,month:dues.REGISTRATION,amount:3000,date:'2026-09-01'},
-    {id:2,month:'أكتوبر',amount:20000,date:'2026-09-10'}
+    {id:2,month:'أكتوبر',amount:30000,date:'2026-09-10'}
   ],{ ...school, asOf:'2026-09-10' });
   assert.equal(prepaid.outstanding,0);
-  assert.equal(prepaid.totalPaid,23000);
-  assert.equal(prepaid.scheduledOutstanding,70000);
+  assert.equal(prepaid.totalPaid,33000);
+  assert.equal(prepaid.scheduledOutstanding,60000);
   assert.equal(dues.outstandingThrough(prepaid,'نوفمبر'),0,'a future receipt includes only the balance through its selected month');
 });
 
-test('a future-month receipt reconciles its fee and stops at the selected month', () => {
+test('payments clear compulsory June before later monthly fees', () => {
   const student=enrolled({registrationDate:'2026-09-01'});
   const ledger=dues.ledgerFor(student,[
     {id:1,month:'أكتوبر',amount:13000,date:'2026-09-01'},
     {id:2,month:'نوفمبر',amount:3000,date:'2026-09-05'},
     {id:3,month:'نوفمبر',amount:3000,date:'2026-09-10'}
   ],withFees(0,13000,{asOf:'2026-09-10'}));
-  const november=ledger.byMonth.get('نوفمبر');
-  assert.deepEqual([november.amount,november.paid,november.remaining],[13000,6000,7000]);
+  const june=ledger.byMonth.get('يونيو'), october=ledger.byMonth.get('أكتوبر'), november=ledger.byMonth.get('نوفمبر');
+  assert.deepEqual([june.amount,june.paid,june.remaining],[13000,13000,0]);
+  assert.deepEqual([october.amount,october.paid,october.remaining],[13000,6000,7000]);
+  assert.deepEqual([november.amount,november.paid,november.remaining],[13000,0,13000]);
   assert.equal(ledger.outstanding,0,'future November is not current September debt');
-  assert.equal(dues.outstandingThrough(ledger,'نوفمبر'),7000,'its receipt still reports the unpaid balance through November');
-  assert.equal(dues.outstandingThrough(ledger,'ديسمبر'),20000,'later untouched months are included only when explicitly selected');
+  assert.equal(dues.outstandingThrough(ledger,'نوفمبر'),20000,'the balance through November includes October and November after June');
+  assert.equal(dues.outstandingThrough(ledger,'ديسمبر'),33000,'later untouched months are included only when explicitly selected');
 });
 
 test('a payment is a credit allocated to the oldest unpaid charge first', () => {
@@ -82,10 +84,10 @@ test('a payment is a credit allocated to the oldest unpaid charge first', () => 
   const ledger = dues.ledgerFor(student, [{ id: 1, month: 'أكتوبر', amount: 30000, date: '2026-10-05' }], withFees(0, 10000));
   assert.deepEqual(amounts(ledger).slice(0, 5), [
     [dues.REGISTRATION, 0, 0, 0],
+    ['يونيو', 10000, 10000, 0],
     ['أكتوبر', 10000, 10000, 0],
     ['نوفمبر', 10000, 10000, 0],
-    ['ديسمبر', 10000, 10000, 0],
-    ['يناير', 10000, 0, 10000]
+    ['ديسمبر', 10000, 0, 10000]
   ]);
   assert.equal(ledger.credit, 0);
   // Nine months at 10000; three are settled, so six remain.
@@ -108,17 +110,18 @@ test('allocation follows payment date then id, and records which invoice paid wh
     { id: 2, invoiceNo: 'F-000002', amount: 6000, date: '2026-11-02' },
     { id: 1, invoiceNo: 'F-000001', amount: 3000, date: '2026-10-02' }
   ], withFees(0, 5000));
-  const october = ledger.byMonth.get('أكتوبر'), november = ledger.byMonth.get('نوفمبر');
-  assert.deepEqual(october.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000001', 3000], ['F-000002', 2000]]);
-  assert.deepEqual(november.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000002', 4000]]);
-  assert.equal(november.remaining, 1000);
+  const june = ledger.byMonth.get('يونيو'), october = ledger.byMonth.get('أكتوبر'), november = ledger.byMonth.get('نوفمبر');
+  assert.deepEqual(june.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000001', 3000], ['F-000002', 2000]]);
+  assert.deepEqual(october.allocations.map(a => [a.invoiceNo, a.amount]), [['F-000002', 4000]]);
+  assert.equal(october.remaining, 1000);
+  assert.equal(november.paid, 0);
 });
 
 test('decimal amounts allocate without leaving rounding dust', () => {
   const student = enrolled({ registrationDate: '2026-10-01' });
   const ledger = dues.ledgerFor(student, [{ id: 1, amount: 99.99, date: '2026-10-01' }], withFees(0, 33.33));
-  assert.equal(ledger.byMonth.get('ديسمبر').remaining, 0);
-  assert.equal(ledger.byMonth.get('يناير').paid, 0);
+  assert.equal(ledger.byMonth.get('نوفمبر').remaining, 0);
+  assert.equal(ledger.byMonth.get('ديسمبر').paid, 0);
   assert.equal(ledger.credit, 0);
 });
 
@@ -208,16 +211,16 @@ test('a JSON database migrates to school fees, active status and no departure', 
   assert.equal(dues.ledgerFor(student, [], withFees(0, 7000)).totalDue, 6 * 7000, 'January enrolment is not billed for October to December');
 });
 
-test('each month falls due on the registration day within that month', () => {
+test('monthly fees fall due on day one and June is due at registration', () => {
   const student = enrolled({ registrationDate: '2027-02-10' });
   const dates = dues.chargesFor(student, withFees(0, 12000)).map(c => [c.month, c.dueDate]);
   assert.deepEqual(dates, [
-    [dues.REGISTRATION, '2027-02-10'], ['فبراير', '2027-02-10'], ['مارس', '2027-03-10'],
-    ['أبريل', '2027-04-10'], ['مايو', '2027-05-10'], ['يونيو', '2027-06-10']
+    [dues.REGISTRATION, '2027-02-10'], ['يونيو', '2027-02-10'], ['فبراير', '2027-02-01'],
+    ['مارس', '2027-03-01'], ['أبريل', '2027-04-01'], ['مايو', '2027-05-01']
   ]);
   const monthEnd = enrolled({ registrationDate: '2026-10-31' });
   const november = dues.chargesFor(monthEnd, withFees(0, 100)).find(c => c.month === 'نوفمبر');
-  assert.equal(november.dueDate, '2026-11-30', 'the day is clamped to the length of the month');
+  assert.equal(november.dueDate, '2026-11-01');
 });
 
 test('a discount reduces the monthly fee but never the registration fee', () => {
@@ -293,7 +296,9 @@ test('a visit records one receipt per fee, and the batch is capped as a whole', 
 
   const school = { ...settings, ...db.publicSettings(), departments: db.getDepartments() };
   const ledger = dues.ledgerFor(db.getData().students[0], db.getData().studentPayments, school);
-  assert.equal(ledger.byMonth.get('نوفمبر').paid, 400);
+  assert.equal(ledger.byMonth.get('يونيو').paid, 1000);
+  assert.equal(ledger.byMonth.get('أكتوبر').paid, 400);
+  assert.equal(ledger.byMonth.get('نوفمبر').paid, 0);
   assert.equal(ledger.outstanding, 200 + 9 * 1000 - 1600);
 
   // 7600 is left; a batch worth more is refused entirely, not partly written.

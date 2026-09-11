@@ -268,6 +268,7 @@ function studentFeeRows(student) {
 }
 function feeEntryHtml(row) {
   const head = `<div class="fee-entry-head"><b>${esc(row.month)}</b><span>المستحق: ${money(row.amount)} أوقية</span>`
+    + (row.month === 'يونيو' ? '<span class="status-partial">يُدفع عند التسجيل</span>' : '')
     + (row.paid > 0 ? `<span class="status-partial">سبق تسديد ${money(row.paid)}</span>` : '') + '</div>';
   const details = `<button type="button" class="secondary fee-details-button" data-charge-details="${row.index}" aria-label="عرض تفاصيل وفواتير ${esc(row.month)}">تفاصيل</button>`;
   if (!(row.amount > 0)) return `<div class="fee-entry" data-fee-entry="${row.index}">${head}<p class="status-exempt">بلا رسوم على هذا الشهر.</p>${details}</div>`;
@@ -299,7 +300,7 @@ function renderStudentFeeEntries() {
   $('studentFeeRates').innerHTML = `رسم التسجيل: <b>${money(registrationFeeFor(feeSettings()))}</b> أوقية`
     + ` — الرسم الشهري لمستوى ${esc(student.className || '—')}: <b>${money(monthly)}</b> أوقية`
     + (discount > 0 ? ` — بعد الخصم: <b>${money(round2(monthly - discount))}</b> أوقية` : '')
-    + `. تُقرأ هذه المبالغ من «إعدادات الرسوم» ولا تُدخَل هنا؛ لتغييرها عدّل الإعدادات أو رسوم القسم.`;
+    + `. رسم يونيو مستحق يوم التسجيل، وبقية الأشهر في اليوم الأول من شهرها. تُقرأ المبالغ من «إعدادات الرسوم» ولا تُدخَل هنا.`;
   $('studentFeeEntries').innerHTML = studentFeeRows(student).map(feeEntryHtml).join('')
     || '<p>لا توجد رسوم مستحقة على هذا الطالب.</p>';
   updateStudentFeeSummary();

@@ -204,9 +204,10 @@ test('browser scripts support login, all sections, student fees and session rest
     state.data=originalData;state.settings=originalSettings;state.departments=originalDepartments;
     return body;
   });
-  assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*6,000 أوقية/);
-  assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*7,000 أوقية/);
-  assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*7,000 أوقية/);
+  assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*0 أوقية/);
+  assert.match(receiptBody,/توزيع الدفعة الفعلي[\s\S]*أكتوبر: 3,000 أوقية/);
+  assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*13,000 أوقية/);
+  assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*20,000 أوقية/);
   // The filters, the chips and the rows all read from the one dues vocabulary.
   await expect(page.locator('#feeStatus option')).toHaveCount(5);
   await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');
@@ -254,11 +255,11 @@ test('browser scripts support login, all sections, student fees and session rest
   // The form states the school's fees and asks only what the family has paid.
   await expect(page.locator('#studentFeeRates')).toContainText('رسم التسجيل');
   await expect(page.locator('#studentFeeEntries .fee-entry')).toHaveCount(10);
-  await expect(page.locator('#studentFeeEntries .fee-entry').nth(1)).toContainText('أكتوبر');
-  await expect(page.locator('#studentFeeEntries .fee-entry').nth(1).getByText('دفع جزء من المبلغ')).toBeVisible();
+  const october = page.locator('#studentFeeEntries .fee-entry').filter({hasText:'أكتوبر'});
+  await expect(october).toContainText('أكتوبر');
+  await expect(october.getByText('دفع جزء من المبلغ')).toBeVisible();
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
   // A partial amount opens its own field, and must stay under the whole fee.
-  const october = page.locator('#studentFeeEntries .fee-entry').nth(1);
   await expect(october.locator('.fee-entry-amount')).toBeHidden();
   await october.getByText('دفع جزء من المبلغ').click();
   await expect(october.locator('.fee-entry-amount')).toBeVisible();

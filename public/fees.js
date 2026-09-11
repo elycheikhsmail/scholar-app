@@ -1,8 +1,8 @@
 // Student dues engine, shared by the browser UI and the server (db.js).
 //
 // Three rules it exists to enforce:
-//   1. A student's current balance only includes enrolment through the current
-//      month; later months stay scheduled so they can still be paid in advance.
+//   1. Registration immediately charges both the registration fee and June;
+//      every other monthly fee falls due on the first day of its own month.
 //   2. A payment is a credit on the account, allocated to the oldest unpaid
 //      charge first, so paying several months at once clears them all.
 //   3. Fees are not a property of the student. The school sets one registration
@@ -133,18 +133,16 @@ function departureIndex(student, startYear) {
   return index === null ? MONTHS.length - 1 : index;
 }
 
-// A monthly charge falls due on the student's registration day of that month.
-// The old one-month grace is gone: it existed to soften the months before
-// enrolment, which are no longer charged at all, and it pushed the first month
-// onto the same date as the second.
+// Monthly fees are prepaid: each falls due on the first day of its month.
+// June is the exception required at enrolment, alongside the registration fee.
 function dueDateFor(student, month, startYear) {
   const registrationDate = (student && student.registrationDate) || monthDate(MONTHS[0], startYear, 1);
-  if (month === REGISTRATION) return registrationDate;
-  return monthDate(month, startYear, parseInt(registrationDate.slice(8,10), 10) || 1);
+  if (month === REGISTRATION || month === 'يونيو') return registrationDate;
+  return monthDate(month, startYear, 1);
 }
 
-// Every scheduled charge for the school year, oldest first. `ledgerFor` decides
-// which of these rows have become currently due.
+// Settlement priority is registration, June, then the remaining school months.
+// This makes money received at enrolment clear the two compulsory charges first.
 function chargesFor(student, settings) {
   const startYear = startYearOf(settings && settings.schoolYear);
   const first = enrolmentIndex(student, startYear);
@@ -157,7 +155,13 @@ function chargesFor(student, settings) {
   }];
   const gross = monthlyFeeFor(student, settings);
   const discount = discountOn(student, gross);
+  charges.push({
+    month: 'يونيو',
+    dueDate: dueDateFor(student, 'يونيو', startYear),
+    gross, discount, amount: round2(gross - discount)
+  });
   for (let i = first; i <= last; i++) {
+    if (MONTHS[i] === 'يونيو') continue;
     charges.push({
       month: MONTHS[i],
       dueDate: dueDateFor(student, MONTHS[i], startYear),
@@ -226,7 +230,7 @@ function ledgerFor(student, payments, settings) {
 // a future month, its receipt extends the balance only as far as that selected
 // month, never through the rest of the school year.
 function outstandingThrough(ledger, month) {
-  const selectedIndex = month === REGISTRATION ? 0 : MONTHS.includes(month) ? MONTHS.indexOf(month) + 1 : -1;
+  const selectedIndex = ledger&&Array.isArray(ledger.rows)?ledger.rows.findIndex(row=>row.month===month):-1;
   const accruedIndex = (ledger && ledger.accruedRows ? ledger.accruedRows.length : 0) - 1;
   const end = Math.max(accruedIndex, selectedIndex);
   return round2((ledger && ledger.rows ? ledger.rows : []).slice(0,end + 1)

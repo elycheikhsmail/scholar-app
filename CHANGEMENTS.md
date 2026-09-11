@@ -3,6 +3,20 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.18.0 — 2026-09-11
+
+- Les frais mensuels sont désormais payables d'avance et deviennent exigibles
+  le premier jour de leur mois.
+- Les frais de juin deviennent exigibles intégralement dès l'inscription, en
+  plus des frais d'inscription. L'affectation des paiements suit donc l'ordre :
+  inscription, juin, puis les autres mois scolaires.
+- La fiche financière explique cette règle et identifie juin comme payable à
+  l'inscription. Les reçus indiquent aussi l'affectation réelle de chaque
+  versement afin que son usage reste transparent.
+- Tous les soldes, retards, limites de paiement, relevés, rapports et reçus
+  réutilisent cette règle centrale.
+- Vérification : `npm run check`, `npm test` et `npm run test:ui`.
+
 ## 1.17.0 — 2026-09-11
 
 - Le filtre **الجاري** est désormais sélectionné automatiquement à chaque

@@ -300,6 +300,9 @@ function printStudentReceipt(paymentId){
   const receiptOutstanding=outstandingThrough(ledger,payment.month);
   const futurePayment=charge&&!ledger.accruedRows.includes(charge);
   const credit=creditFor(student);
+  const allocations=ledger.rows.flatMap(row=>row.allocations
+    .filter(allocation=>Number(allocation.paymentId)===Number(payment.id))
+    .map(allocation=>`${esc(row.month)}: ${money(allocation.amount)} أوقية`));
   const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';
 
   const line=(label,value)=>`<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
@@ -321,6 +324,7 @@ function printStudentReceipt(paymentId){
     +line('إجمالي الرسوم',`${money(due)} أوقية`)
     +amountLine('amount','إجمالي المدفوع لهذه الرسوم',money(paidForCharge))
     +amountLine('amount','المدفوع الآن',money(payment.amount))
+    +line('توزيع الدفعة الفعلي',allocations.join('<br>')||'رصيد لصالح الطالب')
     +amountLine('remaining','المتبقي لهذه الرسوم',money(remaining))
     +amountLine('remaining',futurePayment?`إجمالي المتبقي حتى شهر ${esc(payment.month)}`:'إجمالي المتبقي على الطالب',money(receiptOutstanding))
     +(credit>0?amountLine('remaining','رصيد لصالح الطالب',money(credit)):'')
