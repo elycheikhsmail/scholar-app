@@ -26,6 +26,17 @@ async function confirmFutureMonth(month,what){
   if(months.indexOf(month)<=months.indexOf(currentMonth()))return true;
   return askConfirm(`شهر ${month} لم يحل بعد. هل تريد تسجيل ${what} له مسبقًا؟`);
 }
+// القاعدة: الراتب لا يُستحق إلا في اليوم الأخير من الشهر (`fees.js`). Le كشف et
+// le formulaire de paie s'y réfèrent ; avant cette date seule une سلفة est possible.
+const schoolStartYear=()=>startYearOf(state.settings?.schoolYear);
+const salaryDueDateOf=month=>salaryDueDate(month,schoolStartYear());
+const salaryEarned=(month,date=today())=>salaryEarnedOn(month,schoolStartYear(),date);
+function rejectUnearnedSalary(month,date,focusId){
+  if(salaryEarned(month,date))return false;
+  toast(`راتب شهر ${month} لا يُستحق إلا في اليوم الأخير من الشهر (${western(salaryDueDateOf(month))})؛ قبل ذلك سجّل سلفة.`);
+  $(focusId).focus();
+  return true;
+}
 const salaryReceiptNo=p=>p?.receiptNo||`S-${String(p?.id||0).padStart(6,'0')}`;
 const advanceReceiptNo=a=>a?.receiptNo||`A-${String(a?.id||0).padStart(6,'0')}`;
 
@@ -260,6 +271,7 @@ const selectedSalaryTeacher=()=>state.data?.teachers.find(x=>Number(x.id)===Numb
 
 $('salaryTeacher').onchange=()=>{updateSalaryHoursVisibility();updateSalaryHint()};
 $('salaryMonth').onchange=()=>{populateStaffSelects();updateSalaryHoursVisibility();updateSalaryHint()};
+$('salaryDate').onchange=updateSalaryHint;
 $('salaryHours').oninput=updateSalaryHint;
 $('salaryForm').addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();resetSalaryDates();updateSalaryHoursVisibility();updateSalaryHint()}});
 $('salaryTeacherSearch').oninput=debounce(()=>{populateStaffSelects();updateSalaryHoursVisibility();updateSalaryHint()},150);
@@ -293,7 +305,10 @@ function updateSalaryHint(){
   const advanceText=advances.length
     ?`تُخصم السلف: ${advances.map(a=>`${money(a.amount)} (${western(a.date)})`).join('، ')} = ${money(st.adv)}.`
     :'لا توجد سلف لهذا الشهر.';
-  const tail=`${advanceText} المتبقي قبل الدفعة: ${money(remaining)}.`;
+  const dueDate=western(salaryDueDateOf(month));
+  const earned=salaryEarned(month,$('salaryDate').value||today());
+  const dueText=earned?`تاريخ الاستحقاق: ${dueDate}.`:`⚠️ لم يحل موعد الاستحقاق بعد (اليوم الأخير من الشهر: ${dueDate})؛ قبل ذلك تُسجَّل سلفة.`;
+  const tail=`${advanceText} المتبقي قبل الدفعة: ${money(remaining)}. ${dueText}`;
   $('salaryDueInfo').textContent=roleNeedsFixed(t.role)
     ? `الراتب الثابت للشهر: ${money(due)}. ${tail}`
     : `الاستحقاق = الساعات × سعر الساعة = ${money(Number(enteredHours||0))} × ${money(t.hourlyRate)} = ${money(due)}. ${tail}`;
@@ -313,7 +328,7 @@ $('salaryForm').onsubmit=async e=>{
   const amount=Number($('salaryAmount').value)||0;
   if(amount<=0)return toast('أدخل المبلغ المدفوع.');
   // Une estimation nulle (heures non encore saisies) ne bloque pas la saisie.
-  if(!(await confirmFutureMonth(month,'دفعة راتب')))return;
+  if(rejectUnearnedSalary(month,$('salaryDate').value||today(),'salaryDate'))return;
   if(due>0&&available<=0){
     // Mois déjà soldé : un versement supplémentaire (prime, rappel) reste possible après confirmation.
     if(!(await askConfirm(`راتب ${t.name} لشهر ${month} مسدَّد بالكامل. هل تريد تسجيل دفعة إضافية؟`)))return;
@@ -355,22 +370,26 @@ $('salaryForm').onsubmit=async e=>{
 // totaux. Les boutons pré-remplissent les formulaires de paie et d'avance.
 
 let payrollStatusFilter='all';
-const PAYROLL_STATUS_LABELS={paid:'مسدَّد',partial:'جزئي',unpaid:'لم يُصرف',hours:'الساعات غير مدخلة',nodue:'بلا راتب محدد'};
+const PAYROLL_STATUS_LABELS={paid:'مسدَّد',partial:'جزئي',unpaid:'لم يُصرف',pending:'لم يحل بعد',hours:'الساعات غير مدخلة',nodue:'بلا راتب محدد'};
 
-function payrollStatusOf(t,st){
+// Un mois dont le dernier jour n'est pas passé n'est pas « لم يُصرف » mais
+// « لم يحل بعد » : rien n'est dû, seules les avances sont possibles.
+function payrollStatusOf(t,st,earned=true){
+  if(!earned&&!(st.due>0&&st.rem<=0))return 'pending';
   if(st.due<=0&&st.paid<=0&&st.adv<=0)return t.role==='أستاذ'?'hours':'nodue';
   if(st.rem<=0)return 'paid';
   return st.paid>0||st.adv>0?'partial':'unpaid';
 }
 function monthlyPayroll(month){
+  const earned=salaryEarned(month);
   return activeTeachers().map(t=>{
     const st=teacherMonthState(t,month);
-    return {teacher:t,...st,status:payrollStatusOf(t,st)};
+    return {teacher:t,...st,status:payrollStatusOf(t,st,earned)};
   });
 }
 function payrollFilterMatches(status){
   if(payrollStatusFilter==='all')return true;
-  if(payrollStatusFilter==='unpaid')return status==='unpaid'||status==='hours';
+  if(payrollStatusFilter==='unpaid')return status==='unpaid'||status==='hours'||status==='pending';
   return status===payrollStatusFilter;
 }
 function renderPayroll(){
@@ -379,13 +398,15 @@ function renderPayroll(){
   const rows=monthlyPayroll(month);
   const totals=rows.reduce((a,r)=>({due:a.due+r.due,adv:a.adv+r.adv,paid:a.paid+r.paid,rem:a.rem+r.rem}),{due:0,adv:0,paid:0,rem:0});
   const settled=rows.filter(r=>r.status==='paid').length;
+  const dueNote=salaryEarned(month)?'':`<span class="payroll-pending-note">⚠️ لم يحل موعد الاستحقاق بعد: ${western(salaryDueDateOf(month))}</span>`;
   $('payrollSummary').innerHTML=rows.length
-    ?`<span>الموظفون: ${money(rows.length)}</span><span>مسدَّد: ${money(settled)}</span><span>إجمالي الاستحقاق: ${money(totals.due)}</span><span>السلف: ${money(totals.adv)}</span><span>المدفوع: ${money(totals.paid)}</span><span class="${totals.rem>0?'overdue-soft':'status-paid'}">المتبقي: ${money(totals.rem)}</span>`
+    ?`${dueNote}<span>الموظفون: ${money(rows.length)}</span><span>مسدَّد: ${money(settled)}</span><span>إجمالي الاستحقاق: ${money(totals.due)}</span><span>السلف: ${money(totals.adv)}</span><span>المدفوع: ${money(totals.paid)}</span><span class="${totals.rem>0?'overdue-soft':'status-paid'}">المتبقي: ${money(totals.rem)}</span>`
     :'<span class="payroll-summary-empty">لا يوجد موظفون مسجلون.</span>';
   const visible=rows.filter(r=>payrollFilterMatches(r.status));
   $('payrollTable').innerHTML=visible.map(({teacher:t,due,adv,paid,rem,status})=>{
     const actions=[];
-    if(status==='hours')actions.push(`<button class="btn-edit" onclick="prefillSalaryForm(${t.id},true)">أدخل الساعات</button>`);
+    if(status==='pending');// الراتب لم يُستحق بعد : لا صرف قبل اليوم الأخير من الشهر.
+    else if(status==='hours')actions.push(`<button class="btn-edit" onclick="prefillSalaryForm(${t.id},true)">أدخل الساعات</button>`);
     else if(rem>0)actions.push(`<button class="btn-pay" onclick="prefillSalaryForm(${t.id})">صرف المتبقي</button>`);
     actions.push(`<button class="btn-edit" onclick="prefillAdvanceForm(${t.id})">سلفة</button>`);
     return `<tr data-payroll-status="${status}" data-teacher-id="${t.id}">
@@ -593,6 +614,7 @@ $('salaryEditForm').onsubmit=async event=>{
   const hours=fixed?0:Number($('salaryEditHours').value)||0;
   const hourlyRate=fixed?0:Number(p.hourlyRate||t.hourlyRate||0);
   const salaryDue=fixed?Number(t.fixedSalary||p.salaryDue||0):hours*hourlyRate;
+  if(rejectUnearnedSalary($('salaryEditMonth').value,$('salaryEditDate').value||p.date,'salaryEditDate'))return;
   try{
     await api('/verify-password',{method:'POST',body:JSON.stringify({password:western($('salaryEditPassword').value)})});
     await api(`/teacher-payments/${id}`,{method:'PUT',body:JSON.stringify({

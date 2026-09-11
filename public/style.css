@@ -340,6 +340,8 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .payroll-status.partial{color:var(--status-partial)}
 .payroll-status.unpaid{color:var(--status-unpaid)}
 .payroll-status.hours,.payroll-status.nodue{color:var(--status-exempt)}
+.payroll-status.pending{color:var(--status-partial)}
+.payroll-pending-note{flex-basis:100%;color:var(--status-partial)}
 .payroll-summary-empty{color:var(--text-muted)}
 .salary-form #salaryTeacherSearch{flex:1.2}
 .salary-form #salaryTeacher{flex:1.6}

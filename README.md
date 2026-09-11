@@ -9,7 +9,9 @@ L'application permet de gérer les élèves, les frais scolaires, les employés,
 - Tableau de bord avec les indicateurs financiers et scolaires.
 - Gestion des élèves et de leurs informations administratives.
 - Suivi des frais d'inscription et des paiements mensuels.
-- Gestion des employés, des salaires et des avances.
+- Gestion des employés, des salaires et des avances. Règle : le salaire d'un
+  mois n'est dû qu'à son dernier jour ; avant cette date seule une avance
+  (سلفة) peut être versée, le كشف du mois affiche « لم يحل بعد ».
 - Enregistrement et suivi des dépenses.
 - Gestion des examens, des matières, des coefficients et des résultats.
 - Règles personnalisables pour les appréciations et les décisions.

@@ -12,7 +12,7 @@ test('browser scripts support login, all sections, student fees and session rest
   db.init(directory);
   db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر' });
   const teacher=db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000 });
-  db.addTeacherPayment({ teacherId:teacher.id, month:'أكتوبر', amount:3000, date:'2026-09-10', salaryDue:5000 });
+  db.addTeacherPayment({ teacherId:teacher.id, month:'أكتوبر', amount:3000, date:'2026-10-31', salaryDue:5000 });
   const settings = { ...db.publicSettings(), applicationMode: 'production', version:require('../../package.json').version };
   const responses = {
     '/api/mode': { mode: 'production' },
@@ -130,6 +130,9 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.match(workbookBytes.toString(),/xl\/worksheets\/sheet1\.xml/);
   assert.match(workbookBytes.toString(),/طالب تجريبي/);
   assert.ok(!workbookBytes.toString().includes('ولي الأمر'),'العمود غير المحدد لا يُصدَّر');
+  // Salaries are earned on the last day of the month: the browser clock is
+  // pinned to 31 October so the payroll assertions do not depend on today.
+  await page.clock.setFixedTime(new Date('2026-10-31T10:00:00'));
   await page.locator('.nav-item[data-section="staff"]').click();
   // The staff page shows one screen at a time: payroll sheet first, then the
   // registry, salaries and advances behind tabs; the last opened tab is kept.
@@ -155,7 +158,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.keyboard.press('Escape');
   // The registry filters by name, role and status; active employees show by default.
   await expect(page.locator('#teacherCount')).toContainText('عدد الموظفين المعروضين: 1 من 1');
-  await expect(page.locator('#teachersTable')).toContainText('أكتوبر — 2026-09-10');
+  await expect(page.locator('#teachersTable')).toContainText('أكتوبر — 2026-10-31');
   await page.locator('#teacherStatusFilter').selectOption('stopped');
   await expect(page.locator('#teachersTable')).toContainText('لا يوجد موظف مطابق للتصفية.');
   await page.locator('#teacherStatusFilter').selectOption('active');
@@ -165,6 +168,11 @@ test('browser scripts support login, all sections, student fees and session rest
   // The monthly payroll sheet lists every employee with the state of the month
   // and pre-fills the payment form with the remaining amount.
   await page.locator('[data-staff-tab="payroll"]').click();
+  // A month whose last day has not come is « لم يحل بعد »: no salary button.
+  await page.locator('#payrollMonth').selectOption('نوفمبر');
+  await expect(page.locator('#payrollTable tr[data-teacher-id]')).toHaveAttribute('data-payroll-status','pending');
+  await expect(page.locator('#payrollTable tr[data-teacher-id] .btn-pay')).toHaveCount(0);
+  await expect(page.locator('#payrollSummary')).toContainText('لم يحل موعد الاستحقاق بعد: 2026-11-30');
   await page.locator('#payrollMonth').selectOption('أكتوبر');
   const payrollRow=page.locator('#payrollTable tr[data-teacher-id]');
   await expect(payrollRow).toHaveCount(1);
@@ -202,7 +210,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#salaryLogMonth').selectOption('نوفمبر');
   await expect(page.locator('#salaryTable')).toContainText('لا توجد دفعات مطابقة للتصفية.');
   await page.locator('#salaryLogMonth').selectOption('');
-  await page.locator('#salaryLogFrom').fill('2026-09-11');
+  await page.locator('#salaryLogFrom').fill('2026-11-01');
   await expect(page.locator('#salaryLogTotals')).toContainText('عدد الدفعات المعروضة: 0');
   await page.locator('#salaryLogFrom').fill('');
   await expect(page.locator('#salaryTable tr')).toHaveCount(1);
@@ -220,7 +228,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#salaryEditDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#salaryEditIdentity')).toContainText('موظف تجريبي');
   await expect(page.locator('#salaryEditAmount')).toHaveValue('3000');
-  await expect(page.locator('#salaryEditDate')).toHaveValue('2026-09-10');
+  await expect(page.locator('#salaryEditDate')).toHaveValue('2026-10-31');
   await expect(page.locator('#salaryEditPassword')).toHaveAttribute('type','password');
   await expect(page.locator('#salaryEditPassword')).toHaveValue('');
   await expect(page.locator('#salaryEditHoursWrap')).toBeHidden();
@@ -229,10 +237,11 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#salaryEditPassword').fill('secret');
   await page.locator('#salaryEditForm button.primary').click();
   await expect(page.locator('#salaryEditDialog')).not.toHaveAttribute('open','');
+  await page.clock.setSystemTime(new Date());
   assert.deepEqual(salaryRequests,[
     {path:'/api/verify-password',body:{password:'secret'}},
     {path:`/api/teacher-payments/${teacher.id}`,body:{
-      month:'أكتوبر',amount:'3500',date:'2026-09-10',notes:'',hours:0,hourlyRate:0,salaryDue:5000
+      month:'أكتوبر',amount:'3500',date:'2026-10-31',notes:'',hours:0,hourlyRate:0,salaryDue:5000
     }}
   ]);
   await page.locator('.nav-item[data-section="students"]').click();

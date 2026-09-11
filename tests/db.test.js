@@ -29,7 +29,7 @@ test('creates SQLite and persists CRUD, linked payments, staff, and nested exams
   db.updateStudent(s.id, { ...student, name: 'اسم معدل' });
   db.addStudentPayment({ studentId: s.id, amount: 200, month: 'أكتوبر' });
   const teacher = db.addTeacher({ name: 'مدرس' });
-  db.addTeacherPayment({ teacherId: teacher.id, amount: 50, month: 'أكتوبر' });
+  db.addTeacherPayment({ teacherId: teacher.id, amount: 50, month: 'أكتوبر', date: '2026-10-31' });
   db.addTeacherAdvance({ teacherId: teacher.id, amount: 10, month: 'أكتوبر' });
   db.addExpense({ category: 'كتب', amount: 25 });
   db.saveExamSettings({ subjectTemplates: [{ department: '6AF', subjects: [{ id: 'ar', name: 'عربية' }] }] });
@@ -77,9 +77,9 @@ test('invoice numbers are never reused after a receipt is deleted or a restart',
   assert.match(third.time, /^\d{2}:\d{2}$/, 'receipts record the entry time');
   // Salary and advance receipts carry their own series.
   const teacher = db.addTeacher({ name: 'م', role: 'معلم', fixedSalary: 5000 });
-  const salary = db.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, salaryDue: 5000 });
+  const salary = db.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, salaryDue: 5000, date: '2026-10-31' });
   db.deleteTeacherPayment(salary.id);
-  const salaryAgain = db.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, salaryDue: 5000 });
+  const salaryAgain = db.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, salaryDue: 5000, date: '2026-10-31' });
   assert.equal(salary.receiptNo, 'S-000001'); assert.equal(salaryAgain.receiptNo, 'S-000002');
   assert.match(salaryAgain.time, /^\d{2}:\d{2}$/);
   assert.equal(db.addTeacherAdvance({ teacherId: teacher.id, month: 'أكتوبر', amount: 500, salaryDue: 5000 }).receiptNo, 'A-000001');
@@ -91,6 +91,14 @@ test('invoice numbers are never reused after a receipt is deleted or a restart',
   assert.equal(db.updateTeacher(teacher.id, { name: 'م', role: 'معلم', status: 'active', endDate: '2026-12-31' }).endDate, '', 'an active employee has no end date');
   assert.equal(db.getData().teacherPayments.filter(p => p.teacherId === teacher.id).length, 1, 'records survive status changes');
   assert.match(third.date, /^\d{4}-\d{2}-\d{2}$/, 'the date stays comparable as text');
+  // Rule: a salary is earned only on the last day of its month; earlier dates
+  // are refused for new and edited payments, while advances stay possible.
+  assert.throws(() => db.addTeacherPayment({ teacherId: teacher.id, month: 'نوفمبر', amount: 100, salaryDue: 5000, date: '2026-11-29' }), /اليوم الأخير من الشهر \(2026-11-30\)/);
+  const november = db.addTeacherPayment({ teacherId: teacher.id, month: 'نوفمبر', amount: 100, salaryDue: 5000, date: '2026-11-30' });
+  assert.throws(() => db.updateTeacherPayment(november.id, { month: 'نوفمبر', amount: 100, date: '2026-11-15' }), /اليوم الأخير من الشهر/);
+  assert.throws(() => db.updateTeacherPayment(november.id, { month: 'ديسمبر', amount: 100, date: '2026-11-30' }), /2026-12-31/);
+  assert.equal(db.updateTeacherPayment(november.id, { month: 'نوفمبر', amount: 100, date: '2026-12-02' }).date, '2026-12-02');
+  assert.equal(db.addTeacherAdvance({ teacherId: teacher.id, month: 'ديسمبر', amount: 300, salaryDue: 5000, date: '2026-12-01' }).month, 'ديسمبر');
 });
 
 test('databases without an invoice sequence resume after the highest number issued', () => {

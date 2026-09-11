@@ -81,6 +81,14 @@ function monthDate(month, startYear, day = 1) {
   return `${year}-${String(mn).padStart(2,'0')}-${String(safeDay).padStart(2,'0')}`;
 }
 
+// Salary rule: an employee earns the month's salary only on its last day. Before
+// that date nothing is due and only an advance (سلفة) may be handed out; the
+// payment date, not the day of entry, is what the rule is checked against.
+function salaryDueDate(month, startYear) { return monthDate(month, startYear, 31); }
+function salaryEarnedOn(month, startYear, dateStr) {
+  return String(dateStr || '') >= salaryDueDate(month, startYear);
+}
+
 // Which school month a calendar date falls in, clamped to the year's own range:
 // anything before October counts as the first month, anything after June the last.
 function monthIndexOf(dateStr, startYear) {
@@ -242,7 +250,7 @@ function outstandingThrough(ledger, month) {
 return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDENT_STATUSES,
   DISCOUNT_TYPES, DISCOUNT_LABELS,
   FEE_STATUS_LABELS, FEE_STATUS_CLASSES, FEE_FILTERS, feeStatusKey, feeStatusOf,
-  round2, startYearOf, monthDate, monthIndexOf,
+  round2, startYearOf, monthDate, monthIndexOf, salaryDueDate, salaryEarnedOn,
   registrationFeeFor, departmentFeeOf, monthlyFeeFor, discountOn,
   enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor, outstandingThrough };
 });

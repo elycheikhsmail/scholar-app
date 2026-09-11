@@ -3,6 +3,22 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.31.0 — 2026-09-11
+
+- Règle métier : le salaire d'un mois n'est dû qu'à son dernier jour. Une
+  dépense de salaire datée avant cette date est refusée (nouvelle dépense et
+  modification) avec la date d'échéance dans le message ; les avances (سلف)
+  restent possibles à tout moment.
+- كشف رواتب الشهر : un mois dont le dernier jour n'est pas passé affiche
+  « لم يحل بعد » avec la date d'échéance, sans bouton « صرف المتبقي » (le
+  bouton « سلفة » reste) ; le formulaire de paie rappelle l'échéance et
+  avertit quand la date saisie la précède.
+- Technique : `salaryDueDate()` / `salaryEarnedOn()` dans `public/fees.js`,
+  contrôle serveur dans `db.js`, données de démonstration datées au dernier
+  jour du mois.
+- Vérification : `npm test` et `npm run test:ui` (horloge du navigateur fixée
+  au 31 octobre pour le كشف).
+
 ## 1.30.0 — 2026-09-11
 
 - Écran « الموظفون والرواتب » : les quatre blocs (كشف رواتب الشهر, سجل

@@ -696,10 +696,17 @@ function updateTeacher(id,t){
   save();return teacher;
 }
 function deleteTeacher(id){const n=Number(id);data.teachers=data.teachers.filter(x=>Number(x.id)!==n);data.teacherPayments=data.teacherPayments.filter(x=>Number(x.teacherId)!==n);data.teacherAdvances=data.teacherAdvances.filter(x=>Number(x.teacherId)!==n);save();}
+// القاعدة: الراتب لا يُستحق إلا في اليوم الأخير من الشهر؛ قبله تُسجَّل سلفة فقط.
+function assertSalaryEarned(month,date){
+  const dueDate=dues.salaryDueDate(month,dues.startYearOf(data.settings.schoolYear));
+  if(!dues.salaryEarnedOn(month,dues.startYearOf(data.settings.schoolYear),date))throw new Error(`راتب شهر ${month} لا يُستحق إلا في اليوم الأخير من الشهر (${dueDate})؛ قبل ذلك تُسجَّل سلفة.`);
+}
 function addTeacherPayment(p){
   const teacher=data.teachers.find(x=>Number(x.id)===Number(p.teacherId));if(!teacher)throw new Error('الموظف غير موجود.');
   const amount=Number(p.amount)||0;if(!clean(p.month)||amount<=0)throw new Error('بيانات الراتب غير صحيحة.');
-  const payment={id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month:clean(p.month),amount,date:clean(p.date)||new Date().toISOString().slice(0,10),time:currentTime(),notes:clean(p.notes),hours:Math.max(0,Number(p.hours)||0),hourlyRate:Math.max(0,Number(p.hourlyRate)||0),salaryDue:Math.max(0,Number(p.salaryDue)||0)};
+  const date=clean(p.date)||new Date().toISOString().slice(0,10);
+  assertSalaryEarned(clean(p.month),date);
+  const payment={id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month:clean(p.month),amount,date,time:currentTime(),notes:clean(p.notes),hours:Math.max(0,Number(p.hours)||0),hourlyRate:Math.max(0,Number(p.hourlyRate)||0),salaryDue:Math.max(0,Number(p.salaryDue)||0)};
   data.teacherPayments.push(payment);save();return payment;
 }
 function updateTeacherPayment(id,p){
@@ -715,7 +722,9 @@ function updateTeacherPayment(id,p){
   const otherPayments=data.teacherPayments.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===month&&Number(x.id)!==payment.id).reduce((a,x)=>a+Number(x.amount||0),0);
   const advances=data.teacherAdvances.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===month).reduce((a,x)=>a+Number(x.amount||0),0);
   if(salaryDue>0&&amount+otherPayments+advances>salaryDue)throw new Error('الدفعة الجديدة تتجاوز المتاح بعد احتساب السلف والدفعات الأخرى.');
-  Object.assign(payment,{month,amount,date:clean(p.date)||payment.date,notes:clean(p.notes),hours,hourlyRate,salaryDue});
+  const date=clean(p.date)||payment.date;
+  assertSalaryEarned(month,date);
+  Object.assign(payment,{month,amount,date,notes:clean(p.notes),hours,hourlyRate,salaryDue});
   save();return payment;
 }
 function deleteTeacherPayment(id){data.teacherPayments=data.teacherPayments.filter(x=>Number(x.id)!==Number(id));save();}

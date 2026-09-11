@@ -68,7 +68,8 @@ async function seedDemo(baseDir = path.resolve(__dirname, '..')) {
       const due = role === 'أستاذ' ? 24 * teacher.hourlyRate : teacher.fixedSalary;
       for (let m = 0; m < 3; m++) {
         const month = ['أكتوبر', 'نوفمبر', 'ديسمبر'][m];
-        const date = `2026-${m + 10}-25`;
+        // Salaries are earned on the last day of the month (fees.js rule).
+        const date = `2026-${m + 10}-${[31, 30, 31][m]}`;
         const advanceNote = `${TAG} advance:${i}:${m}`;
         if (m === 0 && !advanceKeys.has(advanceNote)) db.addTeacherAdvance({ teacherId: teacher.id, month, amount: 2000, salaryDue: due, date: '2026-10-10', notes: advanceNote });
         const salaryNote = `${TAG} salary:${i}:${m}`;
