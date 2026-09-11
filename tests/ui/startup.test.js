@@ -132,6 +132,13 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#today')).toHaveText('⚠️ تاريخ تجريبي: الثلاثاء، 15 ديسمبر 2026');
   await expect(page.locator('#feeMonth')).toHaveValue('ديسمبر');
   await expect(page.locator('#salaryDate')).toHaveValue('2026-12-15');
+  // The expenses register filters by school month (all months by default).
+  await page.locator('.nav-item[data-section="expenses"]').click();
+  assert.deepEqual(await page.locator('#expenseMonth option').allTextContents(), ['كل الأشهر', 'أكتوبر', 'نوفمبر', 'ديسمبر']);
+  await expect(page.locator('#expenseMonth')).toHaveValue('__all__');
+  await expect(page.locator('#expenseCount')).toHaveText('0');
+  await page.locator('#expenseMonth').selectOption('نوفمبر');
+  await expect(page.locator('#expensesTable')).toContainText('لا توجد مصروفات في شهر نوفمبر.');
   // Reports are monthly: any month already begun can be chosen, the current one
   // by default; income and outgoings follow the dates of the receipts.
   await page.locator('.nav-item[data-section="reports"]').click();

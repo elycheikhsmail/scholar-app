@@ -41,8 +41,28 @@ function resetExpense(){
   $('expenseDate').value=today();
 }
 
+// Filtre par mois scolaire : les mois déjà commencés (comme les rapports) ou
+// tout le registre. Une dépense se range d'après sa date.
+const ALL_EXPENSES='__all__';
+function renderExpenseMonths(){
+  const select=$('expenseMonth');
+  // Le mois courant va jusqu'à sa fin : une dépense datée plus tard dans le mois reste visible.
+  const startYear=startYearOf(state.settings?.schoolYear);
+  const periods=reportPeriods().filter(p=>p.value!==YEAR_PERIOD).map(p=>({...p,end:monthDate(p.value,startYear,31)}));
+  periods.unshift({value:ALL_EXPENSES,label:'كل الأشهر',start:'',end:'9999-12-31'});
+  const chosen=periods.some(p=>p.value===select.value)?select.value:ALL_EXPENSES;
+  select.innerHTML=periods.map(p=>`<option value="${esc(p.value)}">${esc(p.label)}</option>`).join('');
+  select.value=chosen;
+  return periods.find(p=>p.value===chosen);
+}
+$('expenseMonth').onchange=renderExpenses;
+
 function renderExpenses(){
-  const rows=state.data.expenses.map(e=>`<tr>
+  const period=renderExpenseMonths();
+  const expenses=state.data.expenses.filter(e=>e.date>=period.start&&e.date<=period.end);
+  $('expenseCount').textContent=money(expenses.length);
+  $('expenseTotal').textContent=money(sumAmount(expenses));
+  const rows=expenses.map(e=>`<tr>
     <td>${esc(e.category)}</td>
     <td>${esc(e.description)}</td>
     <td>${money(e.amount)}</td>
@@ -50,7 +70,7 @@ function renderExpenses(){
     <td>${esc(e.beneficiary)}</td>
     <td class="actions"><button class="btn-edit" onclick="editExpense(${e.id})">تعديل</button><button class="btn-delete" onclick="removeExpense(${e.id})">حذف</button></td>
   </tr>`).join('');
-  $('expensesTable').innerHTML=rows||'<tr><td colspan="6">لا توجد مصروفات مسجلة.</td></tr>';
+  $('expensesTable').innerHTML=rows||`<tr><td colspan="6">${period.value===ALL_EXPENSES?'لا توجد مصروفات مسجلة.':`لا توجد مصروفات في شهر ${esc(period.label)}.`}</td></tr>`;
 }
 
 window.editExpense=id=>{

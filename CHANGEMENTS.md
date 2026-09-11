@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.37.0 — 2026-09-11
+
+- المصروفات : filtre « تصفية حسب الشهر » au-dessus du registre — tous les mois
+  (par défaut) ou l'un des mois scolaires déjà commencés — avec le nombre de
+  dépenses et leur total pour la sélection. Le message vide nomme le mois.
+- Technique : `renderExpenseMonths()` dans `public/reports.js` réutilise
+  `reportPeriods()` ; `#expenseMonth`, `#expenseCount`, `#expenseTotal`.
+- Vérification : `npm run check` et `npm run test:ui`.
+
 ## 1.36.0 — 2026-09-11
 
 - التقارير : l'إجمالي الخارج est détaillé en deux cartes — « الخارج: الرواتب
