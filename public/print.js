@@ -9,8 +9,8 @@ const OFFICIAL_HEADER_DEFAULTS={
   ministry:'وزارة التعليم',
   regional:'الإدارة الجهوية للتعليم'
 };
-// Les reçus (frais, salaires, avances) portent toujours cette mention, quel que
-// soit le mode ; les listes A4 et les relevés ne l'affichent qu'en mode test.
+// Les listes A4 et les relevés de notes portent cette mention en mode test ;
+// les reçus (frais, salaires, avances) ne l'affichent jamais.
 const TEST_MODE_LABEL='نسخة للتجريب فقط';
 const isTestMode=()=>state.settings?.applicationMode==='test';
 

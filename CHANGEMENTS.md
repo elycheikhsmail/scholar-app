@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.52.1 — 2026-09-12
+
+- Reçus (frais, salaires, avances) : la mention « نسخة للتجريب فقط » n'est plus
+  imprimée sur les reçus, ni en production ni en mode test. Les listes A4 et
+  les relevés de notes la conservent en mode test.
+- Technique : `receiptHtml` (`fees-ui.js`) et `staffReceiptHtml` (`staff.js`)
+  n'insèrent plus `TEST_MODE_LABEL` ; test UI inversé.
+
 ## 1.52.0 — 2026-09-12
 
 - Montants et effectifs : le séparateur de milliers est désormais une **espace**

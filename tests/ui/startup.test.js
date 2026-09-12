@@ -433,8 +433,8 @@ test('browser scripts support login, all sections, student fees and session rest
     return body;
   });
   assert.match(salaryReceipt,/إيصال صرف راتب/);
-  // Receipts carry the test-copy label even in production mode.
-  assert.match(salaryReceipt,/نسخة للتجريب فقط/);
+  // Receipts never carry the test-copy label, whatever the mode.
+  assert.doesNotMatch(salaryReceipt,/نسخة للتجريب فقط/);
   assert.match(salaryReceipt,/S-000001/);
   assert.match(salaryReceipt,/موظف تجريبي/);
   assert.match(salaryReceipt,/المتبقي بعد هذه الدفعة[\s\S]*2\u00a0000 أوقية/);
@@ -556,7 +556,7 @@ test('browser scripts support login, all sections, student fees and session rest
     return body;
   });
   assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*0 أوقية/);
-  assert.match(receiptBody,/نسخة للتجريب فقط/);
+  assert.doesNotMatch(receiptBody,/نسخة للتجريب فقط/);
   assert.match(receiptBody,/توزيع الدفعة الفعلي[\s\S]*أكتوبر: 3\u00a0000 أوقية/);
   assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*13\u00a0000 أوقية/);
   assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*20\u00a0000 أوقية/);

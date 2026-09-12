@@ -546,7 +546,6 @@ function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}
   const school=state.settings?.schoolName||'';
   const line=(label,value)=>`<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
   return `<div class="receipt">`
-    +`<div class="center title">${TEST_MODE_LABEL}</div>`
     +`<div class="center school">${esc(school)}</div>`
     +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
     +`<div class="line"></div>`

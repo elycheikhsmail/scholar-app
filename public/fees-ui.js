@@ -308,7 +308,6 @@ function printStudentReceipt(paymentId){
   const line=(label,value)=>`<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
   const amountLine=(cls,label,value)=>`<div class="row ${cls}"><span>${label}</span><span>${value} أوقية</span></div>`;
   const body=`<div class="receipt">`
-    +`<div class="center title">${TEST_MODE_LABEL}</div>`
     +`<div class="center school">${esc(school)}</div>`
     +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
     +`<div class="line"></div>`
