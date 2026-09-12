@@ -497,10 +497,26 @@ function networkAddresses(port) {
 }
 
 if (require.main === module) {
-  startServer().catch(error => {
+  let running = null;
+  startServer().then(info => { running = info; }).catch(error => {
     console.error("تعذر تشغيل خادم حسابات المدرسة:", error);
     process.exitCode = 1;
   });
+  // Stopping the standalone server (Ctrl+C, kill) pushes the snapshot to the
+  // web copy like closing the desktop application does (main.js), bounded wait.
+  let stopping = false;
+  const stop = () => {
+    if (stopping) return;
+    stopping = true;
+    syncRemote({ timeout: 5000 }).then(result => {
+      console.log(result.ok ? `تمت المزامنة قبل الإغلاق: ${result.records} سجلًا.` : `لم تتم المزامنة قبل الإغلاق: ${result.error}`);
+    }).catch(() => {}).finally(() => {
+      if (running && running.close) running.close();
+      process.exit(0);
+    });
+  };
+  process.on("SIGINT", stop);
+  process.on("SIGTERM", stop);
 }
 
 module.exports = { startServer, syncRemote };

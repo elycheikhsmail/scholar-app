@@ -3,6 +3,15 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.56.1 — 2026-09-12
+
+- Serveur lancé seul (`node server.js`, ouvert dans un navigateur) : l'arrêt
+  (Ctrl+C / SIGTERM) envoie d'abord l'instantané au site, comme la fermeture de
+  l'application de bureau (`main.js`), attente bornée à 5 s ; le résultat est
+  affiché dans le terminal (« تمت المزامنة قبل الإغلاق: N سجلًا »).
+- Technique : gestionnaires `SIGINT`/`SIGTERM` dans le bloc `require.main` de
+  `server.js` ; vérifié avec un récepteur factice.
+
 ## 1.56.0 — 2026-09-12
 
 - Tous les champs de mot de passe (connexion, confirmation dans les paramètres,
