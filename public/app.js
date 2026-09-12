@@ -1,4 +1,5 @@
 setDate('registrationDate');setDate('teacherStart');setDate('salaryDate');setDate('advanceDate');setDate('expenseDate');toggleRoleFields();
+enhancePasswordFields();
 
 
 checkApplicationMode();

@@ -3,6 +3,17 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.55.0 — 2026-09-12
+
+- Tous les champs de mot de passe (connexion, confirmation dans les paramètres,
+  changement de mot de passe, nouvel utilisateur, modification de salaire,
+  synchronisation et boîtes de dialogue) ont une icône œil pour afficher ou
+  masquer la saisie.
+- Technique : `enhancePasswordFields` (`core.js`) enveloppe chaque
+  `input[type=password]` dans `.password-field` avec un bouton
+  `.password-toggle` ; appelé au démarrage (`app.js`) et dans
+  `showInputDialog`. Test UI étendu.
+
 ## 1.54.1 — 2026-09-12
 
 - Guide `DEPLOIEMENT-VERCEL.md` § 3 : le nouveau formulaire Vercel Blob ne crée

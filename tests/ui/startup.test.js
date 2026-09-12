@@ -74,7 +74,13 @@ test('browser scripts support login, all sections, student fees and session rest
   const login=async()=>{
     await page.locator('#loginUsername').fill('test');
     await page.locator('#loginPassword').fill('test');
-    await page.locator('#loginForm button').click();
+    // Every password field carries a show/hide toggle.
+    const toggle=page.locator('#loginForm .password-toggle');
+    await toggle.click();
+    await expect(page.locator('#loginPassword')).toHaveAttribute('type','text');
+    await toggle.click();
+    await expect(page.locator('#loginPassword')).toHaveAttribute('type','password');
+    await page.locator('#loginForm button.primary').click();
     await expect(page.locator('#app')).toBeVisible();
   };
   await login();

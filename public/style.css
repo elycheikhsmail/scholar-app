@@ -371,3 +371,4 @@ body:is(.read-only,.no-write) .write-only,body:is(.read-only,.no-write) [data-wr
 .role-select{border:1px solid var(--border-field);border-radius:var(--radius-sm);padding:5px 8px;font:inherit;background:#fff}
 .read-only-badge{background:#fff3cd;color:#7a4b00}
 .sync-status{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:14px;font-weight:700}
+.password-field{position:relative;display:block;width:100%}.password-field input{padding-left:42px!important}.password-toggle{position:absolute;left:6px;top:50%;transform:translateY(-50%);border:0;background:transparent;padding:4px;border-radius:var(--radius-sm);color:#607d8b;cursor:pointer;display:inline-flex;align-items:center;line-height:0}.password-toggle:hover,.password-toggle:focus-visible{color:var(--blue);background:var(--blue-tint,#e3f0fb);outline:none}
