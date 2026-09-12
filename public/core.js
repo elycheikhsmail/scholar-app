@@ -3,7 +3,9 @@ const monthNumber=MONTH_NUMBER;
 let state={token:'',settings:null,user:null,data:null,departments:[],examData:{settings:{},exams:[]}};
 const $=id=>document.getElementById(id);
 const API_BASE=window.location.protocol==='file:'?'http://127.0.0.1:3780/api':'/api';
-const money=n=>Number(n||0).toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
+// Montants et effectifs : les milliers sont séparés par une espace insécable
+// (1 000, jamais 1,000), à l'écran comme sur les reçus imprimés.
+const money=n=>Number(n||0).toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2}).replace(/,/g,'\u00a0');
 const western=v=>String(v??'').replace(/[٠-٩۰-۹]/g,d=>String(Math.max('٠١٢٣٤٥٦٧٨٩'.indexOf(d),'۰۱۲۳۴۵۶۷۸۹'.indexOf(d))));
 // Date d'une facture suivie de l'heure de saisie quand elle est connue (« 2026-09-11 14:05 »).
 const dateTime=row=>[western(row?.date),western(row?.time)].filter(Boolean).join(' ');

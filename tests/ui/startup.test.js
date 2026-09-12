@@ -175,10 +175,10 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#reportMonth')).toHaveValue('ديسمبر');
   await expect(page.locator('#rOut')).toHaveText('0');
   await page.locator('#reportMonth').selectOption('أكتوبر');
-  await expect(page.locator('#rOut')).toHaveText('3,000');
-  await expect(page.locator('#rOutSalaries')).toHaveText('3,000');
+  await expect(page.locator('#rOut')).toHaveText('3\u00a0000');
+  await expect(page.locator('#rOutSalaries')).toHaveText('3\u00a0000');
   await expect(page.locator('#rOutExpenses')).toHaveText('0');
-  await expect(page.locator('#rSalaries')).toHaveText('3,000');
+  await expect(page.locator('#rSalaries')).toHaveText('3\u00a0000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-10-31');
   await expect(page.locator('#departmentDuesInfo')).toContainText('2026-10-31');
   // The print button reproduces the displayed period in the shared A4 window.
@@ -190,13 +190,13 @@ test('browser scripts support login, all sections, student fees and session rest
     return printed;
   });
   assert.equal(printedReport.title,'التقرير المالي — شهر أكتوبر');
-  assert.match(printedReport.body,/الرواتب المدفوعة<\/td><td>3,000/);
-  assert.match(printedReport.body,/الخارج: الرواتب والسلف<\/td><td>3,000/);
+  assert.match(printedReport.body,/الرواتب المدفوعة<\/td><td>3\u00a0000/);
+  assert.match(printedReport.body,/الخارج: الرواتب والسلف<\/td><td>3\u00a0000/);
   assert.match(printedReport.body,/الخارج: المصروفات<\/td><td>0/);
-  assert.match(printedReport.body,/إجمالي الخارج<\/td><td>3,000/);
+  assert.match(printedReport.body,/إجمالي الخارج<\/td><td>3\u00a0000/);
   assert.match(printedReport.body,/ملخص المستحقات حسب القسم/);
   await page.locator('#reportMonth').selectOption('__year__');
-  await expect(page.locator('#rOut')).toHaveText('3,000');
+  await expect(page.locator('#rOut')).toHaveText('3\u00a0000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-12-15');
   await page.locator('.nav-item[data-section="settings"]').click();
   await expect(page.locator('#simulatedDateInfo')).toContainText('الشهر الجاري المعتمد: ديسمبر');
@@ -392,8 +392,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(payrollRow).toHaveCount(1);
   await expect(payrollRow).toHaveAttribute('data-payroll-status','partial');
   await expect(payrollRow).toContainText('33445566');
-  await expect(payrollRow).toContainText('2,000');
-  await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2,000');
+  await expect(payrollRow).toContainText('2\u00a0000');
+  await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2\u00a0000');
   await page.locator('#payrollPanel [data-payroll-status="paid"]').click();
   await expect(page.locator('#payrollTable tr[data-teacher-id]')).toHaveCount(0);
   await page.locator('#payrollPanel [data-payroll-status="all"]').click();
@@ -433,9 +433,11 @@ test('browser scripts support login, all sections, student fees and session rest
     return body;
   });
   assert.match(salaryReceipt,/إيصال صرف راتب/);
+  // Receipts carry the test-copy label even in production mode.
+  assert.match(salaryReceipt,/نسخة للتجريب فقط/);
   assert.match(salaryReceipt,/S-000001/);
   assert.match(salaryReceipt,/موظف تجريبي/);
-  assert.match(salaryReceipt,/المتبقي بعد هذه الدفعة[\s\S]*2,000 أوقية/);
+  assert.match(salaryReceipt,/المتبقي بعد هذه الدفعة[\s\S]*2\u00a0000 أوقية/);
   await expect(page.locator('#salaryTable')).toContainText('S-000001');
   await expect(page.locator('#salaryTable')).toContainText('33445566');
   // The salary log filters by employee, month and dates, and totals what it shows.
@@ -554,9 +556,10 @@ test('browser scripts support login, all sections, student fees and session rest
     return body;
   });
   assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*0 أوقية/);
-  assert.match(receiptBody,/توزيع الدفعة الفعلي[\s\S]*أكتوبر: 3,000 أوقية/);
-  assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*13,000 أوقية/);
-  assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*20,000 أوقية/);
+  assert.match(receiptBody,/نسخة للتجريب فقط/);
+  assert.match(receiptBody,/توزيع الدفعة الفعلي[\s\S]*أكتوبر: 3\u00a0000 أوقية/);
+  assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*13\u00a0000 أوقية/);
+  assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*20\u00a0000 أوقية/);
   // The filters, the chips and the rows all read from the one dues vocabulary.
   await expect(page.locator('#feeStatus option')).toHaveCount(5);
   await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');
@@ -649,11 +652,11 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
   await page.locator('#studentFeePaymentAmount').fill('13200');
   await expect(page.locator('#studentFeeEntrySummary')).toContainText('رسوم التسجيل: 200');
-  await expect(page.locator('#studentFeeEntrySummary')).toContainText('يونيو: 12,000');
-  await expect(page.locator('#studentFeeEntrySummary')).toContainText('أكتوبر: 1,000');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('يونيو: 12\u00a0000');
+  await expect(page.locator('#studentFeeEntrySummary')).toContainText('أكتوبر: 1\u00a0000');
   await expect(page.locator('#studentFeeEntries .fee-entry').filter({hasText:'يونيو'})).toContainText('مسدَّد بالكامل');
   await expect(october).toContainText('مسدَّد جزئياً');
-  await expect(october).toContainText('المتبقي بعدها: 11,000');
+  await expect(october).toContainText('المتبقي بعدها: 11\u00a0000');
   await expect(page.locator('#saveStudentFees')).toBeEnabled();
   await page.locator('#saveStudentFees').click();
   await expect.poll(()=>studentPaymentRequests.length).toBe(1);
@@ -716,7 +719,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#studentLedgerRows tr[data-payment-id]')).toHaveCount(2);
   const juneInvoice=page.locator('#studentLedgerRows tr[data-payment-id="92"]');
   await expect(juneInvoice).toContainText('2026-09-11 14:05');
-  await expect(juneInvoice).toContainText('يونيو: 1,000');
+  await expect(juneInvoice).toContainText('يونيو: 1\u00a0000');
   await expect(juneInvoice).toContainText('F-000092');
   await expect(juneInvoice.getByText('طباعة')).toBeVisible();
   await expect(juneInvoice.getByText('تعديل')).toBeVisible();

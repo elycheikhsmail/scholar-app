@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.52.0 — 2026-09-12
+
+- Montants et effectifs : le séparateur de milliers est désormais une **espace**
+  (1 000 au lieu de 1,000) partout — écrans, impressions A4 et reçus. Les
+  fichiers Excel contiennent toujours des nombres bruts.
+- Reçus (frais, salaires, avances) : la mention « نسخة للتجريب فقط » est
+  imprimée sur tous les reçus quel que soit le mode (production ou test). Les
+  listes A4 et les relevés de notes ne l'affichent qu'en mode test, comme avant.
+- Technique : `money` (`core.js`) remplace la virgule par une espace insécable ;
+  `receiptHtml` (`fees-ui.js`) et `staffReceiptHtml` (`staff.js`) n'appellent
+  plus `isTestMode()` ; test UI adapté.
+
 ## 1.51.0 — 2026-09-12
 
 - Onglet الموظفون والرواتب : chaque tableau s'exporte en **Excel avec choix des
