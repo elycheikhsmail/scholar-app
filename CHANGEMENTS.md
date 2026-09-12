@@ -3,6 +3,28 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.57.0 — 2026-09-12
+
+- Journal d'erreurs sur disque pour diagnostiquer une panne de l'application de
+  bureau : `logs/app.log` dans le dossier des données (`userData` sous Electron,
+  le projet pour `node server.js`), rotation automatique au-delà de 2 Mo
+  (`app.1.log` … `app.3.log`). Y sont consignés le démarrage (version, mode,
+  port, système), les erreurs 500 avec leur pile, les requêtes refusées (400)
+  en avertissement, les échecs de synchronisation, les exceptions non attrapées
+  du processus, les plantages du rendu (`render-process-gone`, `did-fail-load`,
+  fenêtre figée) et les erreurs JavaScript de l'interface (`window.onerror`,
+  promesses rejetées) envoyées via `POST /api/client-log`.
+- Un échec de démarrage affiche désormais une boîte de dialogue avec le chemin
+  du journal au lieu de laisser l'application sans fenêtre.
+- الإعدادات ← حسابي : le chemin du journal est affiché et, sur le bureau, un
+  bouton « فتح مجلد السجلات » ouvre le dossier pour l'envoyer au développeur.
+- Technique : nouveau module `logger.js` (ajouté au paquet `electron-builder`),
+  `logFile` dans `GET /api/mode`, route `/api/client-log` sans connexion,
+  bornée (2 000 caractères par champ, 30 envois par minute et par client, 30
+  par page côté navigateur) ; `preload.js` expose `schoolAPI.openLogs`
+  (`ipcMain` → `shell.openPath`). Tests : `tests/logger.test.js` (format,
+  rotation, gestionnaires de processus, route serveur) ; `logs/` ignoré par git.
+
 ## 1.56.1 — 2026-09-12
 
 - Serveur lancé seul (`node server.js`, ouvert dans un navigateur) : l'arrêt

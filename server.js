@@ -5,6 +5,7 @@ const os = require("os");
 const crypto = require("crypto");
 const zlib = require("zlib");
 const db = require("./db");
+const log = require("./logger");
 const APP_VERSION = (() => {
   try { return require("./package.json").version; }
   catch(error) {
@@ -32,6 +33,8 @@ let readOnly = false;
 const READ_ONLY_MESSAGE = 'هذه النسخة للعرض فقط؛ لا يمكن الحفظ أو التعديل.';
 function modeInfo() {
   const info = { mode: applicationMode, label: applicationMode === 'test' ? 'نسخة للتجريب فقط' : 'وضع الإنتاج', version:APP_VERSION, readOnly };
+  // The browser shows where the error log lives (settings → account); the web copy has none.
+  if (log.file()) info.logFile = log.file();
   // Only a test database proposes a test date; production always runs on the real day.
   if (applicationMode === 'test') {
     const { testDate, testDateIssued } = db.publicSettings();
@@ -134,6 +137,17 @@ function loginBlocked(req) {
   return record.count >= LOGIN_ATTEMPTS ? Math.ceil((LOGIN_WINDOW - (Date.now() - record.first)) / 1000) : 0;
 }
 
+const CLIENT_LOG_WINDOW = 60 * 1000;
+const CLIENT_LOG_LIMIT = 30;
+const clientLogCounts = new Map();
+function clientLogBlocked(req) {
+  const key = clientKey(req);
+  const record = clientLogCounts.get(key);
+  if (!record || Date.now() - record.first > CLIENT_LOG_WINDOW) { clientLogCounts.set(key, { first: Date.now(), count: 1 }); return false; }
+  record.count++;
+  return record.count > CLIENT_LOG_LIMIT;
+}
+
 function noteLoginFailure(req) {
   const key = clientKey(req);
   const record = loginFailures.get(key);
@@ -214,6 +228,17 @@ async function api(req, res) {
   if (parts[0] !== "api") return sendFile(res, u.pathname);
 
   if (parts[1] === "mode" && method === "GET") return json(res, 200, modeInfo());
+
+  // Browser-side errors (window.onerror, unhandled rejections) land in the same
+  // log file as the server's, before login too; bounded so a loop or a LAN
+  // client cannot flood the disk.
+  if (parts[1] === "client-log" && method === "POST") {
+    if (clientLogBlocked(req)) return json(res, 429, { error: "تم تجاوز حد السجل." });
+    const b = await body(req);
+    const text = value => String(value ?? "").slice(0, 2000);
+    log.error(`CLIENT ${text(b.kind) || "error"} ${text(b.page)} ${text(b.message)}`.trim(), text(b.stack), b.version ? `version ${text(b.version)}` : "");
+    return json(res, 200, { ok: true });
+  }
 
   if (parts[1] === "login" && method === "POST") {
     const wait = loginBlocked(req);
@@ -386,7 +411,11 @@ async function api(req, res) {
       return json(res, 200, { ok: true, settings: { ...db.updateSettings(b), applicationMode } });
     }
   } catch (error) {
-    console.error("API ERROR:", error);
+    // Refused requests are warnings: useful to reconstruct what the user tried.
+    // An Arabic message is a validation rule shown to the user; anything else
+    // (SQLite, TypeError) is a program fault and keeps its stack.
+    const validation = /[\u0600-\u06FF]/.test(error.message || "");
+    log.warn(`API ${method} ${u.pathname} → 400 ${error.message || ""}`, validation ? undefined : error);
     return json(res, 400, { error: error.message || "حدث خطأ." });
   }
 
@@ -418,6 +447,7 @@ async function syncRemote({ timeout = 20000 } = {}) {
     const settings = db.recordSync(snapshot.exportedAt);
     return { ok: true, lastSyncAt: settings.lastSyncAt, records: Object.values(snapshot).filter(Array.isArray).reduce((n, list) => n + list.length, 0) };
   } catch (error) {
+    log.warn("sync failed", error.name === "TimeoutError" ? "timeout" : error);
     return { ok: false, error: error.name === "TimeoutError" ? "انتهت مهلة الاتصال بالموقع." : `تعذر الاتصال بالموقع: ${error.message}` };
   }
 }
@@ -450,6 +480,7 @@ async function startServer() {
     };
   }
 
+  log.init(baseDir());
   applicationMode = readMode();
   readOnly = process.env.SCHOOL_READ_ONLY === '1';
   db.init(baseDir(), {mode:applicationMode});
@@ -457,7 +488,7 @@ async function startServer() {
 
   server = http.createServer((req, res) => {
     api(req, res).catch(error => {
-      console.error("SERVER ERROR:", error);
+      log.error(`SERVER ${req.method} ${req.url} → 500`, error);
       if (!res.headersSent) json(res, 500, { error: error.message || "خطأ داخلي في الخادم." });
       else res.end();
     });
@@ -469,6 +500,7 @@ async function startServer() {
   });
 
   const addresses = networkAddresses(actualPort);
+  log.info(`server started: version ${APP_VERSION}, mode ${applicationMode}, port ${actualPort}, node ${process.version}, ${os.platform()} ${os.release()}`);
   console.log("========================================");
   console.log("تم تشغيل خادم حسابات المدرسة بنجاح.");
   console.log(`Local: http://127.0.0.1:${actualPort}`);
@@ -481,7 +513,7 @@ async function startServer() {
 function closeServer() {
   sessions.clear();
   if (!server) return;
-  try { server.close(); } catch (error) { console.error("خطأ أثناء إغلاق الخادم:", error); }
+  try { server.close(); } catch (error) { log.error("خطأ أثناء إغلاق الخادم", error); }
   server = null;
 }
 
@@ -497,9 +529,11 @@ function networkAddresses(port) {
 }
 
 if (require.main === module) {
+  log.init(baseDir());
+  log.installProcessHandlers();
   let running = null;
   startServer().then(info => { running = info; }).catch(error => {
-    console.error("تعذر تشغيل خادم حسابات المدرسة:", error);
+    log.error("تعذر تشغيل خادم حسابات المدرسة", error);
     process.exitCode = 1;
   });
   // Stopping the standalone server (Ctrl+C, kill) pushes the snapshot to the
@@ -509,7 +543,8 @@ if (require.main === module) {
     if (stopping) return;
     stopping = true;
     syncRemote({ timeout: 5000 }).then(result => {
-      console.log(result.ok ? `تمت المزامنة قبل الإغلاق: ${result.records} سجلًا.` : `لم تتم المزامنة قبل الإغلاق: ${result.error}`);
+      if (result.ok) log.info(`تمت المزامنة قبل الإغلاق: ${result.records} سجلًا.`);
+      else log.warn(`لم تتم المزامنة قبل الإغلاق: ${result.error}`);
     }).catch(() => {}).finally(() => {
       if (running && running.close) running.close();
       process.exit(0);

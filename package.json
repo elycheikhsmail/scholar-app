@@ -1,6 +1,6 @@
 {
   "name": "school-accounts",
-  "version": "1.56.1",
+  "version": "1.57.0",
   "description": "نظام حسابات المدرسة وإدارة الطلاب والرسوم والمدرسين والرواتب والمصروفات",
   "main": "main.js",
   "author": "ely cheikh smail",
@@ -34,6 +34,7 @@
       "preload.js",
       "server.js",
       "db.js",
+      "logger.js",
       "public/**/*",
       "package.json"
     ],

@@ -11,7 +11,7 @@ function temp() { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-sqli
 function database(dir) { return path.join(dir, 'database', 'school-data.sqlite'); }
 function copySources(dir) {
   fs.mkdirSync(path.join(dir, 'public'), { recursive: true });
-  for (const file of ['server.js', 'db.js', path.join('public', 'fees.js')]) {
+  for (const file of ['server.js', 'db.js', 'logger.js', path.join('public', 'fees.js')]) {
     fs.copyFileSync(path.resolve(__dirname, '..', file), path.join(dir, file));
   }
 }

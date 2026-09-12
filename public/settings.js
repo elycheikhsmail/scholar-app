@@ -297,8 +297,17 @@ async function checkApplicationMode() {
     if (state.token && state.settings?.applicationMode && state.settings.applicationMode !== info.mode) return location.reload();
     if (adoptTestDate(info)) return location.reload();
     applyApplicationMode(info.mode, !!info.readOnly);
+    renderLogInfo(info.logFile);
   } catch { /* Keep the last confirmed label while disconnected. */ }
 }
+// Emplacement du journal d'erreurs (bureau et serveur local seulement) ; sous
+// Electron un bouton ouvre le dossier pour l'envoyer au développeur.
+function renderLogInfo(logFile){
+  $('logInfo').classList.toggle('hidden',!logFile);
+  $('logFilePath').textContent=logFile||'';
+  $('openLogsBtn').classList.toggle('hidden',!(logFile&&window.schoolAPI?.openLogs));
+}
+$('openLogsBtn').onclick=()=>window.schoolAPI.openLogs().catch(error=>toast(error.message));
 // La base de test peut proposer sa propre date (scripts/seed-testing.js) :
 // adoptée une fois par émission sur cet appareil, puis modifiable ou effaçable
 // comme une date saisie à la main.

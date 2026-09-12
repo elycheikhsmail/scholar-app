@@ -12,7 +12,7 @@ const student = { name: 'طالب الموقع', schoolNo: 'W1', nni: '123456789
 test('web copy: sync with token, login, read-only API, every write refused', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-web-'));
   fs.mkdirSync(path.join(dir, 'public'), { recursive: true });
-  for (const file of ['server.js', 'db.js', path.join('public', 'fees.js')]) fs.copyFileSync(path.resolve(__dirname, '..', file), path.join(dir, file));
+  for (const file of ['server.js', 'db.js', 'logger.js', path.join('public', 'fees.js')]) fs.copyFileSync(path.resolve(__dirname, '..', file), path.join(dir, file));
   const previousEnv = { ...process.env };
   Object.assign(process.env, { WEB_SNAPSHOT_FILE: path.join(dir, 'snapshot.json'), WEB_PASSWORD: 'web-secret', WEB_USERNAME: 'viewer', SYNC_TOKEN: 'sync-secret' });
   delete process.env.BLOB_READ_WRITE_TOKEN;

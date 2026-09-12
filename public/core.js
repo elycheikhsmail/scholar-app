@@ -113,6 +113,26 @@ function applyReadOnly(flag){
   state.readOnly=!!flag;
   document.body.classList.toggle('read-only',state.readOnly);
 }
+// Les erreurs JavaScript non attrapées (exception ou promesse rejetée) sont
+// envoyées au serveur local qui les écrit dans logs/app.log avec les siennes :
+// un écran figé chez l'école laisse ainsi une trace lisible par le développeur.
+// Bornées par page et jamais sur la copie web (pas de fichier là-bas).
+const CLIENT_LOG_LIMIT=30;
+let clientLogCount=0;
+function reportClientError(kind,message,stack){
+  if(state.readOnly||clientLogCount>=CLIENT_LOG_LIMIT)return;
+  clientLogCount++;
+  const payload={kind,message:String(message||'').slice(0,2000),stack:String(stack||'').slice(0,2000),page:document.querySelector('.section.active-section')?.id||'',version:window.schoolAPI?.version||state.settings?.version||''};
+  try{fetch(`${API_BASE}/client-log`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(()=>{});}catch{}
+}
+window.addEventListener('error',event=>{
+  const error=event.error;
+  reportClientError('error',error?.message||event.message,error?.stack||`${event.filename||''}:${event.lineno||0}:${event.colno||0}`);
+});
+window.addEventListener('unhandledrejection',event=>{
+  const reason=event.reason;
+  reportClientError('unhandledrejection',reason?.message||reason,reason?.stack);
+});
 function api(path,options={}){if(state.readOnly&&(options.method||'GET')!=='GET'&&!['/login','/logout'].includes(path))return Promise.reject(Error(READ_ONLY_MESSAGE));const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(`${API_BASE}${path}`,{...options,headers}).then(async r=>{const x=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&state.token&&path!=='/login')location.reload();throw Error(x.error||'حدث خطأ.');}return x})}
 // Export Excel avec choix des colonnes : une seule boîte partagée par les tableaux
 // (موظفون, رواتب…). Chaque tableau décrit ses colonnes {key,label,value(row)} et
