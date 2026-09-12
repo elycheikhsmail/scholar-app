@@ -73,15 +73,19 @@ Dans l'application de bureau (وضع الإنتاج, pas وضع التجريب �
 1. **الإعدادات → المزامنة مع الموقع**.
 2. **رابط المزامنة** : `https://<projet>.vercel.app/api/sync`
    (bien `/api/sync` à la fin, en `https`).
-3. **رمز المزامنة** : coller `SYNC_TOKEN`.
-4. **كلمة المرور الحالية** : mot de passe du desktop → **حفظ إعدادات المزامنة**.
-5. **مزامنة الآن** → message « تمت المزامنة: N سجلًا ». « آخر مزامنة » se remplit,
+3. **رمز المزامنة** : coller `SYNC_TOKEN` (pas le jeton Blob `vercel_blob_rw_…`,
+   qui reste côté Vercel) → **حفظ إعدادات المزامنة**.
+4. **مزامنة الآن** → message « تمت المزامنة: N سجلًا ». « آخر مزامنة » se remplit,
    « التغييرات منذ آخر مزامنة » repasse à 0.
+
+Ces paramètres sont réservés à l'admin et au développeur ; une fois posés, la
+secrétaire voit l'onglet avec le seul bouton **مزامنة الآن** et peut l'utiliser.
 
 Messages possibles et remèdes :
 
 | Message | Cause | Remède |
 | --- | --- | --- |
+| يجب تسجيل الدخول | l'URL ne se termine pas par `/api/sync` (ex. `/api/async`) | corriger l'URL |
 | رمز المزامنة غير صحيح | jeton différent entre Vercel et le desktop | recopier `SYNC_TOKEN`, redéployer si modifié côté Vercel |
 | رفض الموقع المزامنة (HTTP 500) | Blob non lié ou `BLOB_READ_WRITE_TOKEN` absent | § 3, puis Redeploy |
 | تعذر الاتصال بالموقع / انتهت مهلة الاتصال | pas d'internet, URL fausse, pare-feu | vérifier l'URL dans un navigateur (`/api/mode`) |

@@ -123,9 +123,8 @@ function renderSyncStatus(){
 $('syncSettingsForm').onsubmit=async e=>{
   e.preventDefault();
   try{
-    const result=await api('/sync-settings',{method:'PUT',body:JSON.stringify({syncUrl:$('syncUrl').value.trim(),syncToken:$('syncToken').value,currentPassword:$('syncCurrentPassword').value})});
+    const result=await api('/sync-settings',{method:'PUT',body:JSON.stringify({syncUrl:$('syncUrl').value.trim(),syncToken:$('syncToken').value})});
     state.settings={...state.settings,...result.settings};
-    $('syncCurrentPassword').value='';
     renderSyncStatus();
     toast('تم حفظ إعدادات المزامنة.');
   }catch(error){toast(error.message)}

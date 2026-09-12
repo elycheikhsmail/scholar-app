@@ -373,13 +373,12 @@ test('read-only server refuses every change and the desktop pushes its snapshot 
     assert.equal((await (await request('/mode')).json()).readOnly, false);
     assert.equal((await request('/students', 'POST', token, student)).status, 200);
     assert.equal((await (await request('/sync-remote', 'POST', token)).json()).error.includes('رابط'), true, 'nothing configured yet');
-    assert.equal((await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'wrong', currentPassword: 'nope' })).status, 403);
-    let saved = await (await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'wrong', currentPassword: '36485606' })).json();
+    let saved = await (await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'wrong' })).json();
     assert.equal(saved.settings.syncTokenSet, true);
     const refused = await request('/sync-remote', 'POST', token);
     assert.equal(refused.status, 502);
     assert.match((await refused.json()).error, /رمز المزامنة/);
-    await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'secret-1', currentPassword: '36485606' });
+    await request('/sync-settings', 'PUT', token, { syncUrl: receiverUrl, syncToken: 'secret-1' });
     const pushed = await request('/sync-remote', 'POST', token);
     assert.equal(pushed.status, 200);
     const result = await pushed.json();
@@ -593,6 +592,8 @@ test('HTTP roles: reads for everyone, records for the secretary, settings and ac
     assert.equal((await request('/fee-settings', 'PUT', sec.token, { registrationFee: 1, defaultMonthlyFee: 1 })).status, 403);
     assert.equal((await request('/users', 'GET', sec.token)).status, 403);
     assert.equal((await request('/reset-data', 'POST', sec.token, { password: 'sec-pass' })).status, 403);
+    assert.equal((await request('/sync-settings', 'PUT', sec.token, { syncUrl: 'https://school.example/api/sync', syncToken: 'x' })).status, 403, 'the sync parameters stay with the admin');
+    assert.equal((await request('/sync-remote', 'POST', sec.token)).status, 502, 'the secretary may push the snapshot (nothing configured here, so the site is not reached)');
     assert.equal((await request('/verify-password', 'POST', sec.token, { password: 'sec-pass' })).status, 200, 'confirmation checks the signed-in account');
     assert.equal((await request('/password', 'PUT', sec.token, { currentPassword: 'sec-pass', newPassword: 'sec-new' })).status, 200);
     assert.equal((await request('/password', 'PUT', sec.token, { currentPassword: 'sec-pass', newPassword: 'again' })).status, 400);

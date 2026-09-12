@@ -418,17 +418,16 @@
     <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-users" data-settings-tab="users" data-roles="admin developer" aria-controls="settingsPanel-users" aria-selected="false" tabindex="-1">المستخدمون</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-account" data-settings-tab="account" aria-controls="settingsPanel-account" aria-selected="false" tabindex="-1">حسابي</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-mode" data-settings-tab="mode" data-roles="admin developer" aria-controls="settingsPanel-mode" aria-selected="false" tabindex="-1">وضع الاستخدام</button>
-    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-sync" data-settings-tab="sync" data-roles="admin developer" aria-controls="settingsPanel-sync" aria-selected="false" tabindex="-1">المزامنة مع الموقع</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-sync" data-settings-tab="sync" data-roles="admin developer secretary" aria-controls="settingsPanel-sync" aria-selected="false" tabindex="-1">المزامنة مع الموقع</button>
     <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-data" data-settings-tab="data" data-roles="admin developer" aria-controls="settingsPanel-data" aria-selected="false" tabindex="-1">البيانات</button>
     <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-database" data-settings-tab="database" data-roles="developer" aria-controls="settingsPanel-database" aria-selected="false" tabindex="-1">قاعدة البيانات</button>
   </nav>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-sync" data-settings-panel="sync" data-roles="admin developer" aria-labelledby="settingsTab-sync" class="hidden panel write-only"><h3>المزامنة مع الموقع (نسخة للعرض فقط)</h3>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-sync" data-settings-panel="sync" data-roles="admin developer secretary" aria-labelledby="settingsTab-sync" class="hidden panel write-only"><h3>المزامنة مع الموقع (نسخة للعرض فقط)</h3>
     <p class="hint-box">يرسل زر «مزامنة الآن» نسخة كاملة من البيانات إلى الموقع الإلكتروني الذي يعرضها للقراءة فقط. اضغطه بعد إدخال كمية معتبرة من البيانات؛ وتُجرى مزامنة تلقائية عند إغلاق التطبيق. الموقع لا يغيّر شيئًا هنا.</p>
     <div class="sync-status"><span>آخر مزامنة: <b id="syncLastAt">—</b></span><span>التغييرات منذ آخر مزامنة: <b id="syncPending">0</b></span><button type="button" class="primary" id="syncNow">مزامنة الآن</button></div>
-    <form id="syncSettingsForm" class="form-grid" novalidate>
+    <form id="syncSettingsForm" class="form-grid" data-roles="admin developer" novalidate>
       <label class="name-field">رابط المزامنة (URL)<input id="syncUrl" type="url" placeholder="https://…/api/sync"></label>
       <label>رمز المزامنة (Token)<input id="syncToken" type="password" autocomplete="new-password"></label>
-      <label>كلمة المرور الحالية<input id="syncCurrentPassword" type="password" autocomplete="current-password" required></label>
       <p id="syncTokenInfo" class="hint-box"></p>
       <div class="form-actions"><button class="primary">حفظ إعدادات المزامنة</button></div>
     </form>

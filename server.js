@@ -108,9 +108,10 @@ function openSession(user) {
 }
 
 // Who may change what. Reads are open to every account; the secretary records
-// the school's daily work; settings, sync and the reset stay with the admin;
-// accounts with the admin and the developer; the database with the developer alone.
-const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'settings', 'sync-settings', 'sync-remote', 'reset-data']);
+// the school's daily work and may push the snapshot to the web copy (harmless:
+// the site is read-only); settings, sync parameters and the reset stay with the
+// admin; accounts with the admin and the developer; the database with the developer alone.
+const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'settings', 'sync-settings', 'reset-data']);
 const SELF_ROUTES = new Set(['logout', 'verify-password', 'password']);
 const PERMISSION_MESSAGE = 'ليست لديك صلاحية لهذه العملية.';
 function allowed(role, route, method) {
@@ -372,9 +373,7 @@ async function api(req, res) {
 
     // Remote read-only copy: where to push the snapshot, and the push itself.
     if (parts[1] === "sync-settings" && method === "PUT") {
-      const b = await body(req);
-      if (!db.checkLogin(user.username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
-      return json(res, 200, { ok: true, settings: { ...db.updateSyncSettings(b), applicationMode } });
+      return json(res, 200, { ok: true, settings: { ...db.updateSyncSettings(await body(req)), applicationMode } });
     }
     if (parts[1] === "sync-remote" && method === "POST") {
       const result = await syncRemote();

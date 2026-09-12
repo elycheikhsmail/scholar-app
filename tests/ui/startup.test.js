@@ -248,7 +248,7 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.equal(errors.filter(e => /\/api\/expenses/.test(e)).length, 0, 'no write request was issued');
   responses['/api/mode'] = { mode: 'production' };
   // A supervisor reads everything and changes nothing; a secretary records
-  // without reaching the settings; both keep « حسابي ». A remembered tab the
+  // without reaching the settings, except the sync button; both keep « حسابي ». A remembered tab the
   // role cannot see is not restored.
   responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 5, username: 'nadia', role: 'supervisor' } };
   await page.reload();
@@ -268,7 +268,10 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('.nav-item[data-section="expenses"]').click();
   await expect(page.locator('#expenseForm')).toBeVisible();
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(1);
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(2);
+  await page.locator('[data-settings-tab="sync"]').click();
+  await expect(page.locator('#syncNow')).toBeVisible();
+  await expect(page.locator('#syncSettingsForm')).toBeHidden();
   responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 2, username: 'developer', role: 'developer' } };
   await page.reload();
   await login();

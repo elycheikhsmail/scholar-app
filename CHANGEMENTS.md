@@ -14,6 +14,20 @@ versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
   `.password-toggle` ; appelé au démarrage (`app.js`) et dans
   `showInputDialog`. Test UI étendu.
 
+## 1.55.0 — 2026-09-12
+
+- الإعدادات ← المزامنة مع الموقع : la sauvegarde du lien et du jeton ne demande
+  plus la كلمة المرور الحالية (champ retiré) ; les paramètres restent réservés à
+  l'admin et au développeur.
+- La secrétaire voit désormais l'onglet المزامنة avec le seul bouton
+  « مزامنة الآن » et peut envoyer l'instantané au site (lecture seule, sans
+  risque) une fois les paramètres posés par l'admin.
+- Guide `DEPLOIEMENT-VERCEL.md` : rappel que le jeton desktop est `SYNC_TOKEN`
+  (pas le jeton Blob) ; ligne « يجب تسجيل الدخول » = URL sans `/api/sync`.
+- Technique : `sync-remote` retiré de `ADMIN_ROUTES` (`server.js`), plus de
+  `checkLogin` sur `PUT /sync-settings` ; `data-roles` sur le formulaire ;
+  tests db et UI ajustés.
+
 ## 1.54.1 — 2026-09-12
 
 - Guide `DEPLOIEMENT-VERCEL.md` § 3 : le nouveau formulaire Vercel Blob ne crée
