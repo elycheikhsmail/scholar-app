@@ -616,3 +616,48 @@ test('HTTP roles: reads for everyone, records for the secretary, settings and ac
     server.close();
   }
 });
+
+test('HTTP database export and import: developer only, password re-checked, backup kept, sessions closed, bad files refused', async () => {
+  const dir = temp();
+  copySources(dir);
+  const previousPort = process.env.SCHOOL_PORT;
+  process.env.SCHOOL_PORT = '23884';
+  const { startServer } = require(path.join(dir, 'server.js'));
+  if (previousPort === undefined) delete process.env.SCHOOL_PORT; else process.env.SCHOOL_PORT = previousPort;
+  const server = await startServer();
+  const request = (endpoint, method = 'GET', token = '', payload, extraHeaders = {}) => fetch(server.url + '/api' + endpoint, { method, headers: { 'Content-Type': 'application/json', Connection: 'close', Authorization: `Bearer ${token}`, ...extraHeaders }, ...(payload !== undefined ? { body: payload instanceof Uint8Array ? payload : JSON.stringify(payload) } : {}) });
+  const login = async (username, password) => (await (await request('/login', 'POST', '', { username, password })).json()).token;
+  const importFile = (token, bytes, password = 'Dev@2026') => request('/database/import', 'POST', token, bytes, { 'Content-Type': 'application/octet-stream', 'X-Confirm-Password': encodeURIComponent(password) });
+  try {
+    const admin = await login('yaghoub', '36485606');
+    assert.equal((await request('/expenses', 'POST', admin, { category: 'قبل', amount: 7 })).status, 200);
+    assert.equal((await request('/database/export', 'POST', admin, { password: '36485606' })).status, 403, 'admins cannot export');
+    let dev = await login('developer', 'Dev@2026');
+    assert.equal((await request('/database/export', 'POST', dev, { password: 'wrong' })).status, 403);
+    const exported = await request('/database/export', 'POST', dev, { password: 'Dev@2026' });
+    assert.equal(exported.status, 200);
+    assert.match(exported.headers.get('content-disposition'), /school-data-\d{4}-\d{2}-\d{2}\.sqlite/);
+    const bytes = new Uint8Array(await exported.arrayBuffer());
+    assert.equal(Buffer.from(bytes.subarray(0, 16)).toString(), 'SQLite format 3\0');
+    assert.deepEqual(fs.readdirSync(path.join(dir, 'database')).filter(f => f.startsWith('export-')), [], 'the temporary export file is removed');
+
+    // Data changes after the export, then the export is imported back.
+    assert.equal((await request('/expenses', 'POST', admin, { category: 'بعد', amount: 9 })).status, 200);
+    assert.equal((await importFile(admin, bytes, '36485606')).status, 403, 'admins cannot import');
+    assert.equal((await importFile(dev, bytes, 'wrong')).status, 403);
+    assert.equal((await importFile(dev, Buffer.from('not a database at all'))).status, 400);
+    assert.equal((await (await request('/data', 'GET', admin)).json()).expenses.length, 2, 'a refused import changes nothing');
+    const imported = await importFile(dev, bytes);
+    assert.equal(imported.status, 200);
+    const result = await imported.json();
+    assert.equal(result.counts.expenses, 1);
+    assert.ok(fs.existsSync(result.backup) && result.backup.includes('before-import-'));
+    assert.equal((await request('/data', 'GET', admin)).status, 401, 'every session is closed');
+    assert.equal((await request('/data', 'GET', dev)).status, 401);
+    dev = await login('developer', 'Dev@2026');
+    assert.deepEqual((await (await request('/data', 'GET', dev)).json()).expenses.map(e => e.category), ['قبل']);
+    assert.deepEqual(fs.readdirSync(path.join(dir, 'database')).filter(f => /\.tmp$|-wal$|-shm$/.test(f) && !f.startsWith('school-data')), []);
+  } finally {
+    server.close();
+  }
+});

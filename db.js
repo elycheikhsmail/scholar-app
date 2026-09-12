@@ -1,12 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { DatabaseSync } = require('node:sqlite');
+const { DatabaseSync, backup } = require('node:sqlite');
 const dues = require('./public/fees.js');
 
 let data;
 let filePath;
 let sqlite;
+// How the database was opened, so replaceDatabase() can reopen it the same way.
+let lastInit = null;
 const COLLECTIONS = ['departments', 'students', 'studentPayments', 'teachers',
   'teacherPayments', 'teacherAdvances', 'expenses', 'exams', 'users'];
 // Accounts. The developer account is built in: it alone imports or exports the
@@ -212,6 +214,7 @@ function save(connection = sqlite, only = touched) {
 }
 
 function init(baseDir, options = {}) {
+  lastInit = { baseDir, options };
   const mode = options.mode || 'production';
   if (!['production','test'].includes(mode)) throw new Error('وضع التطبيق غير صحيح.');
   close();
@@ -1002,6 +1005,69 @@ function batch(fn) {
 }
 module.exports.batch = batch;
 module.exports.close = close;
+
+// --- Whole-database export / import (developer) ------------------------------
+// Both go through SQLite's online backup: one consistent file, WAL included,
+// with no `-wal`/`-shm` companions — so the exported file can be copied to
+// another machine and imported as is.
+async function exportDatabase(destination) {
+  if (!sqlite) throw new Error('La base de données doit être initialisée.');
+  await backup(sqlite, destination);
+  return destination;
+}
+// Checks a file before it replaces the school's data: a real SQLite file of
+// this application's schema that passes the integrity check. Returns the
+// record counts so the caller can tell what it is about to import.
+function validateDatabaseFile(file) {
+  const header = Buffer.alloc(16);
+  const fd = fs.openSync(file, 'r');
+  try { fs.readSync(fd, header, 0, 16, 0); } finally { fs.closeSync(fd); }
+  if (header.toString() !== 'SQLite format 3\0') throw new Error('الملف ليس قاعدة بيانات SQLite.');
+  const source = new DatabaseSync(file, { readOnly: true });
+  try {
+    if (source.prepare('PRAGMA integrity_check').get().integrity_check !== 'ok') throw new Error('قاعدة البيانات تالفة.');
+    const tables = new Set(source.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all().map(row => row.name));
+    for (const table of ['metadata', 'settings', ...COLLECTIONS.filter(c => c !== 'users')]) {
+      if (!tables.has(table)) throw new Error('الملف ليس قاعدة بيانات هذا البرنامج.');
+    }
+    const version = source.prepare("SELECT value FROM metadata WHERE key = 'schemaVersion'").get();
+    if (!version || version.value !== '1') throw new Error('إصدار قاعدة البيانات غير مدعوم.');
+    const counts = {};
+    for (const table of COLLECTIONS) counts[table] = tables.has(table) ? source.prepare(`SELECT count(*) AS n FROM "${table}"`).get().n : 0;
+    return counts;
+  } finally {
+    source.close();
+    // A read-only connection cannot fold the WAL companions it created; they are empty.
+    for (const suffix of ['-wal', '-shm']) fs.rmSync(file + suffix, { force: true });
+  }
+}
+// Replaces the open database with `file` (already validated): the current one
+// is backed up first, the connection closed (which folds the WAL in), the file
+// moved into place and the database reopened. If reopening fails, the backup
+// is put back so the school never ends up without a working database.
+async function replaceDatabase(file) {
+  if (!sqlite || !lastInit) throw new Error('La base de données doit être initialisée.');
+  const backupDir = path.join(path.dirname(filePath), 'backups');
+  fs.mkdirSync(backupDir, { recursive: true });
+  const backupPath = path.join(backupDir, `before-import-${new Date().toISOString().replace(/[:.]/g, '-')}.sqlite`);
+  await backup(sqlite, backupPath);
+  const target = filePath;
+  close();
+  for (const suffix of ['-wal', '-shm']) fs.rmSync(target + suffix, { force: true });
+  fs.renameSync(file, target);
+  try {
+    init(lastInit.baseDir, lastInit.options);
+  } catch (error) {
+    fs.copyFileSync(backupPath, target);
+    for (const suffix of ['-wal', '-shm']) fs.rmSync(target + suffix, { force: true });
+    init(lastInit.baseDir, lastInit.options);
+    throw new Error(`تعذر فتح القاعدة المستوردة، وأُعيدت القاعدة السابقة: ${error.message}`, { cause: error });
+  }
+  return backupPath;
+}
+module.exports.exportDatabase = exportDatabase;
+module.exports.validateDatabaseFile = validateDatabaseFile;
+module.exports.replaceDatabase = replaceDatabase;
 module.exports.ROLES = ROLES;
 module.exports.ASSIGNABLE_ROLES = ASSIGNABLE_ROLES;
 module.exports.DEVELOPER_USERNAME = DEVELOPER_USERNAME;

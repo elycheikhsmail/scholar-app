@@ -80,7 +80,7 @@ function json(res, status, payload) {
     "Content-Type": "application/json; charset=utf-8",
     "Cache-Control": "no-store",
     "Vary": "Origin",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Confirm-Password",
     "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS"
   };
   // Recorded once per request, so every response answers the same way.
@@ -156,6 +156,22 @@ function body(req) {
       try { resolve(raw ? JSON.parse(raw) : {}); }
       catch { reject(new Error("بيانات غير صحيحة.")); }
     });
+    req.on("error", reject);
+  });
+}
+
+// The database import arrives as raw bytes, not JSON.
+const IMPORT_LIMIT = 512 * 1024 * 1024;
+function rawBody(req, limit = IMPORT_LIMIT) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    req.on("data", chunk => {
+      size += chunk.length;
+      if (size > limit) { req.destroy(); return reject(new Error("الملف كبير جدًا.")); }
+      chunks.push(chunk);
+    });
+    req.on("end", () => resolve(Buffer.concat(chunks)));
     req.on("error", reject);
   });
 }
@@ -252,6 +268,43 @@ async function api(req, res) {
       const input = await body(req);
       switchMode(input.mode);
       return json(res, 200, {...modeInfo(), token: openSession(user), settings:publicSettings(), user});
+    }
+
+    // Whole database, developer only (allowed() keeps everyone else out). Each
+    // action re-checks the developer's password: it can overwrite real data.
+    if (parts[1] === "database" && parts[2] === "export" && method === "POST") {
+      const b = await body(req);
+      if (!db.checkLogin(user.username, b.password)) { noteLoginFailure(req); return json(res, 403, { error: "كلمة المرور غير صحيحة." }); }
+      // A school year weighs a few megabytes: the copy is read whole and the
+      // temporary file is gone before the first byte leaves.
+      const file = path.join(baseDir(), 'database', `export-${Date.now()}.sqlite`);
+      let copy;
+      try { await db.exportDatabase(file); copy = fs.readFileSync(file); }
+      finally { fs.rmSync(file, { force: true }); }
+      const stamp = new Date().toISOString().slice(0, 10);
+      const headers = { "Content-Type": "application/vnd.sqlite3", "Content-Length": copy.length,
+        "Cache-Control": "no-store", "Content-Disposition": `attachment; filename="school-data-${stamp}.sqlite"` };
+      if (LOOPBACK_ORIGIN.test(res.corsOrigin || "")) headers["Access-Control-Allow-Origin"] = res.corsOrigin;
+      res.writeHead(200, headers);
+      return res.end(copy);
+    }
+    if (parts[1] === "database" && parts[2] === "import" && method === "POST") {
+      const password = decodeURIComponent(req.headers["x-confirm-password"] || "");
+      if (!db.checkLogin(user.username, password)) { noteLoginFailure(req); return json(res, 403, { error: "كلمة المرور غير صحيحة." }); }
+      const upload = await rawBody(req);
+      const temporary = path.join(baseDir(), 'database', `import-${Date.now()}.tmp`);
+      fs.writeFileSync(temporary, upload, { mode: 0o600 });
+      let counts;
+      try {
+        counts = db.validateDatabaseFile(temporary);
+        const backup = await db.replaceDatabase(temporary);
+        // Every session belonged to the previous database's accounts.
+        sessions.clear();
+        modeGeneration++;
+        return json(res, 200, { ok: true, backup, counts });
+      } finally {
+        fs.rmSync(temporary, { force: true });
+      }
     }
 
     // Accounts: admins manage the school's users, everyone changes their own password.

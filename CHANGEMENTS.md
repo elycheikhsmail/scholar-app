@@ -3,6 +3,26 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.47.0 — 2026-09-12
+
+- Onglet « قاعدة البيانات » (compte développeur uniquement) : **تصدير قاعدة
+  البيانات** télécharge une copie cohérente de la base en un fichier
+  `school-data-AAAA-MM-JJ.sqlite` ; **استيراد قاعدة بيانات** remplace la base
+  courante par un fichier exporté, après mot de passe du développeur et
+  confirmation. Le fichier est vérifié (en-tête SQLite, `integrity_check`,
+  tables, version du schéma), la base actuelle est sauvegardée dans
+  `database/backups/before-import-….sqlite`, toutes les sessions sont fermées
+  et l'écran de connexion revient. Un fichier refusé ne change rien ; une base
+  importée qui ne s'ouvre pas est remplacée par la sauvegarde.
+- Technique : `db.exportDatabase`, `db.validateDatabaseFile`,
+  `db.replaceDatabase` (sauvegarde en ligne SQLite, fermeture qui replie le
+  WAL, remplacement puis réouverture) ; routes `POST /api/database/export`
+  (JSON `{password}`, réponse binaire) et `POST /api/database/import` (corps
+  brut, en-tête `X-Confirm-Password`), réservées au rôle développeur, mot de
+  passe revérifié à chaque appel.
+- Documentation : `README.md` (« Export et import de la base »).
+- Vérification : `npm run check`, `npm test` (48), `npm run test:ui`.
+
 ## 1.46.0 — 2026-09-12
 
 - Comptes utilisateurs avec rôles. **Administrateur** : tout, y compris la

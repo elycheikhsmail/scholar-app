@@ -345,3 +345,38 @@ $('applicationModeForm').onsubmit = async event => {
     location.reload();
   } catch(error) { toast(error.message); } finally { button.disabled = false; }
 };
+
+// --- Base de données (développeur) : export en un fichier, import qui remplace tout ---
+// Le mot de passe du développeur part avec chaque requête : le serveur le
+// revérifie, une session ouverte ne suffit pas pour écraser les données réelles.
+$('exportDatabaseBtn').onclick=async()=>{
+  const password=await askInput('أدخل كلمة مرور المطوّر لتصدير قاعدة البيانات:');
+  if(password===null)return;
+  try{
+    const response=await fetch(`${API_BASE}/database/export`,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${state.token}`},body:JSON.stringify({password:western(password)})});
+    if(!response.ok){const x=await response.json().catch(()=>({}));throw Error(x.error||'تعذر التصدير.')}
+    const name=(response.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/)?.[1]||'school-data.sqlite';
+    const url=URL.createObjectURL(await response.blob());
+    const link=Object.assign(document.createElement('a'),{href:url,download:name});
+    document.body.append(link);link.click();link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    toast('تم تصدير قاعدة البيانات.');
+  }catch(error){toast(error.message)}
+};
+$('importDatabaseBtn').onclick=()=>{$('importDatabaseFile').value='';$('importDatabaseFile').click()};
+$('importDatabaseFile').onchange=async()=>{
+  const file=$('importDatabaseFile').files[0];
+  if(!file)return;
+  const password=await askInput(`أدخل كلمة مرور المطوّر لاستيراد الملف «${file.name}»:`);
+  if(password===null)return;
+  if(!(await askConfirm('سيتم استبدال قاعدة البيانات الحالية بالكامل بمحتوى هذا الملف (مع حفظ نسخة احتياطية). هل تريد المتابعة؟')))return;
+  try{
+    const response=await fetch(`${API_BASE}/database/import`,{method:'POST',headers:{'Content-Type':'application/octet-stream','X-Confirm-Password':encodeURIComponent(western(password)),Authorization:`Bearer ${state.token}`},body:file});
+    const x=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(x.error||'تعذر الاستيراد.');
+    const c=x.counts||{};
+    toast(`تم استيراد قاعدة البيانات (${c.students||0} طالبًا، ${c.departments||0} قسمًا). أعد تسجيل الدخول.`);
+    // Les sessions de l'ancienne base sont closes : retour à l'écran de connexion.
+    setTimeout(()=>location.reload(),2500);
+  }catch(error){toast(error.message)}
+};

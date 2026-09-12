@@ -21,8 +21,8 @@ L'application permet de gérer les élèves, les frais scolaires, les employés,
   compris les comptes), **secrétaire** (saisie des élèves, paiements, personnel,
   dépenses, examens, sans accès aux paramètres), **superviseur** (consultation et
   impression seulement). Un compte **développeur** intégré (`developer`, mot de
-  passe initial `Dev@2026`, à changer dans « حسابي ») est réservé aux
-  opérations sur la base de données ; les administrateurs ne le voient pas.
+  passe initial `Dev@2026`, à changer dans « حسابي ») est le seul à pouvoir
+  exporter ou importer la base de données ; les administrateurs ne le voient pas.
 - Stockage local des données dans la base de données de l'application.
 
 ## Prérequis
@@ -141,6 +141,26 @@ Chaque collection possède sa table (élèves, paiements, employés, dépenses, 
 `GET /api/data` ne renvoie pas les examens, que l'interface lit déjà via `GET /api/exams`.
 
 L'effacement des données crée d'abord une copie SQLite cohérente dans `database/backups/`. Pour une sauvegarde manuelle, arrêter complètement l'application avant de copier la base (ne pas copier seulement le fichier principal pendant son utilisation en mode WAL).
+
+### Export et import de la base (développeur)
+
+Dans **الإعدادات → قاعدة البيانات**, visible uniquement pour le compte
+développeur, deux boutons demandent chacun le mot de passe du développeur :
+
+- **تصدير قاعدة البيانات** : enregistre une copie cohérente (WAL intégré) de la
+  base du mode courant en un seul fichier `school-data-AAAA-MM-JJ.sqlite`.
+- **استيراد قاعدة بيانات** : après sélection d'un fichier `.sqlite` exporté par
+  ce programme et confirmation explicite, le fichier est vérifié (en-tête
+  SQLite, `integrity_check`, tables et version du schéma), la base actuelle
+  est sauvegardée dans `database/backups/before-import-….sqlite`, puis
+  remplacée. Toutes les sessions sont fermées : on se reconnecte avec les
+  comptes de la base importée (le compte développeur y est ajouté s'il manque).
+
+C'est la manière prévue de transférer une base préparée sur une autre machine
+(par exemple les tarifs officiels saisis en développement) vers le poste de
+l'école, sans toucher au dossier `AppData` à la main. Un fichier refusé ne
+change rien ; si la base importée ne s'ouvre pas, la sauvegarde est remise en
+place automatiquement.
 
 Tests de migration, de persistance et de transactions : `node --test tests/db.test.js`.
 

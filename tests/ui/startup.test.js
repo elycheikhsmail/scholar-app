@@ -34,6 +34,7 @@ test('browser scripts support login, all sections, student fees and session rest
   const errors = [];
   const salaryRequests = [];
   const studentPaymentRequests = [];
+  const databaseRequests = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('requestfailed', request => errors.push(request.url()));
   const publicDir = path.resolve(__dirname, '../../public');
@@ -46,6 +47,14 @@ test('browser scripts support login, all sections, student fees and session rest
     if(/^\/api\/teacher-payments\/\d+$/.test(pathname)){
       salaryRequests.push({path:pathname,body:route.request().postDataJSON()});
       return route.fulfill({json:{ok:true}});
+    }
+    if(pathname==='/api/database/export'){
+      databaseRequests.push({path:pathname,body:route.request().postDataJSON()});
+      return route.fulfill({status:200,headers:{'Content-Disposition':'attachment; filename="school-data-2026-09-12.sqlite"'},contentType:'application/vnd.sqlite3',body:Buffer.from('SQLite format 3\0mock')});
+    }
+    if(pathname==='/api/database/import'){
+      databaseRequests.push({path:pathname,password:route.request().headers()['x-confirm-password'],size:route.request().postDataBuffer().length});
+      return route.fulfill({json:{ok:true,backup:'x',counts:{students:12,departments:18}}});
     }
     if(pathname==='/api/student-payments'&&route.request().method()==='POST'){
       studentPaymentRequests.push(route.request().postDataJSON());
@@ -260,6 +269,24 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('.nav-item[data-section="settings"]').click();
   await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(10);
   await expect(page.locator('[data-settings-tab="database"]')).toBeVisible();
+  // Export: the developer's password travels with the request, the file downloads.
+  await page.locator('[data-settings-tab="database"]').click();
+  await page.locator('#exportDatabaseBtn').click();
+  await page.locator('.input-dialog[open] input').fill('Dev@2026');
+  const databaseDownload=page.waitForEvent('download');
+  await page.locator('.input-dialog[open] button.primary').click();
+  assert.equal((await databaseDownload).suggestedFilename(),'school-data-2026-09-12.sqlite');
+  assert.deepEqual(databaseRequests.pop(),{path:'/api/database/export',body:{password:'Dev@2026'}});
+  // Import: file, password, explicit confirmation, then back to the login screen.
+  await page.locator('#importDatabaseBtn').click();
+  await page.locator('#importDatabaseFile').setInputFiles({name:'school-data.sqlite',mimeType:'application/vnd.sqlite3',buffer:Buffer.from('SQLite format 3\0abc')});
+  await page.locator('.input-dialog[open] input').fill('Dev@2026');
+  await page.locator('.input-dialog[open] button.primary').click();
+  await expect(page.locator('.input-dialog[open]')).toContainText('استبدال قاعدة البيانات');
+  await page.locator('.input-dialog[open] button.primary').click();
+  await expect(page.locator('#toast')).toContainText('12 طالبًا');
+  assert.deepEqual(databaseRequests.pop(),{path:'/api/database/import',password:'Dev%402026',size:19});
+  await expect(page.locator('#loginScreen')).toBeVisible({timeout:10000});
   responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 1, username: 'yaghoub', role: 'admin' } };
   await page.reload();
   await login();
