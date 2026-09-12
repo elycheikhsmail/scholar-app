@@ -324,6 +324,7 @@ Déploiement :
 5. Ouvrir `https://<projet>.vercel.app/`, se connecter, vérifier reçus et relevés.
 
 Test : `node --test tests/web-readonly.test.js` (desktop → fonction web locale → API lue).
+Mode d'emploi pas à pas du déploiement et de l'exploitation : `DEPLOIEMENT-VERCEL.md`.
 
 ## Modes production et test
 
