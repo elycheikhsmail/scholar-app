@@ -455,6 +455,7 @@ function renderPayroll(){
     actions.push(`<button class="btn-edit" onclick="prefillAdvanceForm(${t.id})">سلفة</button>`);
     return `<tr data-payroll-status="${status}" data-teacher-id="${t.id}">
       <td>${esc(t.name)}</td>
+      <td>${esc(western(t.phone||'—'))}</td>
       <td>${esc(t.role)}</td>
       <td>${status==='hours'?'—':money(due)}</td>
       <td>${money(adv)}</td>
@@ -463,7 +464,7 @@ function renderPayroll(){
       <td class="payroll-status ${status}">${PAYROLL_STATUS_LABELS[status]}</td>
       <td class="actions">${actions.join('')}</td>
     </tr>`;
-  }).join('')||`<tr><td colspan="8">${!rows.length?'لا يوجد موظفون مسجلون.':query?`لا يوجد موظف مطابق للبحث «${esc($('payrollSearch').value.trim())}».`:'لا يوجد موظف بهذه الحالة لهذا الشهر.'}</td></tr>`;
+  }).join('')||`<tr><td colspan="9">${!rows.length?'لا يوجد موظفون مسجلون.':query?`لا يوجد موظف مطابق للبحث «${esc($('payrollSearch').value.trim())}».`:'لا يوجد موظف بهذه الحالة لهذا الشهر.'}</td></tr>`;
   syncFilterButtons('#payrollPanel [data-payroll-status]','payrollStatus',payrollStatusFilter);
 }
 $('payrollMonth').onchange=renderPayroll;
@@ -612,6 +613,7 @@ function renderSalary(){
     return `<tr>
       <td>${esc(salaryReceiptNo(p))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
+      <td>${esc(western(t?.phone||'—'))}</td>
       <td>${esc(p.month)}</td>
       <td>${money(due)}</td>
       <td>${money(adv)}</td>
@@ -621,7 +623,7 @@ function renderSalary(){
       <td class="actions"><button class="btn-pay" onclick="printSalaryReceipt(${p.id})">إيصال</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
     </tr>`;
   }).join('');
-  $('salaryTable').innerHTML=rows||`<tr><td colspan="9">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
+  $('salaryTable').innerHTML=rows||`<tr><td colspan="10">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
   renderPayroll();
 }
 $('exportSalaryLog').onclick=()=>{
@@ -785,6 +787,7 @@ function renderAdvances(){
     return `<tr>
       <td>${esc(advanceReceiptNo(a))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
+      <td>${esc(western(t?.phone||'—'))}</td>
       <td>${esc(a.month)}</td>
       <td>${money(a.amount)}</td>
       <td>${esc(dateTime(a))}</td>
@@ -792,7 +795,7 @@ function renderAdvances(){
       <td class="actions"><button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">إيصال</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
     </tr>`;
   }).join('');
-  $('advanceTable').innerHTML=rows||`<tr><td colspan="7">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
+  $('advanceTable').innerHTML=rows||`<tr><td colspan="8">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
   renderPayroll();
 }
 $('exportAdvanceLog').onclick=()=>{

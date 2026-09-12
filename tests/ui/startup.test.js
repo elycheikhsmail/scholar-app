@@ -391,6 +391,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#payrollSearch').fill('');
   await expect(payrollRow).toHaveCount(1);
   await expect(payrollRow).toHaveAttribute('data-payroll-status','partial');
+  await expect(payrollRow).toContainText('33445566');
   await expect(payrollRow).toContainText('2,000');
   await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2,000');
   await page.locator('#payrollPanel [data-payroll-status="paid"]').click();
@@ -436,6 +437,7 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.match(salaryReceipt,/موظف تجريبي/);
   assert.match(salaryReceipt,/المتبقي بعد هذه الدفعة[\s\S]*2,000 أوقية/);
   await expect(page.locator('#salaryTable')).toContainText('S-000001');
+  await expect(page.locator('#salaryTable')).toContainText('33445566');
   // The salary log filters by employee, month and dates, and totals what it shows.
   await expect(page.locator('#salaryLogTotals')).toContainText('عدد الدفعات المعروضة: 1');
   await page.locator('#salaryLogMonth').selectOption('نوفمبر');

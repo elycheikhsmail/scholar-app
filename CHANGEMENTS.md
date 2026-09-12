@@ -11,6 +11,16 @@ versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 - Technique : champ `studentGenderFilter`, `filteredStudents` compare
   `s.gender` ; test UI étendu.
 
+## 1.49.0 — 2026-09-12
+
+- Onglet الموظفون : la colonne « الهاتف » apparaît maintenant dans les quatre
+  tableaux à l'écran — registre (déjà présente), « كشف رواتب الشهر », « سجل
+  دفعات الرواتب » et « سجل سلف الموظفين » — juste après le nom de l'employé.
+- Technique : `renderPayroll`, `renderSalaries`, `renderAdvances` et les
+  en-têtes de `index.html` ; lignes vides ajustées (`colspan`) ; test UI
+  vérifie le numéro dans le كشف et le journal des salaires. Les impressions et
+  exports Excel restent inchangés.
+
 ## 1.48.0 — 2026-09-12
 
 - Onglet الموظفون : recherche d'un employé par **numéro de téléphone** (chiffres
