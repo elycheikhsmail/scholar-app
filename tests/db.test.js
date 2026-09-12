@@ -101,6 +101,63 @@ test('invoice numbers are never reused after a receipt is deleted or a restart',
   assert.equal(db.addTeacherAdvance({ teacherId: teacher.id, month: 'ديسمبر', amount: 300, salaryDue: 5000, date: '2026-12-01' }).month, 'ديسمبر');
 });
 
+test('server refuses what the forms refuse: salary and advance caps, school months, dates, expense amounts', () => {
+  const dir = temp(); db.init(dir);
+  const fixed = db.addTeacher({ name: 'ك', role: 'معلم', fixedSalary: 10000 });
+  const hourly = db.addTeacher({ name: 'أ', role: 'أستاذ', hourlyRate: 500 });
+  // Salary cap on entry, advances included, with the estimate taken from the employee when the form sends none.
+  db.addTeacherAdvance({ teacherId: fixed.id, month: 'أكتوبر', amount: 3000 });
+  assert.throws(() => db.addTeacherPayment({ teacherId: fixed.id, month: 'أكتوبر', amount: 7001, date: '2026-10-31' }), /تتجاوز المتاح لهذا الشهر \(7000 أوقية\)/);
+  const october = db.addTeacherPayment({ teacherId: fixed.id, month: 'أكتوبر', amount: 7000, date: '2026-10-31' });
+  assert.equal(october.salaryDue, 10000, 'the fixed salary is the estimate when none is sent');
+  assert.equal('extra' in october, false);
+  // A confirmed extra (bonus, arrears) passes the cap and stays marked; an edit keeps the mark.
+  assert.throws(() => db.addTeacherPayment({ teacherId: fixed.id, month: 'أكتوبر', amount: 1, date: '2026-10-31' }), /تتجاوز المتاح/);
+  const bonus = db.addTeacherPayment({ teacherId: fixed.id, month: 'أكتوبر', amount: 1500, date: '2026-10-31', extra: true });
+  assert.equal(bonus.extra, true);
+  assert.equal(db.updateTeacherPayment(bonus.id, { month: 'أكتوبر', amount: 2000, date: '2026-10-31' }).extra, true);
+  assert.throws(() => db.updateTeacherPayment(october.id, { month: 'أكتوبر', amount: 7001, date: '2026-10-31' }), /تتجاوز المتاح/);
+  // Hourly employees: the cap follows hours × rate; without hours nothing is capped (nothing is known).
+  assert.throws(() => db.addTeacherPayment({ teacherId: hourly.id, month: 'أكتوبر', amount: 5001, hours: 10, date: '2026-10-31' }), /5000 أوقية/);
+  assert.equal(db.addTeacherPayment({ teacherId: hourly.id, month: 'أكتوبر', amount: 5000, hours: 10, date: '2026-10-31' }).salaryDue, 5000);
+  assert.equal(db.addTeacherPayment({ teacherId: hourly.id, month: 'نوفمبر', amount: 800, date: '2026-11-30' }).salaryDue, 0);
+  // Advance cap without an estimate from the form, for a fixed salary.
+  assert.throws(() => db.addTeacherAdvance({ teacherId: fixed.id, month: 'نوفمبر', amount: 10001 }), /السلفة أكبر من المتاح لهذا الشهر \(10000 أوقية\)/);
+  const advance = db.addTeacherAdvance({ teacherId: fixed.id, month: 'نوفمبر', amount: 4000 });
+  assert.equal(advance.salaryDue, 10000);
+  assert.throws(() => db.updateTeacherAdvance(advance.id, { month: 'نوفمبر', amount: 10001 }), /السلفة أكبر من المتاح/);
+  assert.equal(db.updateTeacherAdvance(advance.id, { month: 'نوفمبر', amount: 10000 }).amount, 10000);
+  // Salaries and advances belong to a school month.
+  for (const month of ['شهر وهمي', 'رسوم التسجيل', '']) {
+    assert.throws(() => db.addTeacherPayment({ teacherId: fixed.id, month, amount: 10, date: '2026-10-31' }), /شهر الراتب|بيانات الراتب/);
+    assert.throws(() => db.addTeacherAdvance({ teacherId: fixed.id, month, amount: 10 }), /شهر الراتب|بيانات السلفة/);
+  }
+  assert.throws(() => db.updateTeacherAdvance(advance.id, { month: 'شهر وهمي', amount: 10 }), /شهر الراتب/);
+  // Dates are compared as text everywhere: only a real YYYY-MM-DD is stored, empty means today.
+  const s = db.addStudent(student);
+  for (const date of ['31/10/2026', '2026-10-1', '2026-13-01', '2026-02-30', 'اليوم']) {
+    assert.throws(() => db.addStudentPayment({ studentId: s.id, amount: 10, month: 'أكتوبر', date }), /تاريخ الدفع يجب أن يكون بصيغة YYYY-MM-DD/);
+    assert.throws(() => db.addStudentPayments({ studentId: s.id, date, entries: [{ month: 'أكتوبر', amount: 10 }] }), /تاريخ الدفع/);
+    assert.throws(() => db.addTeacherPayment({ teacherId: fixed.id, month: 'ديسمبر', amount: 10, date }), /تاريخ الدفع/);
+    assert.throws(() => db.addTeacherAdvance({ teacherId: fixed.id, month: 'ديسمبر', amount: 10, date }), /تاريخ السلفة/);
+    assert.throws(() => db.addExpense({ category: 'ورق', amount: 10, date }), /تاريخ المصروف/);
+  }
+  const payment = db.addStudentPayment({ studentId: s.id, amount: 10, month: 'أكتوبر', date: '' });
+  assert.match(payment.date, /^\d{4}-\d{2}-\d{2}$/);
+  assert.throws(() => db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 10, date: '10-10-2026' }), /تاريخ الدفع/);
+  assert.equal(db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 10, date: '' }).date, payment.date, 'an empty date keeps the recorded one');
+  const expense = db.addExpense({ category: 'ورق', amount: 10, date: '2026-10-05' });
+  assert.throws(() => db.updateExpense(expense.id, { category: 'ورق', amount: 10, date: '5/10/2026' }), /تاريخ المصروف/);
+  // An edit cannot leave an expense at zero or without a category, as entry refuses both.
+  assert.throws(() => db.updateExpense(expense.id, { category: 'ورق', amount: 0, date: '2026-10-05' }), /نوع المصروف والمبلغ مطلوبان/);
+  assert.throws(() => db.updateExpense(expense.id, { category: '', amount: 10, date: '2026-10-05' }), /نوع المصروف والمبلغ مطلوبان/);
+  assert.equal(db.updateExpense(expense.id, { category: 'ورق', amount: 12, date: '' }).date, '2026-10-05');
+  assert.equal(db.getData().expenses[0].amount, 12);
+  // Nothing refused above left a trace.
+  assert.equal(db.getData().teacherPayments.length, 4);
+  assert.equal(db.getData().teacherAdvances.length, 2);
+});
+
 test('databases without an invoice sequence resume after the highest number issued', () => {
   const dir = temp(); db.init(dir);
   const s = db.addStudent(student);

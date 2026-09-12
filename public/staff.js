@@ -372,9 +372,12 @@ $('salaryForm').onsubmit=async e=>{
   if(amount<=0)return toast('أدخل المبلغ المدفوع.');
   // Une estimation nulle (heures non encore saisies) ne bloque pas la saisie.
   if(rejectUnearnedSalary(month,$('salaryDate').value||today(),'salaryDate'))return;
+  // Mois déjà soldé : un versement supplémentaire (prime, rappel) reste possible
+  // après confirmation ; il part marqué `extra`, seule façon de passer le plafond du serveur.
+  let extra=false;
   if(due>0&&available<=0){
-    // Mois déjà soldé : un versement supplémentaire (prime, rappel) reste possible après confirmation.
     if(!(await askConfirm(`راتب ${t.name} لشهر ${month} مسدَّد بالكامل. هل تريد تسجيل دفعة إضافية؟`)))return;
+    extra=true;
   }else if(due>0&&amount>available){
     // Le reste disponible est placé dans le champ : plus besoin de le recopier.
     $('salaryAmount').value=String(available);
@@ -391,7 +394,8 @@ $('salaryForm').onsubmit=async e=>{
       notes:$('salaryNotes').value,
       hours,
       hourlyRate:rate,
-      salaryDue:due
+      salaryDue:due,
+      extra
     })});
     await load();
     const nextId=nextUnpaidTeacherId(t.id,month);
@@ -579,6 +583,7 @@ window.printSalaryReceipt=id=>{
   const lines=[];
   if(t&&t.role==='أستاذ')lines.push(['الساعات × سعر الساعة',`${money(Number(p.hours||0))} × ${money(Number(p.hourlyRate||0))}`]);
   lines.push(['استحقاق الشهر',`${money(due)} أوقية`]);
+  if(p.extra)lines.push(['نوع الدفعة','دفعة إضافية خارج الاستحقاق']);
   lines.push(['السلف المخصومة',`${money(adv)} أوقية`]);
   lines.push(['إجمالي المدفوع لهذا الشهر',`${money(paid)} أوقية`]);
   lines.push(['المتبقي بعد هذه الدفعة',`${money(Math.max(0,due-adv-paid))} أوقية`,'remaining']);
@@ -648,7 +653,7 @@ function renderSalary(){
       <td>${esc(salaryReceiptNo(p))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
       <td>${esc(western(t?.phone||'—'))}</td>
-      <td>${esc(p.month)}</td>
+      <td>${esc(p.month)}${p.extra?' <span class="status-partial">(دفعة إضافية)</span>':''}</td>
       <td>${money(due)}</td>
       <td>${money(adv)}</td>
       <td>${money(allPaid)}</td>

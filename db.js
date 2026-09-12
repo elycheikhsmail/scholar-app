@@ -775,6 +775,23 @@ function pushStudentPayment(student, month, amount, date, notes) {
 function assertPaymentMonth(month) {
   if (month !== dues.REGISTRATION && !dues.MONTHS.includes(month)) throw new Error('اختر الرسم الذي تخصه الدفعة.');
 }
+// Salaries and advances belong to a school month: an unknown name would be
+// treated as October by the due-date rule and never match the payroll sheet.
+function assertSalaryMonth(month) {
+  if (!dues.MONTHS.includes(month)) throw new Error('اختر شهر الراتب من أشهر السنة الدراسية.');
+}
+// Every dated record is filtered and reported by comparing the date as text,
+// so a date in another format would silently drop out of the month's figures.
+// Empty means «today» for the caller; anything else must be a real YYYY-MM-DD.
+function assertDate(value, label = 'التاريخ') {
+  const text = clean(value);
+  if (!text) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  const valid = match && new Date(`${text}T00:00:00`).getDate() === Number(match[3]);
+  if (!valid) throw new Error(`${label} يجب أن يكون بصيغة YYYY-MM-DD.`);
+  return text;
+}
+const todayIso = () => new Date().toISOString().slice(0,10);
 
 function addStudentPayment(p) {
   const student = data.students.find(x => Number(x.id) === Number(p.studentId));
@@ -784,7 +801,7 @@ function addStudentPayment(p) {
   if (!month || amount <= 0) throw new Error('أدخل الشهر والمبلغ بشكل صحيح.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount);
-  const payment = pushStudentPayment(student, month, amount, clean(p.date) || new Date().toISOString().slice(0,10), clean(p.notes));
+  const payment = pushStudentPayment(student, month, amount, assertDate(p.date, 'تاريخ الدفع') || todayIso(), clean(p.notes));
   save(); return payment;
 }
 
@@ -796,7 +813,7 @@ function addStudentPayment(p) {
 function addStudentPayments(input) {
   const student = data.students.find(x => Number(x.id) === Number(input && input.studentId));
   if (!student) throw new Error('الطالب غير موجود.');
-  const date = clean(input.date) || new Date().toISOString().slice(0,10);
+  const date = assertDate(input.date, 'تاريخ الدفع') || todayIso();
   const entries = (Array.isArray(input.entries) ? input.entries : [])
     .map(entry => ({ month: clean(entry.month), amount: dues.round2(Number(entry.amount) || 0) }));
   if (!entries.length) throw new Error('لم تُحدَّد أي دفعة لتسجيلها.');
@@ -814,7 +831,7 @@ function updateStudentPayment(id,p) {
   const amount=Number(p.amount)||0, month=clean(p.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount, payment.id);
-  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:clean(p.date)||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
+  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:assertDate(p.date, 'تاريخ الدفع')||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
 }
 function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filter(x=>Number(x.id)!==Number(id));save();}
 
@@ -852,12 +869,34 @@ function assertSalaryEarned(month,date){
   const dueDate=dues.salaryDueDate(month,dues.startYearOf(data.settings.schoolYear));
   if(!dues.salaryEarnedOn(month,dues.startYearOf(data.settings.schoolYear),date))throw new Error(`راتب شهر ${month} لا يُستحق إلا في اليوم الأخير من الشهر (${dueDate})؛ قبل ذلك تُسجَّل سلفة.`);
 }
+// What the month is worth for this employee: the browser's estimate when it
+// sent one, otherwise the employee's own figures (hours × rate, or the fixed salary).
+function salaryEstimate(teacher,p){
+  const hours=teacher.role==='أستاذ'?Math.max(0,Number(p.hours)||0):0;
+  const hourlyRate=teacher.role==='أستاذ'?Math.max(0,Number(p.hourlyRate)||teacher.hourlyRate||0):0;
+  const salaryDue=teacher.role==='أستاذ'?Math.max(0,Number(p.salaryDue)||hours*hourlyRate):Math.max(0,Number(p.salaryDue)||teacher.fixedSalary||0);
+  return {hours,hourlyRate,salaryDue};
+}
+const sumMonth=(rows,teacherId,month,exceptId=null)=>rows.filter(x=>Number(x.teacherId)===Number(teacherId)&&clean(x.month)===month&&Number(x.id)!==Number(exceptId)).reduce((a,x)=>a+Number(x.amount||0),0);
+// A month cannot receive more than it is worth, advances included. The cashier
+// may still record a deliberate extra (bonus, arrears) after confirming in the
+// form: the payment is then flagged `extra`, so the exception stays visible in
+// the log and on the receipt instead of passing as an ordinary salary.
+function assertSalaryWithinDue(teacher,month,amount,salaryDue,exceptId=null){
+  if(salaryDue<=0)return;
+  const available=salaryDue-sumMonth(data.teacherPayments,teacher.id,month,exceptId)-sumMonth(data.teacherAdvances,teacher.id,month);
+  if(amount>available)throw new Error(`الدفعة تتجاوز المتاح لهذا الشهر (${dues.round2(Math.max(0,available))} أوقية) بعد احتساب السلف والدفعات الأخرى.`);
+}
 function addTeacherPayment(p){
   const teacher=data.teachers.find(x=>Number(x.id)===Number(p.teacherId));if(!teacher)throw new Error('الموظف غير موجود.');
-  const amount=Number(p.amount)||0;if(!clean(p.month)||amount<=0)throw new Error('بيانات الراتب غير صحيحة.');
-  const date=clean(p.date)||new Date().toISOString().slice(0,10);
-  assertSalaryEarned(clean(p.month),date);
-  const payment={id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month:clean(p.month),amount,date,time:currentTime(),notes:clean(p.notes),hours:Math.max(0,Number(p.hours)||0),hourlyRate:Math.max(0,Number(p.hourlyRate)||0),salaryDue:Math.max(0,Number(p.salaryDue)||0)};
+  const amount=Number(p.amount)||0, month=clean(p.month);if(!month||amount<=0)throw new Error('بيانات الراتب غير صحيحة.');
+  assertSalaryMonth(month);
+  const date=assertDate(p.date,'تاريخ الدفع')||todayIso();
+  assertSalaryEarned(month,date);
+  const estimate=salaryEstimate(teacher,p);
+  const extra=Boolean(p.extra);
+  if(!extra)assertSalaryWithinDue(teacher,month,amount,estimate.salaryDue);
+  const payment={id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month,amount,date,time:currentTime(),notes:clean(p.notes),...estimate,...(extra?{extra:true}:{})};
   data.teacherPayments.push(payment);save();return payment;
 }
 function updateTeacherPayment(id,p){
@@ -867,25 +906,39 @@ function updateTeacherPayment(id,p){
   if(!teacher)throw new Error('الموظف غير موجود.');
   const amount=Number(p.amount)||0, month=clean(p.month);
   if(!month||amount<=0)throw new Error('بيانات الراتب غير صحيحة.');
-  const hours=teacher.role==='أستاذ'?Math.max(0,Number(p.hours)||0):0;
-  const hourlyRate=teacher.role==='أستاذ'?Math.max(0,Number(p.hourlyRate)||teacher.hourlyRate||0):0;
-  const salaryDue=teacher.role==='أستاذ'?Math.max(0,Number(p.salaryDue)||hours*hourlyRate):Math.max(0,Number(p.salaryDue)||teacher.fixedSalary||0);
-  const otherPayments=data.teacherPayments.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===month&&Number(x.id)!==payment.id).reduce((a,x)=>a+Number(x.amount||0),0);
-  const advances=data.teacherAdvances.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===month).reduce((a,x)=>a+Number(x.amount||0),0);
-  if(salaryDue>0&&amount+otherPayments+advances>salaryDue)throw new Error('الدفعة الجديدة تتجاوز المتاح بعد احتساب السلف والدفعات الأخرى.');
-  const date=clean(p.date)||payment.date;
+  assertSalaryMonth(month);
+  const estimate=salaryEstimate(teacher,p);
+  // An extra stays an extra when edited; the flag is only ever set by the form.
+  const extra=p.extra!==undefined?Boolean(p.extra):Boolean(payment.extra);
+  if(!extra)assertSalaryWithinDue(teacher,month,amount,estimate.salaryDue,payment.id);
+  const date=assertDate(p.date,'تاريخ الدفع')||payment.date;
   assertSalaryEarned(month,date);
-  Object.assign(payment,{month,amount,date,notes:clean(p.notes),hours,hourlyRate,salaryDue});
+  Object.assign(payment,{month,amount,date,notes:clean(p.notes),...estimate});
+  if(extra)payment.extra=true;else delete payment.extra;
   save();return payment;
 }
 function deleteTeacherPayment(id){data.teacherPayments=data.teacherPayments.filter(x=>Number(x.id)!==Number(id));save();}
+// An advance is capped by what the month is worth. Without an estimate from the
+// form, a fixed salary is known from the employee's record; an hourly employee's
+// month is worth nothing until the hours are entered, so only then is it capped.
+function advanceDue(teacher,p,fallback=0){
+  const sent=Math.max(0,Number(p.salaryDue)||0);
+  if(sent>0)return sent;
+  if(fallback>0)return fallback;
+  return teacher.role==='أستاذ'?0:Math.max(0,Number(teacher.fixedSalary)||0);
+}
+function assertAdvanceWithinDue(teacher,month,amount,due,exceptId=null){
+  if(due<=0)return;
+  const available=due-sumMonth(data.teacherAdvances,teacher.id,month,exceptId)-sumMonth(data.teacherPayments,teacher.id,month);
+  if(amount>available)throw new Error(`السلفة أكبر من المتاح لهذا الشهر (${dues.round2(Math.max(0,available))} أوقية).`);
+}
 function addTeacherAdvance(p){
   const teacher=data.teachers.find(x=>Number(x.id)===Number(p.teacherId));if(!teacher)throw new Error('الموظف غير موجود.');
-  const amount=Number(p.amount)||0;if(!clean(p.month)||amount<=0)throw new Error('بيانات السلفة غير صحيحة.');
-  const due=Math.max(0,Number(p.salaryDue)||0);const current=data.teacherAdvances.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===clean(p.month)).reduce((a,x)=>a+Number(x.amount||0),0);
-  const payments=data.teacherPayments.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===clean(p.month)).reduce((a,x)=>a+Number(x.amount||0),0);
-  if(due>0&&amount>Math.max(0,due-current-payments))throw new Error('السلفة أكبر من المتاح لهذا الشهر.');
-  const advance={id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month:clean(p.month),amount,date:clean(p.date)||new Date().toISOString().slice(0,10),time:currentTime(),notes:clean(p.notes),salaryDue:due};
+  const amount=Number(p.amount)||0,month=clean(p.month);if(!month||amount<=0)throw new Error('بيانات السلفة غير صحيحة.');
+  assertSalaryMonth(month);
+  const due=advanceDue(teacher,p);
+  assertAdvanceWithinDue(teacher,month,amount,due);
+  const advance={id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month,amount,date:assertDate(p.date,'تاريخ السلفة')||todayIso(),time:currentTime(),notes:clean(p.notes),salaryDue:due};
   data.teacherAdvances.push(advance);save();return advance;
 }
 function updateTeacherAdvance(id,p){
@@ -895,17 +948,23 @@ function updateTeacherAdvance(id,p){
   if(!teacher)throw new Error('الموظف غير موجود.');
   const amount=Number(p.amount)||0,month=clean(p.month);
   if(!month||amount<=0)throw new Error('بيانات السلفة غير صحيحة.');
-  const due=Math.max(0,Number(p.salaryDue)||advance.salaryDue||0);
-  const currentOthers=data.teacherAdvances.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===month&&Number(x.id)!==advance.id).reduce((a,x)=>a+Number(x.amount||0),0);
-  const payments=data.teacherPayments.filter(x=>Number(x.teacherId)===teacher.id&&clean(x.month)===month).reduce((a,x)=>a+Number(x.amount||0),0);
-  if(due>0&&amount>Math.max(0,due-currentOthers-payments))throw new Error('السلفة أكبر من المتاح لهذا الشهر.');
-  Object.assign(advance,{month,amount,date:clean(p.date)||advance.date,notes:clean(p.notes),salaryDue:due});
+  assertSalaryMonth(month);
+  const due=advanceDue(teacher,p,Number(advance.salaryDue)||0);
+  assertAdvanceWithinDue(teacher,month,amount,due,advance.id);
+  Object.assign(advance,{month,amount,date:assertDate(p.date,'تاريخ السلفة')||advance.date,notes:clean(p.notes),salaryDue:due});
   save();return advance;
 }
 function deleteTeacherAdvance(id){data.teacherAdvances=data.teacherAdvances.filter(x=>Number(x.id)!==Number(id));save();}
 
-function addExpense(e){const o={id:nextId('expenses'),category:clean(e.category),description:clean(e.description),amount:Math.max(0,Number(e.amount)||0),date:clean(e.date)||new Date().toISOString().slice(0,10),beneficiary:clean(e.beneficiary),notes:clean(e.notes)};if(!o.category||o.amount<=0)throw Error('نوع المصروف والمبلغ مطلوبان.');data.expenses.push(o);save();return o;}
-function updateExpense(id,e){const o=data.expenses.find(x=>Number(x.id)===Number(id));if(!o)throw Error('المصروف غير موجود.');Object.assign(o,{category:clean(e.category),description:clean(e.description),amount:Math.max(0,Number(e.amount)||0),date:clean(e.date)||o.date,beneficiary:clean(e.beneficiary),notes:clean(e.notes)});save();return o;}
+// The same checks on entry and on edit: an edit cannot leave an expense without
+// a category or with a zero amount that entry would have refused.
+function expenseFields(e,previousDate){
+  const fields={category:clean(e.category),description:clean(e.description),amount:Math.max(0,Number(e.amount)||0),date:assertDate(e.date,'تاريخ المصروف')||previousDate,beneficiary:clean(e.beneficiary),notes:clean(e.notes)};
+  if(!fields.category||fields.amount<=0)throw Error('نوع المصروف والمبلغ مطلوبان.');
+  return fields;
+}
+function addExpense(e){const o={id:nextId('expenses'),...expenseFields(e,todayIso())};data.expenses.push(o);save();return o;}
+function updateExpense(id,e){const o=data.expenses.find(x=>Number(x.id)===Number(id));if(!o)throw Error('المصروف غير موجود.');Object.assign(o,expenseFields(e,o.date));save();return o;}
 function deleteExpense(id){data.expenses=data.expenses.filter(x=>Number(x.id)!==Number(id));save();}
 
 

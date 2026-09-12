@@ -3,6 +3,35 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.58.0 — 2026-09-12
+
+- Le serveur refuse désormais ce que les formulaires refusaient déjà (une
+  fenêtre ancienne, un autre poste du réseau ou une erreur d'interface ne
+  peuvent plus l'y faire passer) :
+  - plafond du salaire **à l'enregistrement** (et non plus seulement à la
+    modification) : la somme des versements et des سلف du mois ne dépasse pas
+    l'استحقاق, estimé depuis la fiche de l'employé (salaire fixe, ou heures ×
+    taux) quand le formulaire n'en envoie pas ;
+  - plafond de la سلفة même sans estimation envoyée (salaire fixe lu sur la
+    fiche ; un أستاذ sans heures saisies reste non plafonné) ;
+  - le mois d'un salaire ou d'une سلفة doit être un mois de l'année scolaire ;
+  - toute date (versement, salaire, سلفة, dépense) doit être un vrai
+    `YYYY-MM-DD` ; vide = aujourd'hui (ou la date déjà enregistrée en
+    modification). Une date d'un autre format disparaissait des filtres et des
+    rapports, qui comparent le texte ;
+  - la modification d'une dépense exige, comme la saisie, un نوع et un montant
+    > 0.
+- الموظفون ← الرواتب : la « دفعة إضافية » (prime, rappel) confirmée sur un mois
+  déjà soldé reste possible ; elle part marquée `extra`, seule façon de passer
+  le plafond, et apparaît comme « (دفعة إضافية) » dans le سجل دفعات الرواتب et
+  comme « نوع الدفعة : دفعة إضافية خارج الاستحقاق » sur le وصل. Une
+  modification conserve la marque.
+- Technique : `assertDate`, `assertSalaryMonth`, `salaryEstimate`,
+  `assertSalaryWithinDue`, `advanceDue`, `expenseFields` dans `db.js` ;
+  `extra` envoyé par `salaryForm` (`staff.js`) ; test « server refuses what
+  the forms refuse » dans `tests/db.test.js`. Point 1.3 de
+  `REVIEW-ACCOUNTING-UX-1.56.1.md`.
+
 ## 1.57.0 — 2026-09-12
 
 - Journal d'erreurs sur disque pour diagnostiquer une panne de l'application de
