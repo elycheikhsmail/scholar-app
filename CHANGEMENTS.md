@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.54.1 — 2026-09-12
+
+- Guide `DEPLOIEMENT-VERCEL.md` § 3 : le nouveau formulaire Vercel Blob ne crée
+  plus `BLOB_READ_WRITE_TOKEN` par défaut ; il faut cocher « Add a read-write
+  token env var » (ou créer le token ensuite). Préfixe à laisser à `BLOB`.
+- Technique : version de `package.json` resynchronisée avec ce journal
+  (elle était restée à 1.52.1).
+
 ## 1.52.1 — 2026-09-12
 
 - Reçus (frais, salaires, avances) : la mention « نسخة للتجريب فقط » n'est plus

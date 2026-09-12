@@ -50,11 +50,17 @@ Après tout ajout ou changement de variable : **Deployments → ⋯ → Redeploy
 
 ## 3. Stockage de l'instantané (Vercel Blob)
 
-1. Projet → **Storage → Create Database → Blob** → nom libre (ex. `school-snapshot`)
-   → **Create**.
-2. **Connect Project** → choisir `scholar-app`, environnements *Production* (+ *Preview*)
-   → **Connect**. Vercel ajoute lui-même `BLOB_READ_WRITE_TOKEN` aux variables.
-3. **Redeploy** (même chemin qu'au § 2).
+1. Projet → **Storage → Create Database → Blob** → nom libre (ex. `school-snapshot`),
+   accès *Private*, préfixe de variable laissé à `BLOB`.
+2. Par défaut Vercel ne crée que `BLOB_STORE_ID` et `BLOB_WEBHOOK_PUBLIC_KEY`.
+   **Cocher « Add a read-write token env var to this connection »** avant
+   **Create** : c'est ce qui ajoute `BLOB_READ_WRITE_TOKEN`, la seule variable
+   lue par le site (`api/[...path].js`). Ne pas changer le préfixe, sinon le nom
+   du token change et le site ne le trouve plus.
+3. Si le store existe déjà sans cette case : Storage → le store → **Tokens →
+   Create token (Read-Write)**, puis l'ajouter à la main dans *Environment
+   Variables* sous le nom exact `BLOB_READ_WRITE_TOKEN` (Production + Preview).
+4. **Redeploy** (même chemin qu'au § 2).
 
 Vérification : ouvrir `https://<projet>.vercel.app/api/mode` → doit répondre
 `{"mode":"production","label":"وضع الإنتاج","version":"1.45.0","readOnly":true,"syncedAt":""}`.
