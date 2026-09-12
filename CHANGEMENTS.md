@@ -3,7 +3,7 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
-## 1.55.0 — 2026-09-12
+## 1.56.0 — 2026-09-12
 
 - Tous les champs de mot de passe (connexion, confirmation dans les paramètres,
   changement de mot de passe, nouvel utilisateur, modification de salaire,
