@@ -336,7 +336,7 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 /* كشف رواتب الشهر */
 .payroll-tools{align-items:end}
 .payroll-month{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:13px;width:200px}
-.payroll-month select{border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit}
+.payroll-month select,.payroll-month input{border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit}
 .payroll-status{font-weight:800;white-space:nowrap}
 .payroll-status.paid{color:var(--status-paid)}
 .payroll-status.partial{color:var(--status-partial)}
@@ -345,8 +345,8 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 .payroll-status.pending{color:var(--status-partial)}
 .payroll-pending-note{flex-basis:100%;color:var(--status-partial)}
 .payroll-summary-empty{color:var(--text-muted)}
-.salary-form #salaryTeacherSearch{flex:1.2}
-.salary-form #salaryTeacher{flex:1.6}
+.salary-form #salaryTeacherSearch,.salary-form #advanceTeacherSearch{flex:1.2}
+.salary-form #salaryTeacher,.salary-form #advanceTeacher{flex:1.6}
 .staff-toolbar{margin-bottom:10px;flex-wrap:wrap}
 .staff-toolbar label{width:220px}
 .staff-status-stopped{color:var(--status-exempt);font-weight:700}

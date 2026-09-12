@@ -383,6 +383,13 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#payrollMonth').selectOption('أكتوبر');
   const payrollRow=page.locator('#payrollTable tr[data-teacher-id]');
   await expect(payrollRow).toHaveCount(1);
+  // The sheet searches by phone (Arabic digits accepted) as well as by name.
+  await page.locator('#payrollSearch').fill('٣٣٤٤٥٥');
+  await expect(payrollRow).toHaveCount(1);
+  await page.locator('#payrollSearch').fill('99999999');
+  await expect(page.locator('#payrollTable')).toContainText('لا يوجد موظف مطابق للبحث «99999999»');
+  await page.locator('#payrollSearch').fill('');
+  await expect(payrollRow).toHaveCount(1);
   await expect(payrollRow).toHaveAttribute('data-payroll-status','partial');
   await expect(payrollRow).toContainText('2,000');
   await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2,000');
@@ -402,8 +409,20 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#salaryForm button.primary').click();
   await expect(page.locator('#toast')).toContainText('لا يوجد موظف مطابق للبحث');
   await expect(page.locator('#salaryTeacherSearch')).toBeFocused();
+  await page.locator('#salaryTeacherSearch').fill('33445566');
+  await expect(page.locator('#salaryTeacher option')).toHaveCount(1);
   await page.locator('#salaryTeacherSearch').fill('');
   await expect(page.locator('#salaryTeacher option')).toHaveCount(1);
+  // The advance form searches the same way, by name or phone.
+  await page.locator('[data-staff-tab="advances"]').click();
+  await page.locator('#advanceTeacherSearch').fill('٣٣٤٤٥٥٦٦');
+  await expect(page.locator('#advanceTeacher option')).toHaveCount(1);
+  await page.locator('#advanceTeacherSearch').fill('غير موجود');
+  await expect(page.locator('#advanceTeacher option')).toHaveCount(0);
+  await expect(page.locator('#advanceDueInfo')).toContainText('لا يوجد موظف مطابق للبحث «غير موجود»');
+  await page.locator('#advanceTeacherSearch').fill('');
+  await expect(page.locator('#advanceTeacher option')).toHaveCount(1);
+  await page.locator('[data-staff-tab="salaries"]').click();
   // Salary and advance receipts print through the shared receipt window.
   const salaryReceipt=await page.evaluate(()=>{
     let body='';const original=window.printWindow;

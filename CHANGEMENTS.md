@@ -3,6 +3,20 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.48.0 — 2026-09-12
+
+- Onglet الموظفون : recherche d'un employé par **numéro de téléphone** (chiffres
+  arabes acceptés) dans « كشف رواتب الشهر » (nouveau champ « بحث » à côté du
+  mois), « الرواتب الشهرية » (le champ de recherche du formulaire indique
+  désormais « ابحث بالاسم أو الهاتف ») et « السلف » (nouveau champ de recherche
+  devant la liste des employés). Une recherche sans résultat l'indique dans le
+  tableau ou sous le formulaire, et le formulaire de سلفة refuse avec un
+  message lisible au lieu de rester muet.
+- Technique : `teacherQuery` / `teacherMatches` (nom, طبيعة العمل, téléphone)
+  partagés par le registre, le كشف, la paie et les avances ; champs
+  `payrollSearch` et `advanceTeacherSearch` ; `prefillAdvanceForm` vide la
+  recherche avant de sélectionner l'employé ; test UI étendu.
+
 ## 1.47.0 — 2026-09-12
 
 - Onglet « قاعدة البيانات » (compte développeur uniquement) : **تصدير قاعدة
