@@ -11,6 +11,20 @@ versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 - Technique : `receiptHtml` (`fees-ui.js`) et `staffReceiptHtml` (`staff.js`)
   n'insèrent plus `TEST_MODE_LABEL` ; test UI inversé.
 
+## 1.53.0 — 2026-09-12
+
+- Tous les tableaux de l'application (طلاب, كشف الرواتب, سجل الموظفين, دفعات
+  الرواتب, السلف, المصروفات, الامتحانات, التقارير, الإعدادات, فواتير الطالب…)
+  reçoivent le bouton **« إظهار وإخفاء الأعمدة »** déjà présent sur le tableau
+  des frais : chaque colonne peut être masquée ou réaffichée, « إظهار الكل »
+  rétablit tout, et le choix est mémorisé par tableau sur l'appareil.
+- Technique : `setupColumnPickers` (`core.js`) construit le sélecteur à partir
+  des en-têtes `<thead>` de chaque `table[aria-labelledby]` à en-tête fixe et
+  masque les colonnes par une règle CSS `nth-child` (survit aux re-rendus,
+  laisse visibles les lignes `colspan`) ; mémoire `localStorage`
+  `hiddenColumns:<id>` par libellé de colonne ; styles `.column-picker-bar` ;
+  test UI étendu.
+
 ## 1.52.0 — 2026-09-12
 
 - Montants et effectifs : le séparateur de milliers est désormais une **espace**

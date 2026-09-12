@@ -442,3 +442,55 @@ async function deleteWithPassword(path, confirmMessage, successMessage){
 // One round trip, and no session created: /login used to leave an unused token
 // on the server for every confirmation.
 async function requirePassword(){const p=await askInput('أدخل كلمة المرور لإتمام هذه العملية:');if(p===null)return false;try{const x=await api('/verify-password',{method:'POST',body:JSON.stringify({password:western(p)})});return Boolean(x.ok)}catch(error){toast(error.message||'كلمة المرور غير صحيحة.');return false}}
+
+// Sélecteur « إظهار وإخفاء الأعمدة » pour toutes les tables à en-tête fixe (la
+// table des frais garde le sien : ses en-têtes changent avec le mois). Le
+// masquage passe par une règle CSS nth-child, qui survit aux re-rendus par
+// innerHTML ; les cellules colspan (lignes « aucun résultat ») restent
+// visibles. Le choix est mémorisé par table et par libellé de colonne, de sorte
+// qu'une colonne ajoutée plus tard n'hérite pas d'un ancien index.
+const columnPickers=[];
+const columnPickerStyle=document.head.appendChild(document.createElement('style'));
+const columnPickerKey=id=>`hiddenColumns:${id}`;
+function savedHiddenColumns(id){try{const saved=JSON.parse(localStorage.getItem(columnPickerKey(id))||'[]');return Array.isArray(saved)?saved:[]}catch{return []}}
+function saveHiddenColumns(picker){try{localStorage.setItem(columnPickerKey(picker.id),JSON.stringify([...picker.hidden]))}catch{}}
+function applyColumnPickers(){
+  columnPickerStyle.textContent=columnPickers.flatMap(({id,labels,hidden})=>labels
+    .map((label,index)=>hidden.has(label)?`table[aria-labelledby="${id}"] tr>:nth-child(${index+1}):not([colspan]){display:none!important}`:'')
+    .filter(Boolean)).join('\n');
+}
+function setupColumnPickers(){
+  for(const table of document.querySelectorAll('table[aria-labelledby]')){
+    const labels=[...table.querySelectorAll('thead th')].map(th=>th.textContent.trim());
+    if(!labels.length||table.querySelector('thead tr[id]'))continue;
+    const id=table.getAttribute('aria-labelledby');
+    const picker={id,labels,hidden:new Set(savedHiddenColumns(id).filter(label=>labels.includes(label)))};
+    columnPickers.push(picker);
+    const details=document.createElement('details');
+    details.className='fee-column-picker column-picker';
+    const render=()=>{details.innerHTML=`<summary class="secondary">إظهار وإخفاء الأعمدة</summary><div class="fee-column-options">`
+      +labels.map((label,index)=>`<label><input type="checkbox" data-column-index="${index}" ${picker.hidden.has(label)?'':'checked'}> ${esc(label)}</label>`).join('')
+      +'<button type="button" class="secondary" data-show-all-columns>إظهار الكل</button></div>'};
+    render();
+    details.addEventListener('change',event=>{
+      const index=event.target.dataset.columnIndex;
+      if(index===undefined)return;
+      event.target.checked?picker.hidden.delete(labels[index]):picker.hidden.add(labels[index]);
+      saveHiddenColumns(picker);
+      applyColumnPickers();
+    });
+    details.addEventListener('click',event=>{
+      if(!event.target.matches('[data-show-all-columns]'))return;
+      picker.hidden.clear();
+      saveHiddenColumns(picker);
+      render();
+      applyColumnPickers();
+    });
+    const bar=document.createElement('div');
+    bar.className='column-picker-bar';
+    bar.append(details);
+    (table.closest('.table-scroll')||table).before(bar);
+  }
+  applyColumnPickers();
+}
+setupColumnPickers();

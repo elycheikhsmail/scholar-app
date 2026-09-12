@@ -510,7 +510,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#feesTable [data-fee-column="payment"]')).toHaveCount(0);
   await expect(page.locator('#feesTable .fee-form-trigger').first()).toHaveText('+');
   await expect(page.locator('#feesTable .fee-form-trigger').first()).toHaveAttribute('aria-label', /فتح استمارة الرسوم/);
-  await page.locator('.fee-column-picker summary').click();
+  await page.locator('#fees .fee-column-picker summary').click();
   await page.locator('[data-fee-column-toggle="discount"]').uncheck();
   await expect(page.locator('#feesHead [data-fee-column="discount"]')).toBeHidden();
   assert.match(await page.evaluate(() => localStorage.getItem('feeHiddenColumns')), /discount/);
@@ -591,6 +591,23 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentGenderFilter').selectOption('ذكر');
   await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(1);
   await page.locator('#studentGenderFilter').selectOption('');
+  // Every static table gets the fees-style column picker; hiding is a CSS rule,
+  // so it survives re-renders, keeps colspan rows visible and is remembered.
+  const studentsPicker=page.locator('.column-picker-bar:has(+ .table-scroll table[aria-labelledby="studentsTableTitle"]) details');
+  await expect(studentsPicker.locator('label')).toHaveCount(8);
+  await studentsPicker.locator('summary').click();
+  await studentsPicker.locator('[data-column-index="4"]').uncheck();
+  await expect(page.locator('#studentsTable tr td:nth-child(5)')).toBeHidden();
+  await expect(page.locator('table[aria-labelledby="studentsTableTitle"] th:nth-child(5)')).toBeHidden();
+  await expect(page.locator('#studentsTable tr td:nth-child(4)')).toBeVisible();
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('hiddenColumns:studentsTableTitle'))),['الجنس']);
+  await page.locator('#studentSearch').fill('99999999');
+  await expect(page.locator('#studentsTable td[colspan]')).toBeVisible();
+  await page.locator('#studentSearch').fill('');
+  await studentsPicker.locator('[data-show-all-columns]').click();
+  await expect(page.locator('#studentsTable tr td:nth-child(5)')).toBeVisible();
+  await expect(page.locator('.column-picker-bar')).toHaveCount(17);
+  await page.keyboard.press('Escape');
   // Invalid entries are flagged on their own fields (red border, message below,
   // focus on the first) before anything is sent; correcting a field clears it.
   await page.locator('#nni').fill('123');
@@ -704,7 +721,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#studentChargeDetailsBody')).toContainText('المخصَّص لهذا الرسم');
   await page.locator('#studentChargeDetailsDialog [data-close-dialog]').last().click();
   await expect(page.locator('#studentChargeDetailsDialog')).not.toHaveAttribute('open','');
-  await page.locator('#studentAccountDetails summary').click();
+  await page.locator('#studentAccountDetails > summary').click();
   await expect(page.locator('#studentLedger')).toBeVisible();
   await expect(page.locator('#studentLedgerTitle')).toHaveText('الفواتير');
   // One row per invoice; the note lists the fees the receipt settled.

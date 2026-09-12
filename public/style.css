@@ -165,6 +165,7 @@
 .fee-column-options input{accent-color:var(--green);width:17px;height:17px}
 .fee-column-options button{margin-top:4px;width:100%}
 .fee-column-hidden{display:none!important}
+.column-picker-bar{display:flex;justify-content:flex-start;margin:0 0 8px}.column-picker-bar summary{padding:8px 14px;font-size:13px}.column-picker-bar .fee-column-options{left:auto;right:0}
 .fees-scroll [data-fee-column="name"]{position:sticky;right:0;z-index:2;background:#fff;box-shadow:-5px 0 8px #1a283212}
 .fees-scroll th[data-fee-column="name"]{z-index:5;background:var(--surface-head)}
 .fees-scroll tbody tr:nth-child(even) [data-fee-column="name"]{background:var(--row-alt)}
