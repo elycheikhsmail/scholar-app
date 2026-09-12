@@ -11,7 +11,7 @@ function javascriptFiles(directory) {
 }
 const files = [
   ...fs.readdirSync(root).filter(name => name.endsWith('.js')).map(name => path.join(root, name)),
-  ...['public', 'scripts', 'tests'].flatMap(name => javascriptFiles(path.join(root, name)))
+  ...['api', 'public', 'scripts', 'tests'].flatMap(name => javascriptFiles(path.join(root, name)))
 ];
 let failed = false;
 for (const file of files) {

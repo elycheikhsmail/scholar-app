@@ -353,9 +353,10 @@ test('read-only server refuses every change and the desktop pushes its snapshot 
   const http = require('node:http');
   const received = [];
   const receiver = http.createServer((req, res) => {
-    let raw = ''; req.on('data', chunk => raw += chunk); req.on('end', () => {
+    const chunks = []; req.on('data', chunk => chunks.push(chunk)); req.on('end', () => {
       if (req.headers.authorization !== 'Bearer secret-1') { res.writeHead(401, { 'Content-Type': 'application/json' }); return res.end('{"error":"رمز المزامنة غير صحيح."}'); }
-      received.push(JSON.parse(raw)); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"ok":true}');
+      assert.equal(req.headers['content-type'], 'application/gzip');
+      received.push(JSON.parse(require('node:zlib').gunzipSync(Buffer.concat(chunks)).toString('utf8'))); res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"ok":true}');
     });
   });
   await new Promise(resolve => receiver.listen(0, '127.0.0.1', resolve));

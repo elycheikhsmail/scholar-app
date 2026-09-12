@@ -32,6 +32,7 @@ No bundler or framework. UI text is Arabic (RTL); preserve existing wording.
 | Startup, replacement session | `public/app.js` |
 | Markup / styles | `public/index.html` / `public/style.css` |
 | Desktop lifecycle / bridge | `main.js` / `preload.js` |
+| Read-only web copy (Vercel function, local runner) | `api/[...path].js`, `scripts/web-local.js`, `tests/web-readonly.test.js`, `vercel.json` |
 | Demo data (production) | `scripts/seed-demo.js`, `tests/seed-demo.test.js` |
 | Test database, February in progress | `scripts/seed-testing.js`, `tests/seed-testing.test.js` |
 | Official levels and fees; production loader / reset | `scripts/official-fees.js`, `scripts/apply-fees.js`, `scripts/clear-fees.js`, `tests/apply-fees.test.js`, `tests/clear-fees.test.js` |

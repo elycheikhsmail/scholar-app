@@ -1,0 +1,13 @@
+database/
+dist/
+build/
+tests/
+scripts/
+docs/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.md
+/ecole.jpg
+main.js
+preload.js

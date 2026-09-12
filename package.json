@@ -1,6 +1,6 @@
 {
   "name": "school-accounts",
-  "version": "1.44.0",
+  "version": "1.45.0",
   "description": "نظام حسابات المدرسة وإدارة الطلاب والرسوم والمدرسين والرواتب والمصروفات",
   "main": "main.js",
   "author": "ely cheikh smail",
@@ -10,6 +10,7 @@
     "dist": "electron-builder --win nsis",
     "test:e2e": "playwright test",
     "test": "node --test tests/*.test.js",
+    "web:local": "node scripts/web-local.js",
     "test:fees": "node --test tests/fees.test.js",
     "test:db": "node --test tests/db.test.js",
     "test:seed": "node --test tests/seed-demo.test.js tests/seed-testing.test.js tests/apply-fees.test.js tests/clear-fees.test.js",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
+    "@vercel/blob": "^2.8.0",
     "electron": "^37.10.3",
     "electron-builder": "^26.15.3"
   },

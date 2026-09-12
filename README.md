@@ -296,7 +296,34 @@ Voir `NOTES-WEB-READONLY.md` pour l'analyse. Ce dépôt fournit déjà :
   (compteur dans la table `metadata`, hors des données de l'école). L'application Electron
   synchronise aussi à la fermeture (5 s maximum, silencieux hors ligne). Refusée en وضع التجريب.
 
-Reste à faire côté hébergement (étape 4 des notes) : le site qui reçoit l'instantané et le sert.
+### Le site (Vercel)
+
+`api/[...path].js` est la seule fonction : elle reçoit l'instantané (`POST /api/sync`, jeton
+`SYNC_TOKEN`, corps gzippé), le range dans Vercel Blob (privé) et sert `GET /api/mode`,
+`/api/settings`, `/api/data`, `/api/departments`, `/api/exams` derrière une connexion
+(`WEB_USERNAME` / `WEB_PASSWORD`, sessions signées de 12 h) ; tout le reste répond 405.
+`public/` est servi tel quel par Vercel. `vercel.json` et `.vercelignore` évitent d'installer
+Electron et d'envoyer les bases.
+
+Essai local complet, sans compte Vercel : `WEB_PASSWORD=… SYNC_TOKEN=… npm run web:local`
+(port 3790, instantané dans `database/web-snapshot.json`), puis dans le desktop
+الإعدادات ← المزامنة : URL `http://127.0.0.1:3790/api/sync` + le jeton, « مزامنة الآن »,
+et ouvrir `http://127.0.0.1:3790/`.
+
+Déploiement :
+
+1. Vercel → *Add New Project* → importer ce dépôt GitHub, framework *Other*, sans commande
+   de build.
+2. *Storage* → créer un **Blob store** et le lier au projet (`BLOB_READ_WRITE_TOKEN` est
+   ajouté automatiquement).
+3. *Settings → Environment Variables* : `WEB_PASSWORD` (mot de passe du site),
+   `WEB_USERNAME` (facultatif, sinon l'identifiant du desktop), `SYNC_TOKEN` (long, aléatoire :
+   `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`).
+4. Déployer, puis dans le desktop الإعدادات ← المزامنة مع الموقع : URL
+   `https://<projet>.vercel.app/api/sync` + le même jeton, « مزامنة الآن ».
+5. Ouvrir `https://<projet>.vercel.app/`, se connecter, vérifier reçus et relevés.
+
+Test : `node --test tests/web-readonly.test.js` (desktop → fonction web locale → API lue).
 
 ## Modes production et test
 

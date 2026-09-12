@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const db = require("./db");
 const APP_VERSION = (() => {
   try { return require("./package.json").version; }
@@ -317,10 +318,12 @@ async function syncRemote({ timeout = 20000 } = {}) {
     if (!url) return { ok: false, error: "لم يُضبط رابط المزامنة بعد (الإعدادات ← المزامنة)." };
     if (!token) return { ok: false, error: "لم يُضبط رمز المزامنة بعد (الإعدادات ← المزامنة)." };
     const snapshot = db.snapshot();
+    // Gzipped: a full year of receipts and marks fits well under the size
+    // limit of a serverless function, and the upload is ten times faster.
     const response = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(snapshot),
+      headers: { "Content-Type": "application/gzip", Authorization: `Bearer ${token}` },
+      body: zlib.gzipSync(JSON.stringify(snapshot)),
       signal: AbortSignal.timeout(timeout)
     });
     if (!response.ok) {

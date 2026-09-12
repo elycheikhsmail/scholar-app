@@ -3,6 +3,19 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.45.0 — 2026-09-12
+
+- Copie web en lecture seule, étape 4 : fonction Vercel `api/[...path].js`
+  (réception de l'instantané avec jeton, stockage Vercel Blob privé, API GET
+  identique à celle du desktop, connexion par mot de passe, 405 sur toute
+  écriture), `vercel.json`, `.vercelignore`, `npm run web:local` pour l'essayer
+  sur la machine. L'instantané part gzippé du desktop (0,13 Mo pour une année
+  pleine). Mode d'emploi du déploiement dans `README.md`.
+- Technique : `@vercel/blob` en devDependency (non embarqué dans l'application
+  Electron) ; `tests/web-readonly.test.js` fait dialoguer le serveur desktop et
+  la fonction web.
+- Vérification : `npm run check`, `npm test`, `npm run test:ui`.
+
 ## 1.44.0 — 2026-09-11
 
 - Préparation de la copie web en lecture seule (étapes 1–3 de
