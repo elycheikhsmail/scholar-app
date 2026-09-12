@@ -85,6 +85,43 @@ function applyReadOnly(flag){
   document.body.classList.toggle('read-only',state.readOnly);
 }
 function api(path,options={}){if(state.readOnly&&(options.method||'GET')!=='GET'&&!['/login','/logout'].includes(path))return Promise.reject(Error(READ_ONLY_MESSAGE));const headers={'Content-Type':'application/json',...(options.headers||{})};if(state.token)headers.Authorization=`Bearer ${state.token}`;return fetch(`${API_BASE}${path}`,{...options,headers}).then(async r=>{const x=await r.json().catch(()=>({}));if(!r.ok){if(r.status===401&&state.token&&path!=='/login')location.reload();throw Error(x.error||'حدث خطأ.');}return x})}
+// Export Excel avec choix des colonnes : une seule boîte partagée par les tableaux
+// (موظفون, رواتب…). Chaque tableau décrit ses colonnes {key,label,value(row)} et
+// une clé de stockage ; le choix est conservé dans localStorage, une colonne
+// disparue est ignorée pour ne pas ressusciter.
+let columnExportConfig=null;
+function savedExportColumns(storageKey,columns){
+  try{
+    const saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+    if(Array.isArray(saved))return columns.filter(column=>saved.includes(column.key)).map(column=>column.key);
+  }catch{}
+  return columns.map(column=>column.key);
+}
+function openColumnExport({storageKey,columns,rows,title,unit,filename,sheetName}){
+  if(!rows.length)return toast(`لا توجد بيانات مطابقة للتصفية لتصديرها.`);
+  columnExportConfig={storageKey,columns,rows,filename,sheetName,unit};
+  const selected=savedExportColumns(storageKey,columns);
+  $('columnExportTitle').textContent=`أعمدة تصدير Excel — ${title}`;
+  $('columnExportCount').textContent=`سيتم تصدير ${money(rows.length)} ${unit} حسب التصفية الحالية.`;
+  $('columnExportColumns').innerHTML=columns.map(column=>`<label><input type="checkbox" data-export-column="${esc(column.key)}" ${selected.includes(column.key)?'checked':''}> ${esc(column.label)}</label>`).join('');
+  $('columnExportDialog').showModal();
+}
+function setAllColumnExport(checked){for(const input of document.querySelectorAll('[data-export-column]'))input.checked=checked}
+$('selectAllColumnExport').onclick=()=>setAllColumnExport(true);
+$('clearColumnExport').onclick=()=>setAllColumnExport(false);
+$('closeColumnExport').onclick=()=>$('columnExportDialog').close();
+$('columnExportForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const config=columnExportConfig;
+  if(!config)return;
+  const checked=new Set([...document.querySelectorAll('[data-export-column]')].filter(input=>input.checked).map(input=>input.dataset.exportColumn));
+  const columns=config.columns.filter(column=>checked.has(column.key));
+  if(!columns.length)return toast('اختر عمودًا واحدًا على الأقل للتصدير.');
+  try{localStorage.setItem(config.storageKey,JSON.stringify(columns.map(column=>column.key)))}catch{}
+  downloadXlsx(`${config.filename} — ${today()}.xlsx`,config.sheetName,[columns.map(column=>column.label),...config.rows.map(row=>columns.map(column=>column.value(row)))]);
+  $('columnExportDialog').close();
+  toast(`تم تصدير ${money(config.rows.length)} ${config.unit} إلى Excel.`);
+});
 function toast(m){const t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',3200)}
 function setDate(id){if($(id)&&!$(id).value)$(id).value=today()}
 

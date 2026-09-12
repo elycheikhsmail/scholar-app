@@ -435,6 +435,7 @@ function payrollFilterMatches(status){
   if(payrollStatusFilter==='unpaid')return status==='unpaid'||status==='hours'||status==='pending';
   return status===payrollStatusFilter;
 }
+let payrollVisibleRows=[];
 function renderPayroll(){
   if(!state.data)return;
   const month=$('payrollMonth').value;
@@ -447,6 +448,7 @@ function renderPayroll(){
     :'<span class="payroll-summary-empty">لا يوجد موظفون مسجلون.</span>';
   const query=teacherQuery('payrollSearch');
   const visible=rows.filter(r=>payrollFilterMatches(r.status)&&teacherMatches(r.teacher,query));
+  payrollVisibleRows=visible;
   $('payrollTable').innerHTML=visible.map(({teacher:t,due,adv,paid,rem,status})=>{
     const actions=[];
     if(status==='pending');// الراتب لم يُستحق بعد : لا صرف قبل اليوم الأخير من الشهر.
@@ -468,6 +470,39 @@ function renderPayroll(){
   syncFilterButtons('#payrollPanel [data-payroll-status]','payrollStatus',payrollStatusFilter);
 }
 $('payrollMonth').onchange=renderPayroll;
+// Les exports Excel du personnel passent par la boîte commune de choix des
+// colonnes (core.js) et suivent la liste affichée, filtres compris.
+const PAYROLL_EXPORT_COLUMNS=[
+  {key:'name',label:'الموظف',value:r=>r.teacher.name||''},
+  {key:'phone',label:'الهاتف',value:r=>western(r.teacher.phone||'')},
+  {key:'role',label:'طبيعة العمل',value:r=>r.teacher.role||''},
+  {key:'month',label:'الشهر',value:()=>$('payrollMonth').value},
+  {key:'due',label:'الاستحقاق',value:r=>r.status==='hours'?'':Number(r.due||0)},
+  {key:'adv',label:'السلف',value:r=>Number(r.adv||0)},
+  {key:'paid',label:'المدفوع',value:r=>Number(r.paid||0)},
+  {key:'rem',label:'المتبقي',value:r=>r.status==='hours'?'':Number(r.rem||0)},
+  {key:'status',label:'الحالة',value:r=>PAYROLL_STATUS_LABELS[r.status]||''}
+];
+$('exportPayroll').onclick=()=>openColumnExport({
+  storageKey:'payrollExportColumns',columns:PAYROLL_EXPORT_COLUMNS,rows:payrollVisibleRows,
+  title:'كشف رواتب الشهر',unit:'موظف',filename:`كشف رواتب ${$('payrollMonth').value}`,sheetName:'كشف الرواتب'
+});
+const TEACHER_EXPORT_COLUMNS=[
+  {key:'name',label:'الموظف',value:t=>t.name||''},
+  {key:'role',label:'طبيعة العمل',value:t=>t.role||''},
+  {key:'status',label:'الحالة',value:t=>isActiveTeacher(t)?'نشط':'متوقف'},
+  {key:'endDate',label:'تاريخ التوقف',value:t=>isActiveTeacher(t)?'':(t.endDate||'')},
+  {key:'stage',label:'المرحلة',value:t=>t.stage||''},
+  {key:'subject',label:'المادة',value:t=>t.subject||''},
+  {key:'fixedSalary',label:'الثابت',value:t=>roleNeedsFixed(t.role)?Number(t.fixedSalary||0):''},
+  {key:'hourlyRate',label:'سعر الساعة',value:t=>roleNeedsFixed(t.role)?'':Number(t.hourlyRate||0)},
+  {key:'phone',label:'الهاتف',value:t=>western(t.phone||'')},
+  {key:'lastPayment',label:'آخر دفعة',value:t=>{const last=lastPaymentOf(t.id);return last?`${last.month} — ${western(last.date)}`:''}}
+];
+$('exportTeachers').onclick=()=>openColumnExport({
+  storageKey:'teacherExportColumns',columns:TEACHER_EXPORT_COLUMNS,rows:filteredTeachers(),
+  title:'سجل الموظفين',unit:'موظف',filename:'سجل الموظفين',sheetName:'الموظفون'
+});
 $('payrollSearch').oninput=debounce(renderPayroll,150);
 $('payrollPanel').addEventListener('click',event=>{
   const button=event.target.closest('[data-payroll-status]');
@@ -626,12 +661,27 @@ function renderSalary(){
   $('salaryTable').innerHTML=rows||`<tr><td colspan="10">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
   renderPayroll();
 }
-$('exportSalaryLog').onclick=()=>{
-  const header=['رقم الإيصال','الموظف','طبيعة العمل','الشهر','الاستحقاق','السلف','المدفوع (هذه الدفعة)','إجمالي المدفوع للشهر','المتبقي','التاريخ','الساعة','الساعات','سعر الساعة','ملاحظات'];
-  const rows=salaryLogRows.map(({p,t,due,adv,allPaid,rem})=>[salaryReceiptNo(p),t?.name||'محذوف',t?.role||'',p.month,due,adv,Number(p.amount||0),allPaid,rem,p.date||'',p.time||'',Number(p.hours||0),Number(p.hourlyRate||0),p.notes||'']);
-  if(!rows.length)return toast('لا توجد دفعات لتصديرها.');
-  downloadXlsx(`دفعات الرواتب — ${today()}.xlsx`,'دفعات الرواتب',[header,...rows]);
-};
+const SALARY_EXPORT_COLUMNS=[
+  {key:'receiptNo',label:'رقم الإيصال',value:r=>salaryReceiptNo(r.p)},
+  {key:'name',label:'الموظف',value:r=>r.t?.name||'محذوف'},
+  {key:'phone',label:'الهاتف',value:r=>western(r.t?.phone||'')},
+  {key:'role',label:'طبيعة العمل',value:r=>r.t?.role||''},
+  {key:'month',label:'الشهر',value:r=>r.p.month},
+  {key:'due',label:'الاستحقاق',value:r=>r.due},
+  {key:'adv',label:'السلف',value:r=>r.adv},
+  {key:'amount',label:'المدفوع (هذه الدفعة)',value:r=>Number(r.p.amount||0)},
+  {key:'allPaid',label:'إجمالي المدفوع للشهر',value:r=>r.allPaid},
+  {key:'rem',label:'المتبقي',value:r=>r.rem},
+  {key:'date',label:'التاريخ',value:r=>r.p.date||''},
+  {key:'time',label:'الساعة',value:r=>r.p.time||''},
+  {key:'hours',label:'الساعات',value:r=>Number(r.p.hours||0)},
+  {key:'hourlyRate',label:'سعر الساعة',value:r=>Number(r.p.hourlyRate||0)},
+  {key:'notes',label:'ملاحظات',value:r=>r.p.notes||''}
+];
+$('exportSalaryLog').onclick=()=>openColumnExport({
+  storageKey:'salaryExportColumns',columns:SALARY_EXPORT_COLUMNS,rows:salaryLogRows,
+  title:'سجل دفعات الرواتب',unit:'دفعة',filename:'دفعات الرواتب',sheetName:'دفعات الرواتب'
+});
 
 window.editSalaryPayment=id=>{
   const p=state.data.teacherPayments.find(x=>Number(x.id)===Number(id));
@@ -798,12 +848,21 @@ function renderAdvances(){
   $('advanceTable').innerHTML=rows||`<tr><td colspan="8">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
   renderPayroll();
 }
-$('exportAdvanceLog').onclick=()=>{
-  const header=['رقم الإيصال','الموظف','طبيعة العمل','الشهر','السلفة','التاريخ','الساعة','ملاحظات'];
-  const rows=advanceLogRows.map(({a,t})=>[advanceReceiptNo(a),t?.name||'محذوف',t?.role||'',a.month,Number(a.amount||0),a.date||'',a.time||'',a.notes||'']);
-  if(!rows.length)return toast('لا توجد سلف لتصديرها.');
-  downloadXlsx(`سلف الموظفين — ${today()}.xlsx`,'سلف الموظفين',[header,...rows]);
-};
+const ADVANCE_EXPORT_COLUMNS=[
+  {key:'receiptNo',label:'رقم الإيصال',value:r=>advanceReceiptNo(r.a)},
+  {key:'name',label:'الموظف',value:r=>r.t?.name||'محذوف'},
+  {key:'phone',label:'الهاتف',value:r=>western(r.t?.phone||'')},
+  {key:'role',label:'طبيعة العمل',value:r=>r.t?.role||''},
+  {key:'month',label:'الشهر',value:r=>r.a.month},
+  {key:'amount',label:'السلفة',value:r=>Number(r.a.amount||0)},
+  {key:'date',label:'التاريخ',value:r=>r.a.date||''},
+  {key:'time',label:'الساعة',value:r=>r.a.time||''},
+  {key:'notes',label:'ملاحظات',value:r=>r.a.notes||''}
+];
+$('exportAdvanceLog').onclick=()=>openColumnExport({
+  storageKey:'advanceExportColumns',columns:ADVANCE_EXPORT_COLUMNS,rows:advanceLogRows,
+  title:'سجل سلف الموظفين',unit:'سلفة',filename:'سلف الموظفين',sheetName:'سلف الموظفين'
+});
 
 window.editAdvance=async id=>{
   if(!(await requirePassword()))return;

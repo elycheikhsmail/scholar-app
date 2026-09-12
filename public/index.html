@@ -264,7 +264,7 @@
       </div>
     </div>
     <p id="payrollSummary" class="totals-line" role="status" aria-live="polite"></p>
-    <div class="table-tools"><button type="button" class="secondary" id="printPayroll">🖨️ طباعة كشف الشهر</button></div>
+    <div class="table-tools"><button type="button" class="secondary" id="printPayroll">🖨️ طباعة كشف الشهر</button><button type="button" class="secondary" id="exportPayroll">📊 تصدير Excel</button></div>
     <h3 class="table-title" id="payrollTitle">كشف رواتب الشهر</h3>
     <div class="table-scroll"><table aria-labelledby="payrollTitle"><thead><tr><th>الموظف</th><th>الهاتف</th><th>طبيعة العمل</th><th>الاستحقاق</th><th>السلف</th><th>المدفوع</th><th>المتبقي</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody id="payrollTable"></tbody></table></div>
   </div>
@@ -273,6 +273,7 @@
       <label>بحث<input id="teacherSearch" type="search" placeholder="الاسم أو الهاتف"></label>
       <label>طبيعة العمل<select id="teacherRoleFilter"><option value="">الكل</option></select></label>
       <label>الحالة<select id="teacherStatusFilter"><option value="active">النشطون</option><option value="stopped">المتوقفون</option><option value="">الكل</option></select></label>
+      <button type="button" class="secondary" id="exportTeachers">📊 تصدير Excel</button>
     </div>
     <p id="teacherCount" class="totals-line" role="status" aria-live="polite"></p>
     <div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الحالة</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>الهاتف</th><th>آخر دفعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
@@ -482,6 +483,21 @@
 </main></div>
 <footer class="app-footer">الإصدار <span id="appVersion">—</span></footer>
 </div>
+<dialog id="columnExportDialog" class="app-dialog export-dialog" aria-labelledby="columnExportTitle">
+  <div class="app-dialog-head">
+    <div><h3 id="columnExportTitle">أعمدة تصدير Excel</h3><p id="columnExportCount"></p></div>
+    <button type="button" class="secondary" id="closeColumnExport" aria-label="إغلاق استمارة التصدير">إغلاق ✕</button>
+  </div>
+  <form id="columnExportForm">
+    <p class="hint-box">اختر الأعمدة التي تريد إظهارها في ملف Excel. يُحفظ اختيارك للمرات القادمة.</p>
+    <div id="columnExportColumns" class="export-columns"></div>
+    <div class="form-actions">
+      <button class="primary">تصدير Excel</button>
+      <button type="button" class="secondary" id="selectAllColumnExport">تحديد الكل</button>
+      <button type="button" class="secondary" id="clearColumnExport">إلغاء التحديد</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="paymentEditDialog" class="app-dialog payment-edit-dialog" aria-labelledby="paymentEditTitle">
   <div class="app-dialog-head">
     <div><h3 id="paymentEditTitle">تعديل دفعة الطالب</h3><p id="paymentEditIdentity"></p></div>

@@ -3,13 +3,27 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
-## 1.49.0 — 2026-09-12
+## 1.51.0 — 2026-09-12
+
+- Onglet الموظفون والرواتب : chaque tableau s'exporte en **Excel avec choix des
+  colonnes** — كشف رواتب الشهر (nouveau bouton « تصدير Excel » à côté de
+  l'impression), سجل الموظفين (nouveau bouton dans la barre de filtres),
+  سجل دفعات الرواتب et سجل سلف الموظفين (les boutons existants ouvrent
+  désormais la boîte de choix). L'export suit les filtres affichés ; les
+  colonnes cochées sont mémorisées séparément pour chaque tableau.
+- Technique : boîte commune `columnExportDialog` et `openColumnExport`
+  (`core.js`, colonnes `{key,label,value}`, mémoire `localStorage` par
+  `storageKey`) ; `PAYROLL_/TEACHER_/SALARY_/ADVANCE_EXPORT_COLUMNS` et
+  `payrollVisibleRows` dans `staff.js` ; test UI étendu.
+
+## 1.50.0 — 2026-09-12
 
 - Onglet الطلاب : nouveau filtre **الجنس** (الكل / ذكر / أنثى) à côté du filtre
   القسم/الشعبة. Il se combine avec le département et la recherche ; le compteur
   « عدد الطلاب » et l'export Excel suivent la liste filtrée.
 - Technique : champ `studentGenderFilter`, `filteredStudents` compare
-  `s.gender` ; test UI étendu.
+  `s.gender` ; test UI étendu. (Livré sous le numéro 1.49.0 déjà utilisé par
+  l'entrée suivante ; renuméroté 1.50.0.)
 
 ## 1.49.0 — 2026-09-12
 

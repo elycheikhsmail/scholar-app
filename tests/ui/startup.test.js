@@ -447,16 +447,33 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#salaryLogTotals')).toContainText('عدد الدفعات المعروضة: 0');
   await page.locator('#salaryLogFrom').fill('');
   await expect(page.locator('#salaryTable tr')).toHaveCount(1);
-  const salaryWorkbook=await page.evaluate(async()=>{
-    const original=window.downloadXlsx;let captured=null;
-    window.downloadXlsx=(name,sheet,rows)=>{captured={name,sheet,rows}};
-    document.getElementById('exportSalaryLog').click();
-    window.downloadXlsx=original;
-    return captured;
-  });
+  // Staff exports share one column-picker dialog; the choice is kept per table.
+  await page.locator('#exportSalaryLog').click();
+  await expect(page.locator('#columnExportDialog')).toHaveAttribute('open', '');
+  await expect(page.locator('#columnExportTitle')).toContainText('سجل دفعات الرواتب');
+  await expect(page.locator('#columnExportCount')).toContainText('سيتم تصدير 1 دفعة');
+  await page.locator('#clearColumnExport').click();
+  await page.locator('[data-export-column="receiptNo"]').check();
+  await page.locator('[data-export-column="name"]').check();
+  await page.evaluate(()=>{window.__xlsxOriginal=window.downloadXlsx;window.downloadXlsx=(name,sheet,rows)=>{window.__xlsxCaptured={name,sheet,rows}}});
+  await page.locator('#columnExportForm button.primary').click();
+  await expect(page.locator('#columnExportDialog')).not.toHaveAttribute('open', '');
+  const salaryWorkbook=await page.evaluate(()=>{window.downloadXlsx=window.__xlsxOriginal;return window.__xlsxCaptured});
   assert.equal(salaryWorkbook.sheet,'دفعات الرواتب');
-  assert.equal(salaryWorkbook.rows.length,2);
-  assert.equal(salaryWorkbook.rows[1][0],'S-000001');
+  assert.deepEqual(salaryWorkbook.rows,[['رقم الإيصال','الموظف'],['S-000001','موظف تجريبي']]);
+  assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('salaryExportColumns'))),['receiptNo','name']);
+  // The payroll sheet and the staff register get the same dialog.
+  await page.locator('[data-staff-tab="payroll"]').click();
+  await page.locator('#exportPayroll').click();
+  await expect(page.locator('#columnExportTitle')).toContainText('كشف رواتب الشهر');
+  await expect(page.locator('[data-export-column="status"]')).toBeChecked();
+  await page.locator('#closeColumnExport').click();
+  await page.locator('[data-staff-tab="registry"]').click();
+  await page.locator('#exportTeachers').click();
+  await expect(page.locator('#columnExportTitle')).toContainText('سجل الموظفين');
+  await expect(page.locator('#columnExportCount')).toContainText('سيتم تصدير 1 موظف');
+  await page.locator('#closeColumnExport').click();
+  await page.locator('[data-staff-tab="salaries"]').click();
   await page.locator('#salaryTable .btn-edit').click();
   await expect(page.locator('#salaryEditDialog')).toHaveAttribute('open', '');
   await expect(page.locator('#salaryEditIdentity')).toContainText('موظف تجريبي');
