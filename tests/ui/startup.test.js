@@ -562,6 +562,13 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentSearch').fill('ولي الأمر');
   await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(1);
   await page.locator('#studentSearch').fill('');
+  // The gender filter narrows the register and combines with the search.
+  await page.locator('#studentGenderFilter').selectOption('أنثى');
+  await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(0);
+  await expect(page.locator('#studentCount')).toHaveText('عدد الطلاب: 0');
+  await page.locator('#studentGenderFilter').selectOption('ذكر');
+  await expect(page.locator('#studentsTable .btn-edit')).toHaveCount(1);
+  await page.locator('#studentGenderFilter').selectOption('');
   // Invalid entries are flagged on their own fields (red border, message below,
   // focus on the first) before anything is sent; correcting a field clears it.
   await page.locator('#nni').fill('123');

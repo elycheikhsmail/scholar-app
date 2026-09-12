@@ -3,6 +3,14 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.49.0 — 2026-09-12
+
+- Onglet الطلاب : nouveau filtre **الجنس** (الكل / ذكر / أنثى) à côté du filtre
+  القسم/الشعبة. Il se combine avec le département et la recherche ; le compteur
+  « عدد الطلاب » et l'export Excel suivent la liste filtrée.
+- Technique : champ `studentGenderFilter`, `filteredStudents` compare
+  `s.gender` ; test UI étendu.
+
 ## 1.48.0 — 2026-09-12
 
 - Onglet الموظفون : recherche d'un employé par **numéro de téléphone** (chiffres

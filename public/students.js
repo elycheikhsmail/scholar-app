@@ -114,6 +114,7 @@ $('studentForm').addEventListener('submit',async e=>{
 });
 $('studentSearch').oninput=debounce(renderStudents);
 $('studentDepartmentFilter').onchange=renderStudents;
+$('studentGenderFilter').onchange=renderStudents;
 // Fees live in the settings and in the departments, so the dues engine is
 // handed both together wherever a ledger is computed.
 // asOf : les relevés suivent la date de test quand elle est active.
@@ -157,10 +158,13 @@ function lateFor(student,month){const row=chargeOf(student,month);return !!row&&
 function statusFor(student,month){return feeStatusOf(chargeOf(student,month),today())}
 // La recherche porte sur le département, le nom, le numéro scolaire, le NNI,
 // et le parent (nom et téléphone) : un numéro tapé retrouve ses enfants.
+// Le filtre الجنس se combine avec le département et la recherche.
 function filteredStudents(){
   const query=western($('studentSearch').value).toLowerCase().trim();
   const dep=$('studentDepartmentFilter').value;
+  const gender=$('studentGenderFilter').value;
   return state.data.students.filter(s=>(!dep||s.className===dep)
+    &&(!gender||s.gender===gender)
     &&[s.className,s.name,s.schoolNo,s.nni,s.guardianName,s.guardianPhone].join(' ').toLowerCase().includes(query));
 }
 function renderStudents(){
