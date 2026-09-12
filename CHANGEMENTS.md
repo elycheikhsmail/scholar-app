@@ -11,6 +11,12 @@ versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 - Technique : `receiptHtml` (`fees-ui.js`) et `staffReceiptHtml` (`staff.js`)
   n'insèrent plus `TEST_MODE_LABEL` ; test UI inversé.
 
+## 1.53.1 — 2026-09-12
+
+- Le bouton « إظهار وإخفاء الأعمدة » des tableaux est centré au-dessus du
+  tableau ; sa liste déroulante s'ouvre centrée sous lui.
+- Technique : `.column-picker-bar` (`style.css`) passe en `justify-content:center`.
+
 ## 1.53.0 — 2026-09-12
 
 - Tous les tableaux de l'application (طلاب, كشف الرواتب, سجل الموظفين, دفعات
