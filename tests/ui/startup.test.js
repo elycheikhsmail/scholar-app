@@ -594,7 +594,9 @@ test('browser scripts support login, all sections, student fees and session rest
   // Every static table gets the fees-style column picker; hiding is a CSS rule,
   // so it survives re-renders, keeps colspan rows visible and is remembered.
   const studentsPicker=page.locator('.column-picker-bar:has(+ .table-scroll table[aria-labelledby="studentsTableTitle"]) details');
-  await expect(studentsPicker.locator('label')).toHaveCount(8);
+  await expect(studentsPicker.locator('label')).toHaveCount(10);
+  await expect(page.locator('#studentsTable tr td:nth-child(6)')).toHaveText('ولي الأمر');
+  await expect(page.locator('#studentsTable tr td:nth-child(7)')).toHaveText('22334455');
   await studentsPicker.locator('summary').click();
   await studentsPicker.locator('[data-column-index="4"]').uncheck();
   await expect(page.locator('#studentsTable tr td:nth-child(5)')).toBeHidden();

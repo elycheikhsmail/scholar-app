@@ -11,6 +11,14 @@ versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 - Technique : `receiptHtml` (`fees-ui.js`) et `staffReceiptHtml` (`staff.js`)
   n'insèrent plus `TEST_MODE_LABEL` ; test UI inversé.
 
+## 1.54.0 — 2026-09-12
+
+- Onglet الطلاب : le tableau « سجل الطلاب » affiche deux nouvelles colonnes
+  après le sexe — **ولي الأمر** (nom du tuteur) et **الهاتف** (téléphone du
+  tuteur). Elles peuvent être masquées avec « إظهار وإخفاء الأعمدة ».
+- Technique : en-tête dans `index.html`, cellules dans `renderStudents`
+  (`students.js`, `colspan` 10) ; test UI étendu.
+
 ## 1.53.2 — 2026-09-12
 
 - Le mot « إيصال » est remplacé par « وصل » partout dans l'application : titre
