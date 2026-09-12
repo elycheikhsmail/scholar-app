@@ -29,7 +29,7 @@
     <div><h1 id="schoolName">مدرسة مكارم الأخلاق الحرة</h1><span id="schoolYear"></span><span id="appModeBadge" class="mode-badge">جارٍ تحديد وضع التطبيق…</span></div>
   </div>
   <div class="top-date"><strong id="clock"></strong><span id="today"></span></div>
-  <button id="logoutBtn" class="logout">تسجيل الخروج</button>
+  <div class="topbar-user"><span id="currentUser" class="user-badge"></span><button id="logoutBtn" class="logout">تسجيل الخروج</button></div>
 </header>
 
 <div class="layout">
@@ -408,15 +408,18 @@
 
 <section id="settings" class="section"><div class="section-head"><div><h2>الإعدادات</h2><p>اختر ما تريد ضبطه من القائمة</p></div></div>
   <nav class="settings-tabs" role="tablist" aria-label="أقسام الإعدادات">
-    <button type="button" class="settings-tab" role="tab" id="settingsTab-fees" data-settings-tab="fees" aria-controls="settingsPanel-fees" aria-selected="false" tabindex="-1">الرسوم</button>
-    <button type="button" class="settings-tab" role="tab" id="settingsTab-departments" data-settings-tab="departments" aria-controls="settingsPanel-departments" aria-selected="false" tabindex="-1">الأقسام</button>
-    <button type="button" class="settings-tab" role="tab" id="settingsTab-roles" data-settings-tab="roles" aria-controls="settingsPanel-roles" aria-selected="false" tabindex="-1">طبيعة العمل</button>
-    <button type="button" class="settings-tab" role="tab" id="settingsTab-school" data-settings-tab="school" aria-controls="settingsPanel-school" aria-selected="false" tabindex="-1">المدرسة والدخول</button>
-    <button type="button" class="settings-tab" role="tab" id="settingsTab-mode" data-settings-tab="mode" aria-controls="settingsPanel-mode" aria-selected="false" tabindex="-1">وضع الاستخدام</button>
-    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-sync" data-settings-tab="sync" aria-controls="settingsPanel-sync" aria-selected="false" tabindex="-1">المزامنة مع الموقع</button>
-    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-data" data-settings-tab="data" aria-controls="settingsPanel-data" aria-selected="false" tabindex="-1">البيانات</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-fees" data-settings-tab="fees" data-roles="admin developer" aria-controls="settingsPanel-fees" aria-selected="false" tabindex="-1">الرسوم</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-departments" data-settings-tab="departments" data-roles="admin developer" aria-controls="settingsPanel-departments" aria-selected="false" tabindex="-1">الأقسام</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-roles" data-settings-tab="roles" data-roles="admin developer" aria-controls="settingsPanel-roles" aria-selected="false" tabindex="-1">طبيعة العمل</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-school" data-settings-tab="school" data-roles="admin developer" aria-controls="settingsPanel-school" aria-selected="false" tabindex="-1">بيانات المدرسة</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-users" data-settings-tab="users" data-roles="admin developer" aria-controls="settingsPanel-users" aria-selected="false" tabindex="-1">المستخدمون</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-account" data-settings-tab="account" aria-controls="settingsPanel-account" aria-selected="false" tabindex="-1">حسابي</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-mode" data-settings-tab="mode" data-roles="admin developer" aria-controls="settingsPanel-mode" aria-selected="false" tabindex="-1">وضع الاستخدام</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-sync" data-settings-tab="sync" data-roles="admin developer" aria-controls="settingsPanel-sync" aria-selected="false" tabindex="-1">المزامنة مع الموقع</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-data" data-settings-tab="data" data-roles="admin developer" aria-controls="settingsPanel-data" aria-selected="false" tabindex="-1">البيانات</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-database" data-settings-tab="database" data-roles="developer" aria-controls="settingsPanel-database" aria-selected="false" tabindex="-1">قاعدة البيانات</button>
   </nav>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-sync" data-settings-panel="sync" aria-labelledby="settingsTab-sync" class="hidden panel write-only"><h3>المزامنة مع الموقع (نسخة للعرض فقط)</h3>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-sync" data-settings-panel="sync" data-roles="admin developer" aria-labelledby="settingsTab-sync" class="hidden panel write-only"><h3>المزامنة مع الموقع (نسخة للعرض فقط)</h3>
     <p class="hint-box">يرسل زر «مزامنة الآن» نسخة كاملة من البيانات إلى الموقع الإلكتروني الذي يعرضها للقراءة فقط. اضغطه بعد إدخال كمية معتبرة من البيانات؛ وتُجرى مزامنة تلقائية عند إغلاق التطبيق. الموقع لا يغيّر شيئًا هنا.</p>
     <div class="sync-status"><span>آخر مزامنة: <b id="syncLastAt">—</b></span><span>التغييرات منذ آخر مزامنة: <b id="syncPending">0</b></span><button type="button" class="primary" id="syncNow">مزامنة الآن</button></div>
     <form id="syncSettingsForm" class="form-grid" novalidate>
@@ -427,7 +430,7 @@
       <div class="form-actions"><button class="primary">حفظ إعدادات المزامنة</button></div>
     </form>
   </div>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-fees" data-settings-panel="fees" aria-labelledby="settingsTab-fees" class="hidden panel"><h3>إعدادات الرسوم</h3>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-fees" data-settings-panel="fees" data-roles="admin developer" aria-labelledby="settingsTab-fees" class="hidden panel"><h3>إعدادات الرسوم</h3>
     <p class="hint-box">تُحدَّد الرسوم هنا مرة واحدة: رسم تسجيل سنوي واحد للمدرسة، ورسم شهري ثابت لكل مستوى يُضبط في تبويب «الأقسام». استمارة الطالب تقرأ هذه القيم ولا تطلب إدخالها، وأي تعديل هنا يسري على كل الطلاب.</p>
     <form id="feeSettingsForm" data-write-only class="form-grid">
       <label>رسم التسجيل السنوي<input id="setRegistrationFee" type="number" min="0" step="0.01" required></label>
@@ -436,13 +439,23 @@
     </form>
   </div>
 
-  <div role="tabpanel" tabindex="0" id="settingsPanel-departments" data-settings-panel="departments" aria-labelledby="settingsTab-departments" class="hidden panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" data-write-only class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-roles" data-settings-panel="roles" aria-labelledby="settingsTab-roles" class="hidden panel"><h3>لائحة طبيعة العمل</h3>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-departments" data-settings-panel="departments" data-roles="admin developer" aria-labelledby="settingsTab-departments" class="hidden panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" data-write-only class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-roles" data-settings-panel="roles" data-roles="admin developer" aria-labelledby="settingsTab-roles" class="hidden panel"><h3>لائحة طبيعة العمل</h3>
     <p class="hint-box">هذه اللائحة تظهر في حقل «طبيعة العمل» باستمارة إضافة الموظف. «أستاذ» يُدفع له بالساعة و«أخرى» هي القيمة الافتراضية، لذلك لا يمكن حذفهما. تعديل الاسم يسري على الموظفين المرتبطين به، ولا يمكن حذف طبيعة عمل لها موظفون.</p>
     <form id="staffRoleForm" data-write-only class="department-form"><input id="staffRoleName" placeholder="طبيعة العمل الجديدة" maxlength="40" required><button class="primary">إضافة</button></form>
     <h3 class="table-title" id="staffRolesTableTitle">جدول طبيعة العمل</h3><div class="table-scroll"><table aria-labelledby="staffRolesTableTitle"><thead><tr><th>طبيعة العمل</th><th>عدد الموظفين</th><th>إجراءات</th></tr></thead><tbody id="staffRolesTable"></tbody></table></div></div>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-school" data-settings-panel="school" aria-labelledby="settingsTab-school" class="hidden panel"><h3>بيانات المدرسة والدخول</h3><form id="settingsForm" data-write-only class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>اسم المستخدم<input id="setUsername" required></label><label>كلمة المرور الحالية<input id="currentPassword" type="password" required></label><label>كلمة المرور الجديدة<input id="newPassword" type="password"></label><label>تأكيد كلمة المرور<input id="confirmPassword" type="password"></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-mode" data-settings-panel="mode" aria-labelledby="settingsTab-mode" class="hidden panel">
+  <div role="tabpanel" tabindex="0" id="settingsPanel-school" data-settings-panel="school" data-roles="admin developer" aria-labelledby="settingsTab-school" class="hidden panel"><h3>بيانات المدرسة</h3><form id="settingsForm" data-write-only class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>كلمة المرور الحالية (للتأكيد)<input id="currentPassword" type="password" autocomplete="current-password" required></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-users" data-settings-panel="users" data-roles="admin developer" aria-labelledby="settingsTab-users" class="hidden panel write-only"><h3>حسابات المستخدمين</h3>
+    <p class="hint-box">مدير النظام يضبط الإعدادات ويدير الحسابات. السكرتير يسجّل الطلاب والرسوم والموظفين والرواتب والمصروفات والامتحانات دون الوصول إلى الإعدادات. المشرف يطّلع على كل الشاشات والتقارير ويطبعها دون أي تعديل.</p>
+    <form id="userForm" class="department-form user-form" novalidate><input id="userName" placeholder="اسم المستخدم" maxlength="40" required autocomplete="off"><select id="userRole"><option value="secretary">سكرتير</option><option value="supervisor">مشرف</option><option value="admin">مدير النظام</option></select><input id="userPassword" type="password" placeholder="كلمة المرور" autocomplete="new-password" required><button class="primary">إضافة مستخدم</button></form>
+    <h3 class="table-title" id="usersTableTitle">جدول المستخدمين</h3><div class="table-scroll"><table aria-labelledby="usersTableTitle"><thead><tr><th>اسم المستخدم</th><th>النوع</th><th>إجراءات</th></tr></thead><tbody id="usersTable"></tbody></table></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-account" data-settings-panel="account" aria-labelledby="settingsTab-account" class="hidden panel"><h3>حسابي</h3>
+    <p class="hint-box">المستخدم الحالي: <b id="accountUsername">—</b> — <span id="accountRole">—</span></p>
+    <form id="passwordForm" data-write-only class="form-grid" novalidate><label>كلمة المرور الحالية<input id="accountCurrentPassword" type="password" autocomplete="current-password" required></label><label>كلمة المرور الجديدة<input id="accountNewPassword" type="password" autocomplete="new-password" required></label><label>تأكيد كلمة المرور الجديدة<input id="accountConfirmPassword" type="password" autocomplete="new-password" required></label><div class="form-actions"><button class="primary">تغيير كلمة المرور</button></div></form></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-database" data-settings-panel="database" data-roles="developer" aria-labelledby="settingsTab-database" class="hidden panel danger-panel write-only"><h3>قاعدة البيانات (المطوّر)</h3>
+    <p class="hint-box">التصدير يحفظ نسخة كاملة من قاعدة البيانات الحالية في ملف واحد. الاستيراد يستبدل قاعدة البيانات الحالية بالكامل بملف <b>school-data.sqlite</b> مُصدَّر من هذا البرنامج، بعد حفظ نسخة احتياطية من القاعدة الحالية. كلتا العمليتين تطلبان كلمة مرور المطوّر، وبعد الاستيراد يلزم تسجيل الدخول من جديد بحسابات القاعدة المستوردة.</p>
+    <div class="form-actions"><button type="button" class="primary" id="exportDatabaseBtn">تصدير قاعدة البيانات</button><button type="button" class="danger-button" id="importDatabaseBtn">استيراد قاعدة بيانات</button><input type="file" id="importDatabaseFile" accept=".sqlite,.db,application/vnd.sqlite3,application/x-sqlite3" hidden></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-mode" data-settings-panel="mode" data-roles="admin developer" aria-labelledby="settingsTab-mode" class="hidden panel">
     <h3>وضع استخدام التطبيق</h3>
     <p>لكل وضع قاعدة بيانات ونسخ احتياطية مستقلة. البيانات الحالية محفوظة في وضع الإنتاج. يبدأ وضع التجريب بقاعدة جديدة دون نسخ الطلاب أو الحسابات.</p>
     <p>عند إنشاء قاعدة جديدة تُنسخ إعدادات المدرسة وبيانات الدخول الحالية فقط. التبديل مباشر دون كلمة مرور أو إعادة تسجيل الدخول، ويحتفظ كل وضع ببياناته عند العودة إليه.</p>
@@ -459,7 +472,7 @@
     </form>
     <p id="simulatedDateInfo" class="hint-box" role="status"></p>
   </div>
-  <div role="tabpanel" tabindex="0" id="settingsPanel-data" data-settings-panel="data" aria-labelledby="settingsTab-data" class="hidden panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-data" data-settings-panel="data" data-roles="admin developer" aria-labelledby="settingsTab-data" class="hidden panel danger-panel"><h3>تفريغ بيانات البرنامج</h3><p>يحذف الطلاب والرسوم والمدفوعات والموظفين والرواتب والسلف والمصروفات، مع الإبقاء على إعدادات المدرسة والأقسام ورسومها.</p><button id="clearDataBtn" class="danger-button">تفريغ بيانات السنة الدراسية</button></div>
 </section>
 <div class="page-back-row page-back-row-bottom">
   <button type="button" class="page-back-button" data-page-back disabled aria-label="الرجوع إلى الصفحة السابقة">↩ <span>الصفحة السابقة</span></button>

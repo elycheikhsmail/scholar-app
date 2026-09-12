@@ -24,7 +24,7 @@ afterEach(() => { db.close(); for (const dir of dirs.splice(0)) fs.rmSync(dir, {
 
 test('creates SQLite and persists CRUD, linked payments, staff, and nested exams across restart', () => {
   const dir = temp(); db.init(dir);
-  assert.equal(db.checkLogin('yaghoub', '36485606'), true);
+  assert.deepEqual(db.checkLogin('yaghoub', '36485606'), { id: 1, username: 'yaghoub', role: 'admin' });
   const s = db.addStudent({ ...student, initialPaid: 100 });
   db.updateStudent(s.id, { ...student, name: 'اسم معدل' });
   db.addStudentPayment({ studentId: s.id, amount: 200, month: 'أكتوبر' });
@@ -281,10 +281,10 @@ test('testing database, settings and reset backups stay separate from production
   const prodStudent = db.addStudent(student);
   db.addStudentPayment({studentId:prodStudent.id,month:'أكتوبر',amount:500});
   const production = db.getData();
-  db.init(dir,{mode:'test',initialSettings:production.settings});
+  db.init(dir,{mode:'test',initialSettings:production.settings,initialUsers:production.users});
   assert.equal(db.getData().students.length,0);
   assert.equal(db.getData().studentPayments.length,0);
-  assert.equal(db.checkLogin('yaghoub','36485606'),true);
+  assert.equal(db.checkLogin('yaghoub','36485606')?.role,'admin');
   db.addStudent({...student,name:'تجريب فقط'});
   const backup = db.clearOperationalData();
   assert.ok(backup.startsWith(path.join(dir,'database','testing','backups')));
@@ -529,5 +529,90 @@ test('sessions expire, repeated login failures are throttled, and CORS is limite
   } finally {
     server.close();
     require(path.join(dir, 'db.js')).close();
+  }
+});
+
+test('accounts: the old single login becomes the admin, the developer is built in, admins manage the others', () => {
+  const dir = temp();
+  const salt = 'ab'.repeat(16);
+  const hash = `${salt}:${require('node:crypto').scryptSync('old-secret', salt, 64).toString('hex')}`;
+  legacy(dir, { settings: { schoolName: 'م', schoolYear: '2026', username: 'ancien', passwordHash: hash } });
+  db.init(dir);
+  assert.deepEqual(db.checkLogin('ancien', 'old-secret'), { id: 1, username: 'ancien', role: 'admin' });
+  assert.equal(db.checkLogin('developer', 'Dev@2026')?.role, 'developer');
+  assert.equal(db.checkLogin('ancien', 'wrong'), null);
+  assert.equal('passwordHash' in db.getData().settings, false, 'the hash left the settings');
+  assert.equal(db.publicSettings().username, 'ancien');
+  assert.equal('users' in db.getCoreData(), false, 'accounts never reach the browser payload');
+
+  // Admins never see the developer; the developer sees everyone.
+  assert.deepEqual(db.listUsers('admin').map(u => u.role), ['admin']);
+  assert.deepEqual(db.listUsers('developer').map(u => u.role), ['admin', 'developer']);
+
+  const sec = db.addUser({ username: 'Sami', role: 'secretary', password: '1234' });
+  assert.throws(() => db.addUser({ username: 'sami', role: 'supervisor', password: '1234' }), /مستعمل مسبقًا/);
+  assert.throws(() => db.addUser({ username: 'x', role: 'developer', password: '1234' }), /نوع المستخدم/);
+  assert.throws(() => db.addUser({ username: 'x', role: 'admin', password: '12' }), /قصيرة/);
+  assert.equal(db.checkLogin('SAMI', '1234')?.id, sec.id, 'usernames ignore case');
+  db.updateUser(sec.id, { role: 'supervisor', password: 'abcd' });
+  assert.equal(db.checkLogin('sami', 'abcd')?.role, 'supervisor');
+  assert.throws(() => db.updateUser(1, { role: 'secretary' }), /آخر مدير/);
+  assert.throws(() => db.deleteUser(1), /آخر مدير/);
+  assert.throws(() => db.deleteUser(2), /المطوّر/);
+  assert.throws(() => db.updateUser(2, { username: 'dev2' }), /المطوّر/);
+  db.changePassword(2, 'Dev@2026', 'new-dev');
+  assert.throws(() => db.changePassword(2, 'Dev@2026', 'other'), /الحالية/);
+  assert.equal(db.checkLogin('developer', 'new-dev')?.role, 'developer');
+  db.deleteUser(sec.id);
+  db.close(); db.init(dir);
+  assert.deepEqual(db.listUsers('developer').map(u => u.username), ['ancien', 'developer']);
+});
+
+test('HTTP roles: reads for everyone, records for the secretary, settings and accounts for the admin, the developer stays hidden', async () => {
+  const dir = temp();
+  copySources(dir);
+  const previousPort = process.env.SCHOOL_PORT;
+  process.env.SCHOOL_PORT = '23883';
+  const { startServer } = require(path.join(dir, 'server.js'));
+  if (previousPort === undefined) delete process.env.SCHOOL_PORT; else process.env.SCHOOL_PORT = previousPort;
+  const server = await startServer();
+  const request = (endpoint, method = 'GET', token = '', payload) => fetch(server.url + '/api' + endpoint, { method, headers: { 'Content-Type': 'application/json', Connection: 'close', Authorization: `Bearer ${token}` }, ...(payload ? { body: JSON.stringify(payload) } : {}) });
+  const login = async (username, password) => (await request('/login', 'POST', '', { username, password })).json();
+  try {
+    const admin = await login('yaghoub', '36485606');
+    assert.deepEqual(admin.user, { id: 1, username: 'yaghoub', role: 'admin' });
+    assert.equal((await (await request('/data', 'GET', admin.token)).json()).user.role, 'admin');
+    assert.equal((await request('/users', 'POST', admin.token, { username: 'sec', role: 'secretary', password: 'sec-pass' })).status, 200);
+    assert.equal((await request('/users', 'POST', admin.token, { username: 'sup', role: 'supervisor', password: 'sup-pass' })).status, 200);
+    assert.deepEqual((await (await request('/users', 'GET', admin.token)).json()).map(u => u.username), ['yaghoub', 'sec', 'sup']);
+    assert.equal((await request('/users/1', 'DELETE', admin.token)).status, 400, 'nobody deletes their own account');
+
+    const sec = await login('sec', 'sec-pass');
+    assert.equal((await request('/expenses', 'POST', sec.token, { category: 'ورق', amount: 5 })).status, 200);
+    assert.equal((await request('/students', 'POST', sec.token, student)).status, 200);
+    assert.equal((await request('/fee-settings', 'PUT', sec.token, { registrationFee: 1, defaultMonthlyFee: 1 })).status, 403);
+    assert.equal((await request('/users', 'GET', sec.token)).status, 403);
+    assert.equal((await request('/reset-data', 'POST', sec.token, { password: 'sec-pass' })).status, 403);
+    assert.equal((await request('/verify-password', 'POST', sec.token, { password: 'sec-pass' })).status, 200, 'confirmation checks the signed-in account');
+    assert.equal((await request('/password', 'PUT', sec.token, { currentPassword: 'sec-pass', newPassword: 'sec-new' })).status, 200);
+    assert.equal((await request('/password', 'PUT', sec.token, { currentPassword: 'sec-pass', newPassword: 'again' })).status, 400);
+
+    const sup = await login('sup', 'sup-pass');
+    assert.equal((await request('/data', 'GET', sup.token)).status, 200);
+    assert.equal((await request('/exams', 'GET', sup.token)).status, 200);
+    assert.equal((await request('/expenses', 'POST', sup.token, { category: 'ورق', amount: 5 })).status, 403);
+    assert.equal((await request('/students', 'POST', sup.token, student)).status, 403);
+
+    const dev = await login('developer', 'Dev@2026');
+    assert.equal(dev.user.role, 'developer');
+    assert.deepEqual((await (await request('/users', 'GET', dev.token)).json()).map(u => u.role), ['admin', 'developer', 'secretary', 'supervisor']);
+    assert.equal((await request('/fee-settings', 'PUT', dev.token, { registrationFee: 1, defaultMonthlyFee: 1 })).status, 200);
+
+    // Removing an account ends its session at once.
+    const supId = (await (await request('/users', 'GET', admin.token)).json()).find(u => u.username === 'sup').id;
+    assert.equal((await request(`/users/${supId}`, 'DELETE', admin.token)).status, 200);
+    assert.equal((await request('/data', 'GET', sup.token)).status, 401);
+  } finally {
+    server.close();
   }
 });

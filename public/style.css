@@ -357,9 +357,16 @@ form + .table-title,.table-scroll + .table-title{margin-top:18px}
 @media(max-width:700px){.report-tools{width:100%;flex-wrap:wrap}.report-period{width:100%}}
 /* Champ de formulaire refusé (fiche élève, fiche employé…) : bordure et libellé rouges, message dessous. */
 label.field-invalid{color:var(--red-ink)}label.field-invalid input,label.field-invalid select,label.field-invalid textarea,label.field-invalid .dmy-part{border-color:var(--red);background:#fff6f5;box-shadow:0 0 0 3px #b4161618}.field-error{color:var(--red-ink);font-size:12px;font-weight:800;line-height:1.4}
-/* Copie en lecture seule (site web) : tout ce qui écrit disparaît — les blocs
-   marqués write-only / data-write-only et les boutons d'édition, de suppression
-   et de saisie rendus dans les tableaux (reconnus à leur gestionnaire). */
-body.read-only .write-only,body.read-only [data-write-only],body.read-only [onclick^="edit"],body.read-only [onclick^="delete"],body.read-only [onclick^="remove"],body.read-only [onclick^="prefill"],body.read-only [onclick^="loadExamTemplate"],body.read-only [onclick*="'edit'"],body.read-only [onclick*="'delete'"]{display:none!important}
+/* Copie en lecture seule (site web) et compte superviseur : tout ce qui écrit
+   disparaît — les blocs marqués write-only / data-write-only et les boutons
+   d'édition, de suppression et de saisie rendus dans les tableaux (reconnus à
+   leur gestionnaire). */
+body:is(.read-only,.no-write) .write-only,body:is(.read-only,.no-write) [data-write-only],body:is(.read-only,.no-write) [onclick^="edit"],body:is(.read-only,.no-write) [onclick^="delete"],body:is(.read-only,.no-write) [onclick^="remove"],body:is(.read-only,.no-write) [onclick^="prefill"],body:is(.read-only,.no-write) [onclick^="loadExamTemplate"],body:is(.read-only,.no-write) [onclick*="'edit'"],body:is(.read-only,.no-write) [onclick*="'delete'"]{display:none!important}
+/* Comptes : le superviseur (no-write) voit tout sans rien saisir ; les onglets
+   réservés (data-roles) disparaissent pour les autres rôles. */
+[data-roles][hidden]{display:none!important}
+.topbar-user{display:flex;align-items:center;gap:12px}.user-badge{font-size:13px;font-weight:800;background:#fff2;border-radius:var(--radius-md);padding:6px 10px}.user-badge:empty{display:none}
+.user-form{grid-template-columns:180px 160px 180px auto}.user-form select{width:100%;border:1px solid var(--border-field);border-radius:var(--radius-md);padding:10px;background:#fff;font:inherit;outline:none}
+.role-select{border:1px solid var(--border-field);border-radius:var(--radius-sm);padding:5px 8px;font:inherit;background:#fff}
 .read-only-badge{background:#fff3cd;color:#7a4b00}
 .sync-status{display:flex;flex-wrap:wrap;gap:18px;align-items:center;margin-bottom:14px;font-weight:700}

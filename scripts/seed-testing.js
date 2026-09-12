@@ -69,12 +69,12 @@ function calendar(settings) {
 // is created, exactly as switching the mode from the interface does.
 function openTestDatabase(baseDir) {
   const testFile = path.join(baseDir, 'database', 'testing', 'school-data.sqlite');
-  let initialSettings;
+  let initialSettings, initialUsers;
   if (!fs.existsSync(testFile)) {
     db.init(baseDir);
-    initialSettings = db.getData().settings;
+    ({ settings: initialSettings, users: initialUsers } = db.getData());
   }
-  db.init(baseDir, { mode: 'test', initialSettings });
+  db.init(baseDir, { mode: 'test', initialSettings, initialUsers });
 }
 
 // The levels of the school replace whatever the test database held, in the

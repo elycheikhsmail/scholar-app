@@ -8,27 +8,22 @@ const settingsTabs=createTabs({nav:'#settings .settings-tabs',tabAttr:'settings-
 
 $('settingsForm').onsubmit=async e=>{
   e.preventDefault();
-  if($('newPassword').value!==$('confirmPassword').value)return toast('تأكيد كلمة المرور غير مطابق.');
   try{
     const result=await api('/settings',{method:'PUT',body:JSON.stringify({
       schoolName:$('setSchoolName').value,
       schoolYear:$('setSchoolYear').value,
-      username:$('setUsername').value,
       managerName:$('setManagerName').value,
       managerPhone:western($('setManagerPhone').value),
       schoolPhone:western($('setSchoolPhone').value),
       republic:$('setRepublic').value,
       ministry:$('setMinistry').value,
       regional:$('setRegional').value,
-      currentPassword:$('currentPassword').value,
-      newPassword:western($('newPassword').value)
+      currentPassword:$('currentPassword').value
     })});
     state.settings=result.settings;
     applySettings();
-    // Les champs de mot de passe ne se rechargent jamais depuis le serveur.
+    // Le champ de mot de passe ne se recharge jamais depuis le serveur.
     $('currentPassword').value='';
-    $('newPassword').value='';
-    $('confirmPassword').value='';
     renderSettings();
     toast('تم حفظ الإعدادات.');
   }catch(error){
@@ -50,13 +45,71 @@ function renderSettings(){
     setRepublic:state.settings.republic||'الجمهورية الإسلامية الموريتانية',
     setMinistry:state.settings.ministry||'وزارة التعليم',
     setRegional:state.settings.regional||'الإدارة الجهوية للتعليم',
-    setUsername:state.settings.username,
     setRegistrationFee:state.settings.registrationFee,
     setDefaultMonthlyFee:state.settings.defaultMonthlyFee
   };
   for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value;
   renderSyncStatus();
+  renderAccount();
+  if(['admin','developer'].includes(state.user?.role)&&!state.readOnly)loadUsers();
 }
+
+// --- Comptes : « حسابي » pour tous, « المستخدمون » pour l'admin et le développeur ---
+function renderAccount(){
+  $('accountUsername').textContent=state.user?.username||'—';
+  $('accountRole').textContent=ROLE_LABELS[state.user?.role]||'—';
+}
+$('passwordForm').onsubmit=async e=>{
+  e.preventDefault();
+  if($('accountNewPassword').value!==$('accountConfirmPassword').value)return toast('تأكيد كلمة المرور غير مطابق.');
+  try{
+    await api('/password',{method:'PUT',body:JSON.stringify({currentPassword:western($('accountCurrentPassword').value),newPassword:western($('accountNewPassword').value)})});
+    for(const id of ['accountCurrentPassword','accountNewPassword','accountConfirmPassword'])$(id).value='';
+    toast('تم تغيير كلمة المرور.');
+  }catch(error){toast(error.message)}
+};
+let users=[];
+async function loadUsers(){
+  try{users=await api('/users');renderUsers()}catch(error){toast(error.message)}
+}
+function renderUsers(){
+  const me=Number(state.user?.id);
+  $('usersTable').innerHTML=users.map(u=>{
+    const locked=u.role==='developer'||Number(u.id)===me;
+    const roleCell=locked?esc(ROLE_LABELS[u.role]||u.role)
+      :`<select class="role-select" aria-label="نوع المستخدم ${esc(u.username)}" onchange="changeUserRole(${u.id},this.value)">${['secretary','supervisor','admin'].map(r=>`<option value="${r}"${r===u.role?' selected':''}>${ROLE_LABELS[r]}</option>`).join('')}</select>`;
+    const actions=u.role==='developer'?'':`<button class="btn-edit" onclick="resetUserPassword(${u.id})">تغيير كلمة المرور</button>${Number(u.id)===me?'':`<button class="btn-delete" onclick="deleteUser(${u.id})">حذف</button>`}`;
+    return `<tr><td>${esc(u.username)}${Number(u.id)===me?' <small>(أنت)</small>':''}</td><td>${roleCell}</td><td class="actions">${actions}</td></tr>`;
+  }).join('')||'<tr><td colspan="3">لا يوجد مستخدمون.</td></tr>';
+}
+$('userForm').onsubmit=async e=>{
+  e.preventDefault();
+  try{
+    await api('/users',{method:'POST',body:JSON.stringify({username:$('userName').value,role:$('userRole').value,password:western($('userPassword').value)})});
+    $('userName').value='';$('userPassword').value='';
+    toast('تمت إضافة المستخدم.');
+    await loadUsers();
+  }catch(error){toast(error.message)}
+};
+window.changeUserRole=async(id,role)=>{
+  try{await api(`/users/${id}`,{method:'PUT',body:JSON.stringify({role})});toast('تم تغيير نوع المستخدم.')}
+  catch(error){toast(error.message)}
+  await loadUsers();
+};
+window.resetUserPassword=async id=>{
+  const user=users.find(u=>Number(u.id)===Number(id));
+  const password=await askInput(`كلمة المرور الجديدة للمستخدم ${user?.username||''}:`);
+  if(password===null)return;
+  try{await api(`/users/${id}`,{method:'PUT',body:JSON.stringify({password:western(password)})});toast('تم تغيير كلمة المرور.')}
+  catch(error){toast(error.message)}
+};
+window.deleteUser=async id=>{
+  const user=users.find(u=>Number(u.id)===Number(id));
+  if(!(await askConfirm(`هل تريد حذف المستخدم ${user?.username||''}؟`)))return;
+  try{await api(`/users/${id}`,{method:'DELETE'});toast('تم حذف المستخدم.')}
+  catch(error){toast(error.message)}
+  await loadUsers();
+};
 // --- Copie web en lecture seule : réglages et bouton de synchronisation ------
 function renderSyncStatus(){
   const s=state.settings;

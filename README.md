@@ -17,6 +17,12 @@ L'application permet de gérer les élèves, les frais scolaires, les employés,
 - Règles personnalisables pour les appréciations et les décisions.
 - Impression des reçus de paiement et des relevés de résultats.
 - Paramètres de l'école, des classes et de l'accès utilisateur.
+- Comptes utilisateurs avec rôles : **administrateur** (`admin`, tout gérer y
+  compris les comptes), **secrétaire** (saisie des élèves, paiements, personnel,
+  dépenses, examens, sans accès aux paramètres), **superviseur** (consultation et
+  impression seulement). Un compte **développeur** intégré (`developer`, mot de
+  passe initial `Dev@2026`, à changer dans « حسابي ») est réservé aux
+  opérations sur la base de données ; les administrateurs ne le voient pas.
 - Stockage local des données dans la base de données de l'application.
 
 ## Prérequis
@@ -102,8 +108,11 @@ npm run test:e2e
 
 Les tests utilisent Chromium installé avec `npx playwright install chromium`. Pour utiliser Chrome déjà installé, définir `E2E_BROWSER_PATH` avec le chemin de son exécutable. Pour voir le parcours : `npm run test:e2e -- --headed`. Les identifiants par défaut sont :
 
-- Nom d'utilisateur : `yaghoub`
+- Nom d'utilisateur : `yaghoub` (administrateur)
 - Mot de passe : `36485606`
+
+Une base créée avant les comptes garde son identifiant : il devient le compte
+administrateur à la première ouverture.
 
 Si les identifiants ont été modifiés, ils peuvent être fournis avec les variables d'environnement suivantes :
 
@@ -328,7 +337,7 @@ Mode d'emploi pas à pas du déploiement et de l'exploitation : `DEPLOIEMENT-VER
 
 ## Modes production et test
 
-Dans **الإعدادات → onglet وضع الاستخدام**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les identifiants de connexion sont repris ; aucun élève ni mouvement financier n'est copié.
+Dans **الإعدادات → onglet وضع الاستخدام**, choisir **وضع الإنتاج** ou **وضع التجريب**, puis cliquer sur le bouton de changement. Aucun mot de passe ni nouvelle connexion ne sont demandés à l’utilisateur déjà connecté. La page se recharge avec une nouvelle session pour éviter de conserver les formulaires du mode précédent. À la première création d'une base, seuls les paramètres de l'école et les comptes utilisateurs sont repris ; aucun élève ni mouvement financier n'est copié.
 
 - Production (mode initial) : `database/school-data.sqlite`. Les données déjà présentes restent à cet emplacement, y compris les éventuelles données de démonstration ajoutées auparavant.
 - Test : `database/testing/school-data.sqlite`, avec ses propres sauvegardes dans `database/testing/backups/`.

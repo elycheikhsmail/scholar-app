@@ -3,6 +3,30 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.46.0 — 2026-09-12
+
+- Comptes utilisateurs avec rôles. **Administrateur** : tout, y compris la
+  gestion des comptes (nouvel onglet « المستخدمون » : ajout, changement de
+  rôle, réinitialisation du mot de passe, suppression — jamais son propre
+  compte ni le dernier administrateur). **Secrétaire** : élèves, paiements,
+  personnel, salaires, avances, dépenses et examens, sans accès aux paramètres.
+  **Superviseur** : consultation et impression de tous les écrans, aucune
+  saisie (mêmes masquages que la copie web). **Développeur** : compte intégré
+  (`developer`, mot de passe initial `Dev@2026`), invisible et intouchable
+  pour les administrateurs, réservé aux opérations sur la base de données.
+- Onglet « حسابي » pour tous : nom, rôle et changement de son propre mot de
+  passe. Le nom d'utilisateur et le mot de passe quittent le formulaire
+  « بيانات المدرسة » (la sauvegarde y demande toujours le mot de passe courant).
+  Le compte connecté s'affiche dans la barre supérieure.
+- Migration transparente : l'identifiant unique d'une base existante devient
+  son compte administrateur à la première ouverture ; le bouton de bascule de
+  mode copie les comptes dans la base de test.
+- Technique : collection `users` (`db.js`, jamais envoyée au navigateur ni au
+  site), sessions porteuses du compte et matrice de permissions par route dans
+  `server.js` (403 « ليست لديك صلاحية »), routes `/api/users`, `/api/password` ;
+  `db.checkLogin` renvoie le compte. Onglets `data-roles` masqués selon le rôle.
+- Vérification : `npm run check`, `npm test` (47), `npm run test:ui`.
+
 ## 1.45.0 — 2026-09-12
 
 - Copie web en lecture seule, étape 4 : fonction Vercel `api/[...path].js`

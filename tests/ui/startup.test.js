@@ -17,9 +17,10 @@ test('browser scripts support login, all sections, student fees and session rest
   const responses = {
     '/api/mode': { mode: 'production' },
     '/api/settings': settings,
-    '/api/login': { token: 'ui-test-token', settings },
+    '/api/login': { token: 'ui-test-token', settings, user: { id: 1, username: 'yaghoub', role: 'admin' } },
     '/api/logout': { ok: true },
     '/api/data': db.getCoreData(),
+    '/api/users': [{ id: 1, username: 'yaghoub', role: 'admin' }, { id: 3, username: 'sami', role: 'secretary' }],
     '/api/departments': db.getDepartments(),
     '/api/exams': db.getExamData()
   };
@@ -106,8 +107,16 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#today')).toHaveText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)، \d{2} \S+ \d{4}$/);
   // The settings screen shows one form at a time, behind its own tab list.
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]')).toHaveCount(7);
+  await expect(page.locator('[data-settings-tab]')).toHaveCount(10);
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(9, 'the database tab is for the developer');
   await expect(page.locator('[data-settings-panel]:visible')).toHaveCount(1);
+  await expect(page.locator('#currentUser')).toHaveText('yaghoub · مدير النظام');
+  // Admins manage the accounts; their own row has no delete button.
+  await page.locator('[data-settings-tab="users"]').click();
+  await expect(page.locator('#usersTable tr')).toHaveCount(2);
+  await expect(page.locator('#usersTable .btn-delete')).toHaveCount(1);
+  await expect(page.locator('#usersTable .role-select')).toHaveCount(1);
+  await page.locator('[data-settings-tab="fees"]').click();
   await expect(page.locator('#setRegistrationFee')).toBeVisible();
   await page.locator('[data-settings-tab="departments"]').click();
   await expect(page.locator('#departmentsTable')).toBeVisible();
@@ -223,6 +232,35 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.equal(refused, 'هذه النسخة للعرض فقط؛ لا يمكن الحفظ أو التعديل.');
   assert.equal(errors.filter(e => /\/api\/expenses/.test(e)).length, 0, 'no write request was issued');
   responses['/api/mode'] = { mode: 'production' };
+  // A supervisor reads everything and changes nothing; a secretary records
+  // without reaching the settings; both keep « حسابي ». A remembered tab the
+  // role cannot see is not restored.
+  responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 5, username: 'nadia', role: 'supervisor' } };
+  await page.reload();
+  await login();
+  await expect(page.locator('body')).toHaveClass(/no-write/);
+  await expect(page.locator('#currentUser')).toHaveText('nadia · مشرف');
+  await page.locator('.nav-item[data-section="expenses"]').click();
+  await expect(page.locator('#expenseForm')).toBeHidden();
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(1);
+  await expect(page.locator('#settingsPanel-account')).toBeVisible();
+  await expect(page.locator('#accountUsername')).toHaveText('nadia');
+  responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 3, username: 'sami', role: 'secretary' } };
+  await page.reload();
+  await login();
+  await expect(page.locator('body')).not.toHaveClass(/no-write/);
+  await page.locator('.nav-item[data-section="expenses"]').click();
+  await expect(page.locator('#expenseForm')).toBeVisible();
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(1);
+  responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 2, username: 'developer', role: 'developer' } };
+  await page.reload();
+  await login();
+  await page.locator('.nav-item[data-section="settings"]').click();
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(10);
+  await expect(page.locator('[data-settings-tab="database"]')).toBeVisible();
+  responses['/api/login'] = { token: 'ui-test-token', settings, user: { id: 1, username: 'yaghoub', role: 'admin' } };
   await page.reload();
   await login();
   await expect(page.locator('body')).not.toHaveClass(/read-only/);

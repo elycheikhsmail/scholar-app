@@ -51,10 +51,10 @@ function switchMode(mode) {
   if (!['production','test'].includes(mode)) throw new Error('وضع التطبيق غير صحيح.');
   if (mode === applicationMode) return;
   const previous = applicationMode;
-  const initialSettings = db.getData().settings;
+  const { settings: initialSettings, users: initialUsers } = db.getData();
   const temporary = modeFile() + '.tmp';
   try {
-    db.init(baseDir(), { mode, initialSettings });
+    db.init(baseDir(), { mode, initialSettings, initialUsers });
     fs.writeFileSync(temporary, JSON.stringify({mode}), {mode:0o600});
     fs.renameSync(temporary, modeFile());
   } catch (error) {
@@ -97,9 +97,28 @@ function getToken(req) {
 function auth(req) {
   const token = getToken(req);
   const session = sessions.get(token);
-  if (!session) return false;
-  if (Date.now() - session.createdAt > SESSION_TTL) { sessions.delete(token); return false; }
-  return true;
+  if (!session) return null;
+  if (Date.now() - session.createdAt > SESSION_TTL) { sessions.delete(token); return null; }
+  return session;
+}
+function openSession(user) {
+  const token = crypto.randomBytes(32).toString("hex");
+  sessions.set(token, { createdAt: Date.now(), user });
+  return token;
+}
+
+// Who may change what. Reads are open to every account; the secretary records
+// the school's daily work; settings, sync and the reset stay with the admin;
+// accounts with the admin and the developer; the database with the developer alone.
+const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'settings', 'sync-settings', 'sync-remote', 'reset-data']);
+const SELF_ROUTES = new Set(['logout', 'verify-password', 'password']);
+const PERMISSION_MESSAGE = 'ليست لديك صلاحية لهذه العملية.';
+function allowed(role, route, method) {
+  if (route === 'database') return role === 'developer';
+  if (route === 'users') return role === 'admin' || role === 'developer';
+  if (method === 'GET' || SELF_ROUTES.has(route)) return true;
+  if (ADMIN_ROUTES.has(route)) return role === 'admin' || role === 'developer';
+  return role === 'admin' || role === 'developer' || role === 'secretary';
 }
 
 function clientKey(req) {
@@ -183,21 +202,23 @@ async function api(req, res) {
     const wait = loginBlocked(req);
     if (wait) return json(res, 429, { error: `محاولات كثيرة. أعد المحاولة بعد ${wait} ثانية.` });
     const b = await body(req);
-    if (!db.checkLogin(b.username, b.password)) {
+    const user = db.checkLogin(b.username, b.password);
+    if (!user) {
       noteLoginFailure(req);
       return json(res, 401, { error: "اسم المستخدم أو كلمة المرور غير صحيحة." });
     }
     loginFailures.delete(clientKey(req));
-    const token = crypto.randomBytes(32).toString("hex");
-    sessions.set(token, { createdAt: Date.now() });
-    return json(res, 200, { token, settings: publicSettings() });
+    return json(res, 200, { token: openSession(user), settings: publicSettings(), user });
   }
 
   if (parts[1] === "settings" && method === "GET") {
     return json(res, 200, publicSettings());
   }
 
-  if (!auth(req)) return json(res, 401, { error: "يجب تسجيل الدخول." });
+  const session = auth(req);
+  if (!session) return json(res, 401, { error: "يجب تسجيل الدخول." });
+  const { user } = session;
+  if (!allowed(user.role, parts[1], method)) return json(res, 403, { error: PERMISSION_MESSAGE });
 
   if (parts[1] === "logout" && method === "POST") {
     sessions.delete(getToken(req));
@@ -212,7 +233,7 @@ async function api(req, res) {
     const b = await body(req);
     // 403, not 401: the session is valid, only the confirmation failed. A 401
     // makes the client treat the session as expired and reload.
-    if (!db.checkLogin(db.publicSettings().username, b.password)) {
+    if (!db.checkLogin(user.username, b.password)) {
       noteLoginFailure(req);
       return json(res, 403, { error: "كلمة المرور غير صحيحة." });
     }
@@ -220,8 +241,9 @@ async function api(req, res) {
     return json(res, 200, { ok: true });
   }
 
+  // The page learns who is signed in with the data it loads (also after a mode switch).
   if (parts[1] === "data" && method === "GET") {
-    return json(res, 200, db.getCoreData());
+    return json(res, 200, { ...db.getCoreData(), user });
   }
   if (readOnly && method !== "GET" && parts[1] !== "verify-password") return json(res, 405, { error: READ_ONLY_MESSAGE });
 
@@ -229,9 +251,23 @@ async function api(req, res) {
     if (parts[1] === "mode" && method === "PUT") {
       const input = await body(req);
       switchMode(input.mode);
-      const token = crypto.randomBytes(32).toString('hex');
-      sessions.set(token, {createdAt:Date.now()});
-      return json(res, 200, {...modeInfo(), token, settings:publicSettings()});
+      return json(res, 200, {...modeInfo(), token: openSession(user), settings:publicSettings(), user});
+    }
+
+    // Accounts: admins manage the school's users, everyone changes their own password.
+    if (parts[1] === "users" && method === "GET") return json(res, 200, db.listUsers(user.role));
+    if (parts[1] === "users" && method === "POST") return json(res, 200, db.addUser(await body(req)));
+    if (parts[1] === "users" && method === "PUT") return json(res, 200, db.updateUser(parts[2], await body(req)));
+    if (parts[1] === "users" && method === "DELETE") {
+      if (Number(parts[2]) === Number(user.id)) return json(res, 400, { error: "لا يمكنك حذف حسابك الحالي." });
+      db.deleteUser(parts[2]);
+      // Whoever was signed in on the removed account is out.
+      for (const [token, other] of sessions) if (Number(other.user.id) === Number(parts[2])) sessions.delete(token);
+      return json(res, 200, { ok: true });
+    }
+    if (parts[1] === "password" && method === "PUT") {
+      const b = await body(req);
+      return json(res, 200, { ok: true, user: db.changePassword(user.id, b.currentPassword, b.newPassword) });
     }
     if (parts[1] === "exams" && method === "GET") return json(res, 200, db.getExamData());
     if (parts[1] === "exam-settings" && method === "PUT") return json(res, 200, db.saveExamSettings(await body(req)));
@@ -276,8 +312,7 @@ async function api(req, res) {
 
     if (parts[1] === "reset-data" && method === "POST") {
       const b = await body(req);
-      const settings = db.publicSettings();
-      if (!db.checkLogin(settings.username, b.password)) return json(res, 403, { error: "كلمة المرور غير صحيحة." });
+      if (!db.checkLogin(user.username, b.password)) return json(res, 403, { error: "كلمة المرور غير صحيحة." });
       const backup = db.clearOperationalData();
       return json(res, 200, { ok: true, backup });
     }
@@ -285,7 +320,7 @@ async function api(req, res) {
     // Remote read-only copy: where to push the snapshot, and the push itself.
     if (parts[1] === "sync-settings" && method === "PUT") {
       const b = await body(req);
-      if (!db.checkLogin(db.publicSettings().username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
+      if (!db.checkLogin(user.username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
       return json(res, 200, { ok: true, settings: { ...db.updateSyncSettings(b), applicationMode } });
     }
     if (parts[1] === "sync-remote" && method === "POST") {
@@ -295,9 +330,7 @@ async function api(req, res) {
 
     if (parts[1] === "settings" && method === "PUT") {
       const b = await body(req);
-      const current = db.publicSettings();
-      if (!db.checkLogin(current.username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
-      if (b.newPassword && b.newPassword.length < 4) return json(res, 400, { error: "كلمة المرور الجديدة قصيرة جدًا." });
+      if (!db.checkLogin(user.username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
       return json(res, 200, { ok: true, settings: { ...db.updateSettings(b), applicationMode } });
     }
   } catch (error) {

@@ -8,7 +8,14 @@ let data;
 let filePath;
 let sqlite;
 const COLLECTIONS = ['departments', 'students', 'studentPayments', 'teachers',
-  'teacherPayments', 'teacherAdvances', 'expenses', 'exams'];
+  'teacherPayments', 'teacherAdvances', 'expenses', 'exams', 'users'];
+// Accounts. The developer account is built in: it alone imports or exports the
+// database, and no admin can see, edit or remove it. Admins create the others.
+const ROLES = ['developer', 'admin', 'secretary', 'supervisor'];
+const ASSIGNABLE_ROLES = ['admin', 'secretary', 'supervisor'];
+const DEVELOPER_USERNAME = 'developer';
+const DEFAULT_PASSWORD = '36485606';
+const DEFAULT_DEVELOPER_PASSWORD = 'Dev@2026';
 
 function close() {
   if (sqlite) sqlite.close();
@@ -153,7 +160,8 @@ const DEFAULT_DATA = {
       { min: 0, decision: 'مطرود' }
     ]
   },
-  exams: []
+  exams: [],
+  users: []
 };
 
 const clean = value => value == null ? '' : String(value).trim();
@@ -219,6 +227,7 @@ function init(baseDir, options = {}) {
     if (version) {
       if (version.value !== '1') throw new Error('Version de base de données SQLite non prise en charge.');
       data = readData();
+      ensureUsers(options.initialUsers);
     } else {
       data = fs.existsSync(legacyPath) ? JSON.parse(fs.readFileSync(legacyPath, 'utf8')) : clone(DEFAULT_DATA);
       if (!fs.existsSync(legacyPath) && options.initialSettings) data.settings = clone(options.initialSettings);
@@ -227,6 +236,7 @@ function init(baseDir, options = {}) {
         if (key in data && !Array.isArray(data[key])) throw new Error(`Collection JSON invalide: ${key}`);
       }
       normalizeData();
+      ensureUsers(options.initialUsers);
       save(sqlite, new Set(COLLECTIONS));
       sqlite.prepare("INSERT INTO metadata(key, value) VALUES ('schemaVersion', '1')").run();
     }
@@ -240,7 +250,7 @@ function init(baseDir, options = {}) {
 
 function normalizeData() {
   data.settings = { ...DEFAULT_DATA.settings, ...(data.settings || {}) };
-  for (const key of ['departments','students','studentPayments','teachers','teacherPayments','teacherAdvances','expenses','exams']) {
+  for (const key of ['departments','students','studentPayments','teachers','teacherPayments','teacherAdvances','expenses','exams','users']) {
     if (!Array.isArray(data[key])) data[key] = [];
   }
   data.examSettings = {
@@ -276,7 +286,28 @@ function normalizeData() {
   data.departments = data.departments.map((d, i) => ({ ...d, id: Number(d.id) || i + 1, name: clean(d.name), monthlyFee: d.monthlyFee != null && Number.isFinite(Number(d.monthlyFee)) ? Math.max(0, Number(d.monthlyFee)) : Number(feeMap.get(clean(d.name)) || 0) }));
   const existingNames = new Set(data.departments.map(d => clean(d.name)));
   for (const d of DEFAULT_DATA.departments) { if (!existingNames.has(d.name)) data.departments.push({ ...clone(d), id: nextId('departments') }); }
-  if (!data.settings.passwordHash) data.settings.passwordHash = hashPassword('36485606');
+}
+
+// A database from before the accounts (one settings.username/passwordHash)
+// turns that login into its admin on first open; the developer account is
+// added to every database. `initialUsers` seeds a database created empty
+// (mode switch) with the accounts of the one it was created from.
+function ensureUsers(initialUsers) {
+  if (!Array.isArray(data.users)) data.users = [];
+  if (!data.users.length && Array.isArray(initialUsers) && initialUsers.length) data.users = clone(initialUsers);
+  let changed = false;
+  if (!data.users.some(u => u.role === 'admin')) {
+    data.users.push({ id: nextId('users'), username: clean(data.settings.username) || 'admin', role: 'admin',
+      passwordHash: data.settings.passwordHash || hashPassword(DEFAULT_PASSWORD), createdAt: new Date().toISOString() });
+    changed = true;
+  }
+  if (!data.users.some(u => u.role === 'developer')) {
+    data.users.push({ id: nextId('users'), username: DEVELOPER_USERNAME, role: 'developer',
+      passwordHash: hashPassword(DEFAULT_DEVELOPER_PASSWORD), createdAt: new Date().toISOString() });
+    changed = true;
+  }
+  if ('passwordHash' in data.settings) { delete data.settings.passwordHash; changed = true; }
+  if (changed) save(sqlite, new Set(['users']));
 }
 
 function nextId(collection) {
@@ -317,7 +348,8 @@ function publicSettings() {
   return {
     schoolName: data.settings.schoolName,
     schoolYear: data.settings.schoolYear,
-    username: data.settings.username,
+    // The admin's login name; the read-only web copy proposes it on its login form.
+    username: data.users.find(u => u.role === 'admin')?.username || data.settings.username,
     registrationFee: Math.max(0, Number(data.settings.registrationFee) || 0),
     defaultMonthlyFee: Math.max(0, Number(data.settings.defaultMonthlyFee) || 0),
     managerName: data.settings.managerName || '',
@@ -386,26 +418,85 @@ function setTestDate(date) {
 
 function getData() { return clone(data); }
 function getCoreData() {
-  // Settings go through publicSettings(): copying data.settings wholesale sent
-  // the scrypt passwordHash to the browser on every load().
+  // Settings go through publicSettings() and accounts stay out: neither the
+  // browser nor the web snapshot ever receives a password hash.
   const result = { settings: publicSettings() };
   for (const key of Object.keys(data)) {
-    if (key === 'exams' || key === 'examSettings' || key === 'settings') continue;
+    if (key === 'exams' || key === 'examSettings' || key === 'settings' || key === 'users') continue;
     result[key] = clone(data[key]);
   }
   return result;
 }
+// --- Accounts ----------------------------------------------------------------
+const publicUser = user => ({ id: user.id, username: user.username, role: user.role });
+const sameName = (a, b) => clean(a).toLowerCase() === clean(b).toLowerCase();
+function findUser(username) { return data.users.find(u => sameName(u.username, username)) || null; }
+function userById(id) {
+  const user = data.users.find(u => Number(u.id) === Number(id));
+  if (!user) throw new Error('المستخدم غير موجود.');
+  return user;
+}
+function assertUsername(username, except = null) {
+  const value = clean(username);
+  if (!value) throw new Error('اسم المستخدم مطلوب.');
+  if (value.length > 40) throw new Error('اسم المستخدم طويل جدًا.');
+  if (data.users.some(u => u !== except && sameName(u.username, value))) throw new Error('اسم المستخدم مستعمل مسبقًا.');
+  return value;
+}
+function assertPassword(password) {
+  if (String(password ?? '').length < 4) throw new Error('كلمة المرور قصيرة جدًا.');
+  return String(password);
+}
+// The last admin keeps the role: a school without an admin could no longer manage accounts.
+function assertNotLastAdmin(user) {
+  if (user.role === 'admin' && data.users.filter(u => u.role === 'admin').length === 1) throw new Error('لا يمكن إزالة آخر مدير للنظام.');
+}
 function checkLogin(username, password) {
-  return clean(username) === clean(data.settings.username) && verifyPassword(password, data.settings.passwordHash);
+  const user = findUser(username);
+  return user && verifyPassword(password, user.passwordHash) ? publicUser(user) : null;
+}
+// Admins never see the developer account; the developer sees everyone.
+function listUsers(viewerRole) {
+  return data.users.filter(u => viewerRole === 'developer' || u.role !== 'developer').map(publicUser);
+}
+function addUser(input) {
+  if (!ASSIGNABLE_ROLES.includes(clean(input.role))) throw new Error('نوع المستخدم غير صحيح.');
+  const user = { id: nextId('users'), username: assertUsername(input.username), role: clean(input.role),
+    passwordHash: hashPassword(assertPassword(input.password)), createdAt: new Date().toISOString() };
+  data.users.push(user); save();
+  return publicUser(user);
+}
+function updateUser(id, input) {
+  const user = userById(id);
+  if (user.role === 'developer') throw new Error('لا يمكن تعديل حساب المطوّر من هنا.');
+  if (input.username !== undefined) user.username = assertUsername(input.username, user);
+  if (input.role !== undefined && clean(input.role) !== user.role) {
+    if (!ASSIGNABLE_ROLES.includes(clean(input.role))) throw new Error('نوع المستخدم غير صحيح.');
+    assertNotLastAdmin(user);
+    user.role = clean(input.role);
+  }
+  if (input.password !== undefined && input.password !== '') user.passwordHash = hashPassword(assertPassword(input.password));
+  save();
+  return publicUser(user);
+}
+function deleteUser(id) {
+  const user = userById(id);
+  if (user.role === 'developer') throw new Error('لا يمكن حذف حساب المطوّر.');
+  assertNotLastAdmin(user);
+  data.users = data.users.filter(u => u !== user); save();
+}
+function changePassword(id, currentPassword, newPassword) {
+  const user = userById(id);
+  if (!verifyPassword(currentPassword, user.passwordHash)) throw new Error('كلمة المرور الحالية غير صحيحة.');
+  user.passwordHash = hashPassword(assertPassword(newPassword)); save();
+  return publicUser(user);
 }
 
 function updateSettings(input) {
   if (!clean(input.schoolName)) throw new Error('اسم المدرسة مطلوب.');
   if (!clean(input.schoolYear)) throw new Error('السنة الدراسية مطلوبة.');
-  if (!clean(input.username)) throw new Error('اسم المستخدم مطلوب.');
   data.settings.schoolName = clean(input.schoolName);
   data.settings.schoolYear = clean(input.schoolYear);
-  data.settings.username = clean(input.username);
   data.settings.managerName = clean(input.managerName);
   data.settings.managerPhone = clean(input.managerPhone);
   data.settings.schoolPhone = clean(input.schoolPhone);
@@ -413,7 +504,6 @@ function updateSettings(input) {
   data.settings.ministry = clean(input.ministry) || DEFAULT_DATA.settings.ministry;
   data.settings.regional = clean(input.regional) || DEFAULT_DATA.settings.regional;
   if (data.settings.managerPhone && !/^\d{8}$/.test(data.settings.managerPhone)) throw new Error('هاتف المدير يجب أن يتكون من 8 أرقام.');
-  if (input.newPassword) data.settings.passwordHash = hashPassword(input.newPassword);
   save();
   return publicSettings();
 }
@@ -853,13 +943,14 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.
-const readOperations = new Set(['getData', 'getCoreData', 'getDepartments', 'publicSettings', 'checkLogin', 'getExamData', 'snapshot', 'syncSettings']);
-// Bookkeeping of the sync itself is not a change the web copy is missing.
-const uncountedWrites = new Set(['updateSyncSettings', 'recordSync', 'setTestDate']);
+const readOperations = new Set(['getData', 'getCoreData', 'getDepartments', 'publicSettings', 'checkLogin', 'listUsers', 'getExamData', 'snapshot', 'syncSettings']);
+// Bookkeeping of the sync itself, and accounts (never part of the snapshot),
+// are not changes the web copy is missing.
+const uncountedWrites = new Set(['updateSyncSettings', 'recordSync', 'setTestDate', 'addUser', 'updateUser', 'deleteUser', 'changePassword']);
 function countWrite() {
   sqlite.prepare(`INSERT INTO metadata(key, value) VALUES ('writesSinceSync', '1')
     ON CONFLICT(key) DO UPDATE SET value = CAST(CAST(value AS INTEGER) + 1 AS TEXT)`).run();
@@ -911,3 +1002,6 @@ function batch(fn) {
 }
 module.exports.batch = batch;
 module.exports.close = close;
+module.exports.ROLES = ROLES;
+module.exports.ASSIGNABLE_ROLES = ASSIGNABLE_ROLES;
+module.exports.DEVELOPER_USERNAME = DEVELOPER_USERNAME;

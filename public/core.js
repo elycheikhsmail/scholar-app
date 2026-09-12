@@ -1,6 +1,6 @@
 const months=MONTHS;
 const monthNumber=MONTH_NUMBER;
-let state={token:'',settings:null,data:null,departments:[],examData:{settings:{},exams:[]}};
+let state={token:'',settings:null,user:null,data:null,departments:[],examData:{settings:{},exams:[]}};
 const $=id=>document.getElementById(id);
 const API_BASE=window.location.protocol==='file:'?'http://127.0.0.1:3780/api':'/api';
 const money=n=>Number(n||0).toLocaleString('en-US',{useGrouping:true,maximumFractionDigits:2});
@@ -195,7 +195,19 @@ function applySettings(){applyApplicationMode(state.settings.applicationMode);$(
 function setupMonths(id){$(id).innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}
 $('feeMonth').innerHTML=monthOptionsHtml();setupMonths('salaryMonth');setupMonths('advanceMonth');setupMonths('payrollMonth');$('payrollMonth').value=currentMonth();$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
 
-async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();const requested=sectionFromLocation();go(DETAIL_SECTIONS.has(requested)?'fees':requested||'dashboard',{historyMode:'replace'})}
+// Comptes et rôles : le serveur refuse de toute façon ce que le rôle n'autorise
+// pas ; ici l'interface masque ce qui ne le concerne pas. Le superviseur lit
+// tout sans rien saisir (no-write, mêmes règles CSS que la copie web) ; les
+// onglets marqués data-roles ne s'affichent qu'aux rôles listés.
+const ROLE_LABELS={developer:'مطوّر',admin:'مدير النظام',secretary:'سكرتير',supervisor:'مشرف'};
+function applyRole(){
+  const role=state.user?.role||'admin';
+  document.body.dataset.role=role;
+  document.body.classList.toggle('no-write',role==='supervisor');
+  for(const element of document.querySelectorAll('[data-roles]'))element.hidden=!element.getAttribute('data-roles').split(/\s+/).includes(role);
+  $('currentUser').textContent=state.user?`${state.user.username} · ${ROLE_LABELS[role]||role}`:'';
+}
+async function enterApplication(x){state.token=x.token;state.settings=x.settings;await load();state.user=x.user||state.data.user||{username:state.settings.username,role:'admin'};applyRole();$('loginScreen').classList.add('hidden');$('app').classList.remove('hidden');applySettings();resetStudent();resetTeacher();resetExpense();resetSalaryDates();resetAdvance();const requested=sectionFromLocation();go(DETAIL_SECTIONS.has(requested)?'fees':requested||'dashboard',{historyMode:'replace'})}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();try{const x=await api('/login',{method:'POST',body:JSON.stringify({username:western($('loginUsername').value),password:western($('loginPassword').value)})});await enterApplication(x)}catch(err){toast(err.message)}});
 $('logoutBtn').onclick=async()=>{try{await api('/logout',{method:'POST'})}catch{}location.reload()};
 document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>go(b.dataset.section));
@@ -260,8 +272,10 @@ function createTabs({nav,tabAttr,panelAttr,storageKey}){
     const saved=localStorage.getItem(storageKey);
     if(names.includes(saved))current=saved;
   }catch{}
+  const tab=name=>list.querySelector(`[data-${tabAttr}="${name}"]`);
   function show(name=current,{focus=false}={}){
-    if(!names.includes(name))name=names[0];
+    const visible=names.filter(n=>!tab(n).hidden);
+    if(!visible.includes(name))name=visible[0]||names[0];
     current=name;
     try{localStorage.setItem(storageKey,name)}catch{}
     for(const button of list.querySelectorAll(`[data-${tabAttr}]`)){
@@ -284,10 +298,11 @@ function createTabs({nav,tabAttr,panelAttr,storageKey}){
     const step={ArrowLeft:1,ArrowRight:-1,Home:'first',End:'last'}[event.key];
     if(step===undefined)return;
     event.preventDefault();
-    const index=names.indexOf(current);
-    const next=step==='first'?0:step==='last'?names.length-1
-      :(index+step+names.length)%names.length;
-    show(names[next],{focus:true});
+    const visible=names.filter(n=>!tab(n).hidden);
+    const index=visible.indexOf(current);
+    const next=step==='first'?0:step==='last'?visible.length-1
+      :(index+step+visible.length)%visible.length;
+    show(visible[next],{focus:true});
   });
   return {show,get current(){return current}};
 }

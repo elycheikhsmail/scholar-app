@@ -11,7 +11,8 @@ test('the testing database gets a February in progress: levels, pupils, dues, st
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-seed-testing-'));
   try {
     db.init(dir);
-    db.updateSettings({ schoolName: 'مدرسة الاختبار', schoolYear: '2026 / 2027', username: 'admin', newPassword: 'secret' });
+    db.updateSettings({ schoolName: 'مدرسة الاختبار', schoolYear: '2026 / 2027' });
+    db.addUser({ username: 'admin', role: 'admin', password: 'secret' });
     db.addStudent({ schoolNo: 'PROD-1', name: 'طالب الإنتاج', gender: 'ذكر', nni: '9999999999', className: 'Jardin' });
     const production = db.getData(); db.close();
 
@@ -23,7 +24,7 @@ test('the testing database gets a February in progress: levels, pupils, dues, st
     db.init(dir, { mode: 'test' });
     const data = db.getData();
     assert.equal(data.settings.schoolName, 'مدرسة الاختبار');
-    assert.equal(db.checkLogin('admin', 'secret'), true);
+    assert.equal(db.checkLogin('admin', 'secret')?.role, 'admin', 'the accounts followed production into the test database');
     assert.equal(db.publicSettings().testDate, '2027-02-28');
     assert.deepEqual(data.departments.map(d => [d.name, d.monthlyFee]), LEVELS.map(l => [l.name, l.fee]));
     for (const level of LEVELS) {
