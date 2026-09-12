@@ -11,6 +11,15 @@ versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 - Technique : `receiptHtml` (`fees-ui.js`) et `staffReceiptHtml` (`staff.js`)
   n'insèrent plus `TEST_MODE_LABEL` ; test UI inversé.
 
+## 1.53.2 — 2026-09-12
+
+- Le mot « إيصال » est remplacé par « وصل » partout dans l'application : titre
+  du reçu de paiement des frais (« وصل دفع »), reçus de salaire et d'avance,
+  boutons « وصل » des journaux, colonne « رقم الوصل » à l'écran et dans les
+  exports Excel, message du bloqueur de fenêtres.
+- Technique : `fees-ui.js`, `staff.js`, `index.html` ; test UI ajusté. Les
+  numéros (`S-…`, `A-…`, `F-…`) et les données stockées sont inchangés.
+
 ## 1.53.1 — 2026-09-12
 
 - Le bouton « إظهار وإخفاء الأعمدة » des tableaux est centré au-dessus du

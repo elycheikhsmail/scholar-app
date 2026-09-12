@@ -311,7 +311,7 @@ function printStudentReceipt(paymentId){
     +`<div class="center school">${esc(school)}</div>`
     +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
     +`<div class="line"></div>`
-    +`<div class="center title">إيصال دفع</div>`
+    +`<div class="center title">وصل دفع</div>`
     +line('رقم الفاتورة',esc(invoiceNo(payment)))
     +line('التاريخ',dateTime(payment)||western(today()))
     +`<div class="line"></div>`

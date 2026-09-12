@@ -550,7 +550,7 @@ function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}
     +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
     +`<div class="line"></div>`
     +`<div class="center title">${title}</div>`
-    +line('رقم الإيصال',esc(number))
+    +line('رقم الوصل',esc(number))
     +line('التاريخ',dateTime(record)||western(today()))
     +`<div class="line"></div>`
     +line('الموظف',esc(teacher?.name||'محذوف'))
@@ -563,11 +563,11 @@ function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}
     +`<div class="line"></div>`
     +`<div class="signature">توقيع المحاسب: __________________</div>`
     +`<div class="signature">توقيع المستلم: __________________</div>`
-    +`<button class="print" onclick="window.print()">طباعة الإيصال</button>`
+    +`<button class="print" onclick="window.print()">طباعة الوصل</button>`
     +`</div>`;
 }
 function openStaffReceipt(title,body){
-  printWindow({title,style:RECEIPT_STYLE,body,width:420,height:700,blockedMessage:'اسمح للنوافذ المنبثقة حتى يتم فتح الإيصال.',autoPrint:true});
+  printWindow({title,style:RECEIPT_STYLE,body,width:420,height:700,blockedMessage:'اسمح للنوافذ المنبثقة حتى يتم فتح الوصل.',autoPrint:true});
 }
 window.printSalaryReceipt=id=>{
   const p=state.data.teacherPayments.find(x=>Number(x.id)===Number(id));
@@ -582,7 +582,7 @@ window.printSalaryReceipt=id=>{
   lines.push(['السلف المخصومة',`${money(adv)} أوقية`]);
   lines.push(['إجمالي المدفوع لهذا الشهر',`${money(paid)} أوقية`]);
   lines.push(['المتبقي بعد هذه الدفعة',`${money(Math.max(0,due-adv-paid))} أوقية`,'remaining']);
-  openStaffReceipt(salaryReceiptNo(p),staffReceiptHtml({title:'إيصال صرف راتب',number:salaryReceiptNo(p),record:p,teacher:t,lines,amountLabel:'المبلغ المستلم',amount:p.amount}));
+  openStaffReceipt(salaryReceiptNo(p),staffReceiptHtml({title:'وصل صرف راتب',number:salaryReceiptNo(p),record:p,teacher:t,lines,amountLabel:'المبلغ المستلم',amount:p.amount}));
 };
 window.printAdvanceReceipt=id=>{
   const a=state.data.teacherAdvances.find(x=>Number(x.id)===Number(id));
@@ -590,7 +590,7 @@ window.printAdvanceReceipt=id=>{
   const t=state.data.teachers.find(x=>Number(x.id)===Number(a.teacherId));
   const due=Number(a.salaryDue||(t?salaryDue(t,a.month):0));
   const lines=[['استحقاق الشهر',`${money(due)} أوقية`],['إجمالي سلف الشهر',`${money(teacherAdvance(a.teacherId,a.month))} أوقية`,'remaining']];
-  openStaffReceipt(advanceReceiptNo(a),staffReceiptHtml({title:'إيصال سلفة على الراتب',number:advanceReceiptNo(a),record:a,teacher:t,lines,amountLabel:'مبلغ السلفة',amount:a.amount}));
+  openStaffReceipt(advanceReceiptNo(a),staffReceiptHtml({title:'وصل سلفة على الراتب',number:advanceReceiptNo(a),record:a,teacher:t,lines,amountLabel:'مبلغ السلفة',amount:a.amount}));
 };
 // Le كشف du mois s'imprime en une page A4 avec une colonne de signature par employé.
 $('printPayroll').onclick=()=>{
@@ -654,14 +654,14 @@ function renderSalary(){
       <td>${money(allPaid)}</td>
       <td class="${rem>0?'overdue-soft':'status-paid'}">${money(rem)}</td>
       <td>${esc(dateTime(p))}</td>
-      <td class="actions"><button class="btn-pay" onclick="printSalaryReceipt(${p.id})">إيصال</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
+      <td class="actions"><button class="btn-pay" onclick="printSalaryReceipt(${p.id})">وصل</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
     </tr>`;
   }).join('');
   $('salaryTable').innerHTML=rows||`<tr><td colspan="10">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
   renderPayroll();
 }
 const SALARY_EXPORT_COLUMNS=[
-  {key:'receiptNo',label:'رقم الإيصال',value:r=>salaryReceiptNo(r.p)},
+  {key:'receiptNo',label:'رقم الوصل',value:r=>salaryReceiptNo(r.p)},
   {key:'name',label:'الموظف',value:r=>r.t?.name||'محذوف'},
   {key:'phone',label:'الهاتف',value:r=>western(r.t?.phone||'')},
   {key:'role',label:'طبيعة العمل',value:r=>r.t?.role||''},
@@ -841,14 +841,14 @@ function renderAdvances(){
       <td>${money(a.amount)}</td>
       <td>${esc(dateTime(a))}</td>
       <td>${esc(a.notes)}</td>
-      <td class="actions"><button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">إيصال</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
+      <td class="actions"><button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">وصل</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
     </tr>`;
   }).join('');
   $('advanceTable').innerHTML=rows||`<tr><td colspan="8">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
   renderPayroll();
 }
 const ADVANCE_EXPORT_COLUMNS=[
-  {key:'receiptNo',label:'رقم الإيصال',value:r=>advanceReceiptNo(r.a)},
+  {key:'receiptNo',label:'رقم الوصل',value:r=>advanceReceiptNo(r.a)},
   {key:'name',label:'الموظف',value:r=>r.t?.name||'محذوف'},
   {key:'phone',label:'الهاتف',value:r=>western(r.t?.phone||'')},
   {key:'role',label:'طبيعة العمل',value:r=>r.t?.role||''},

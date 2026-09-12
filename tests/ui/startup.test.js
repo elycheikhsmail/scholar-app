@@ -432,7 +432,7 @@ test('browser scripts support login, all sections, student fees and session rest
     window.printWindow=original;
     return body;
   });
-  assert.match(salaryReceipt,/إيصال صرف راتب/);
+  assert.match(salaryReceipt,/وصل صرف راتب/);
   // Receipts never carry the test-copy label, whatever the mode.
   assert.doesNotMatch(salaryReceipt,/نسخة للتجريب فقط/);
   assert.match(salaryReceipt,/S-000001/);
@@ -462,7 +462,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#columnExportDialog')).not.toHaveAttribute('open', '');
   const salaryWorkbook=await page.evaluate(()=>{window.downloadXlsx=window.__xlsxOriginal;return window.__xlsxCaptured});
   assert.equal(salaryWorkbook.sheet,'دفعات الرواتب');
-  assert.deepEqual(salaryWorkbook.rows,[['رقم الإيصال','الموظف'],['S-000001','موظف تجريبي']]);
+  assert.deepEqual(salaryWorkbook.rows,[['رقم الوصل','الموظف'],['S-000001','موظف تجريبي']]);
   assert.deepEqual(await page.evaluate(()=>JSON.parse(localStorage.getItem('salaryExportColumns'))),['receiptNo','name']);
   // The payroll sheet and the staff register get the same dialog.
   await page.locator('[data-staff-tab="payroll"]').click();
