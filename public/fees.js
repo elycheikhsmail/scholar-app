@@ -184,8 +184,10 @@ function chargesFor(student, settings) {
 // before it is fully paid. Ordering by id rather than by the entered date keeps
 // what an already printed receipt covers stable when a later receipt is edited
 // or backdated. Whatever is left over stays on the account as a credit.
+// A cancelled receipt (كُتب بالخطأ ثم أُلغي) stays in the register for the
+// record but no longer pays for anything.
 function allocate(charges, payments) {
-  const ordered = (payments || []).slice().sort((a,b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+  const ordered = (payments || []).filter(p => p && !p.cancelled).sort((a,b) => (Number(a.id) || 0) - (Number(b.id) || 0));
   const rows = charges.map(charge => ({ ...charge, paid: 0, remaining: charge.amount, allocations: [] }));
   let index = 0, credit = 0;
   for (const payment of ordered) {

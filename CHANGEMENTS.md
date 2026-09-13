@@ -3,6 +3,31 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.62.0 — 2026-09-13
+
+- Chaque enregistrement (élève, reçu, employé, salaire, سلفة, dépense, قسم,
+  résultat d'examen) porte désormais qui l'a créé et quand (`createdBy`,
+  `createdAt`) et qui l'a modifié en dernier (`updatedBy`, `updatedAt`) — le
+  nom du compte connecté. Colonne « سجّلها » dans سجل التحصيل, سجل دفعات
+  الرواتب et سجل السلف (et dans leurs exports Excel) ; ligne « المحاسب » sur
+  les وصولات imprimés. Les scripts et tests (sans compte) datent sans nommer.
+- Un وصل (dفعة طالب, راتب, سلفة) ne se supprime plus : il **s'annule** — bouton
+  « إلغاء » à la place de « حذف », motif obligatoire puis mot de passe. Le وصل
+  reste dans les registres, barré, avec « ملغاة (qui) — motif », imprimable
+  (mention « ملغاة » en tête du reçu) mais ni modifiable ni comptée : le moteur
+  des frais l'ignore, les plafonds de salaire/سلفة sont libérés, les totaux,
+  la lecture du mois, les rapports et le tableau de bord n'en tiennent plus
+  compte. La numérotation F-/S-/A- reste continue.
+- Technique : `db.as(username)` signe les écritures de la requête (`server.js`
+  passe par `who.*`) ; `stampNew` / `stampUpdate` / `live` / `cancelReceipt`
+  (`db.js`) ; `POST /student-payments/:id/cancel`, `/teacher-payments/:id/cancel`,
+  `/teacher-advances/:id/cancel` ; les routes `DELETE` de ces trois reçus sont
+  retirées (404) ; `allocate` (`fees.js`) ignore `cancelled` ;
+  `cancelWithPassword`, `live`, `recordedBy`, `cancelledText` (`core.js`) ;
+  style `.receipt-cancelled` ; tests db, HTTP et UI. Point 1.5 de
+  `REVIEW-ACCOUNTING-UX-1.56.1.md` (la suppression d'un élève ou d'un employé
+  avec ses reçus reste possible, non traitée ici).
+
 ## 1.61.0 — 2026-09-13
 
 - كشف رواتب الشهر suit les dates de service : un employé n'y figure (et n'est

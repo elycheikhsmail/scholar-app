@@ -6,6 +6,7 @@ const path = require('node:path');
 const { DatabaseSync } = require('node:sqlite');
 const { spawn } = require('node:child_process');
 const db = require('../db');
+const dues = require('../public/fees.js');
 const dirs = [];
 function temp() { const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'school-sqlite-')); dirs.push(dir); return dir; }
 function database(dir) { return path.join(dir, 'database', 'school-data.sqlite'); }
@@ -159,6 +160,52 @@ test('server refuses what the forms refuse: salary and advance caps, school mont
   // Nothing refused above left a trace.
   assert.equal(db.getData().teacherPayments.length, 4);
   assert.equal(db.getData().teacherAdvances.length, 2);
+});
+
+test('records carry who created and changed them; receipts are cancelled with a reason, never erased', () => {
+  const dir = temp(); db.init(dir);
+  const sami = db.as('sami');
+  const s = sami.addStudent(student);
+  assert.equal(s.createdBy, 'sami');
+  assert.match(s.createdAt, /^\d{4}-\d{2}-\d{2}T/);
+  const payment = sami.addStudentPayment({ studentId: s.id, amount: 300, month: 'أكتوبر' });
+  assert.equal(payment.createdBy, 'sami');
+  const edited = db.as('yaghoub').updateStudentPayment(payment.id, { amount: 250 });
+  assert.deepEqual([edited.createdBy, edited.updatedBy], ['sami', 'yaghoub']);
+  assert.ok(edited.updatedAt >= edited.createdAt);
+  // Unsigned calls (scripts, tests) date the record without naming anyone.
+  const expense = db.addExpense({ category: 'ورق', amount: 5 });
+  assert.equal('createdBy' in expense, false);
+  assert.ok(expense.createdAt);
+  assert.equal(db.as('').addExpense({ category: 'حبر', amount: 5 }).createdBy, undefined);
+  for (const [name, fn] of [['teacher', () => sami.addTeacher({ name: 'م', role: 'معلم', fixedSalary: 1000 })], ['department', () => sami.addDepartment({ name: 'قسم', monthlyFee: 10 })]]) {
+    assert.equal(fn().createdBy, 'sami', name);
+  }
+  // Cancelling keeps the receipt, marks it, and takes it out of the account.
+  assert.throws(() => sami.cancelStudentPayment(payment.id, { reason: '' }), /اذكر سبب الإلغاء/);
+  const cancelled = sami.cancelStudentPayment(payment.id, { reason: 'خطأ في المبلغ' });
+  assert.deepEqual([cancelled.cancelled, cancelled.cancelledBy, cancelled.cancelReason], [true, 'sami', 'خطأ في المبلغ']);
+  assert.match(cancelled.cancelledAt, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(db.getData().studentPayments.length, 1, 'the receipt stays in the register');
+  assert.throws(() => sami.cancelStudentPayment(payment.id, { reason: 'مرة أخرى' }), /ملغى أصلًا/);
+  assert.throws(() => sami.updateStudentPayment(payment.id, { amount: 10 }), /ملغى ولا يمكن تعديله/);
+  const settings = { ...db.publicSettings(), departments: db.getDepartments() };
+  assert.equal(dues.ledgerFor(s, db.getData().studentPayments, settings).totalPaid, 0, 'the engine ignores a cancelled receipt');
+  const again = sami.addStudentPayment({ studentId: s.id, amount: 250, month: 'أكتوبر' });
+  assert.equal(again.invoiceNo, 'F-000002', 'the series goes on');
+  assert.equal(dues.ledgerFor(s, db.getData().studentPayments, settings).totalPaid, 250);
+  // Staff receipts: a cancelled advance or salary frees the month's cap and cannot be edited.
+  const teacher = db.getData().teachers[0];
+  const advance = sami.addTeacherAdvance({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000 });
+  assert.throws(() => sami.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1, date: '2026-10-31' }), /تتجاوز المتاح/);
+  sami.cancelTeacherAdvance(advance.id, { reason: 'لم تُصرف' });
+  const salary = sami.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, date: '2026-10-31' });
+  assert.throws(() => sami.updateTeacherAdvance(advance.id, { month: 'أكتوبر', amount: 5 }), /ملغى/);
+  sami.cancelTeacherPayment(salary.id, { reason: 'مكرر' });
+  assert.throws(() => sami.updateTeacherPayment(salary.id, { month: 'أكتوبر', amount: 5, date: '2026-10-31' }), /ملغى/);
+  assert.equal(sami.addTeacherPayment({ teacherId: teacher.id, month: 'أكتوبر', amount: 1000, date: '2026-10-31' }).receiptNo, 'S-000002');
+  assert.equal(db.getData().teacherPayments.length, 2);
+  assert.equal(db.getData().teacherAdvances.length, 1);
 });
 
 test('databases without an invoice sequence resume after the highest number issued', () => {
@@ -648,7 +695,16 @@ test('HTTP roles: reads for everyone, records for the secretary, settings and ac
 
     const sec = await login('sec', 'sec-pass');
     assert.equal((await request('/expenses', 'POST', sec.token, { category: 'ورق', amount: 5 })).status, 200);
-    assert.equal((await request('/students', 'POST', sec.token, student)).status, 200);
+    const created = await (await request('/students', 'POST', sec.token, student)).json();
+    assert.equal(created.createdBy, 'sec', 'writes are signed with the account doing them');
+    // A receipt is cancelled through its own route, with a reason; it is never deleted over HTTP.
+    const receipt = await (await request('/student-payments', 'POST', sec.token, { studentId: created.id, month: 'أكتوبر', amount: 50 })).json();
+    assert.equal(receipt.createdBy, 'sec');
+    assert.equal((await request(`/student-payments/${receipt.id}`, 'DELETE', sec.token)).status, 404);
+    assert.equal((await request(`/student-payments/${receipt.id}/cancel`, 'POST', sec.token, { reason: '' })).status, 400);
+    const cancelled = await (await request(`/student-payments/${receipt.id}/cancel`, 'POST', sec.token, { reason: 'خطأ' })).json();
+    assert.deepEqual([cancelled.cancelled, cancelled.cancelledBy, cancelled.cancelReason], [true, 'sec', 'خطأ']);
+    assert.equal((await (await request('/data', 'GET', sec.token)).json()).studentPayments.length, 1, 'the cancelled receipt stays in the register');
     assert.equal((await request('/fee-settings', 'PUT', sec.token, { registrationFee: 1, defaultMonthlyFee: 1 })).status, 403);
     assert.equal((await request('/users', 'GET', sec.token)).status, 403);
     assert.equal((await request('/reset-data', 'POST', sec.token, { password: 'sec-pass' })).status, 403);

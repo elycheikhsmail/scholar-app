@@ -169,6 +169,25 @@ const DEFAULT_DATA = {
 const clean = value => value == null ? '' : String(value).trim();
 const clone = value => JSON.parse(JSON.stringify(value));
 
+// Who is doing the writing. The server names the signed-in account through
+// `as(username)` for each request; scripts and tests leave it empty. Every
+// record then carries who created it and who last changed it, so the log
+// answers « من سجّل هذا الوصل؟ » without a separate journal.
+let actor = null;
+function stampNew(record) {
+  record.createdAt = new Date().toISOString();
+  if (actor) record.createdBy = actor;
+  return record;
+}
+function stampUpdate(record) {
+  record.updatedAt = new Date().toISOString();
+  if (actor) record.updatedBy = actor;
+  return record;
+}
+// Live rows of a receipt collection: a cancelled receipt stays in the register
+// but counts for nothing (allocation, caps, totals).
+const live = rows => rows.filter(r => !r.cancelled);
+
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   return `${salt}:${crypto.scryptSync(String(password), salt, 64).toString('hex')}`;
 }
@@ -592,7 +611,7 @@ function addDepartment(payload) {
   const fee = Math.max(0, Number(payload?.monthlyFee ?? 0) || 0);
   if (!value) throw new Error('اسم القسم مطلوب.');
   if (data.departments.some(x => clean(x.name) === value)) throw new Error('هذا القسم موجود مسبقًا.');
-  const item = { id: nextId('departments'), name: value, monthlyFee: fee };
+  const item = stampNew({ id: nextId('departments'), name: value, monthlyFee: fee });
   data.departments.push(item); save(); return item;
 }
 function updateDepartment(id, payload) {
@@ -603,7 +622,7 @@ function updateDepartment(id, payload) {
   if (!value) throw new Error('اسم القسم مطلوب.');
   if (data.departments.some(x => Number(x.id) !== Number(id) && clean(x.name) === value)) throw new Error('هذا القسم موجود مسبقًا.');
   const old = item.name;
-  item.name = value; item.monthlyFee = fee;
+  item.name = value; item.monthlyFee = fee; stampUpdate(item);
   data.students.forEach(s => { if (clean(s.className) === old) s.className = value; });
   save(); return item;
 }
@@ -681,13 +700,14 @@ function addStudent(s) {
     leaveDate: clean(s.leaveDate),
     discountType: '', discountValue: 0, discountReason: ''
   };
+  stampNew(student);
   data.students.push(student);
   const initialPaid = Math.max(0, Number(s.initialPaid) || 0);
   const paymentDate = clean(s.initialPaymentDate) || student.registrationDate;
   const registrationPaid = Math.min(initialPaid, dues.registrationFeeFor(feeSettings()));
   const monthlyPaid = Math.max(0, initialPaid - registrationPaid);
   if (registrationPaid > 0) {
-    data.studentPayments.push({
+    data.studentPayments.push(stampNew({
       id: nextId('studentPayments'),
       invoiceNo: nextInvoiceNo(),
       studentId: student.id,
@@ -697,10 +717,10 @@ function addStudent(s) {
       date: paymentDate,
       time: currentTime(),
       notes: 'دفعة رسوم التسجيل عند تسجيل الطالب'
-    });
+    }));
   }
   if (monthlyPaid > 0) {
-    data.studentPayments.push({
+    data.studentPayments.push(stampNew({
       id: nextId('studentPayments'),
       invoiceNo: nextInvoiceNo(),
       studentId: student.id,
@@ -710,7 +730,7 @@ function addStudent(s) {
       date: paymentDate,
       time: currentTime(),
       notes: 'دفعة الرسوم الشهرية عند تسجيل الطالب'
-    });
+    }));
   }
   save(); return student;
 }
@@ -733,6 +753,7 @@ function updateStudent(id, s) {
     registrationDate: clean(s.registrationDate), notes: clean(s.notes),
     status: clean(s.status) || dues.ACTIVE_STATUS, leaveDate: clean(s.leaveDate)
   });
+  stampUpdate(student);
   save(); return student;
 }
 
@@ -741,7 +762,7 @@ function updateStudent(id, s) {
 function updateStudentDiscount(id, input) {
   const student = data.students.find(s => Number(s.id) === Number(id));
   if (!student) throw new Error('الطالب غير موجود.');
-  Object.assign(student, validateDiscount(input));
+  Object.assign(student, validateDiscount(input)); stampUpdate(student);
   save(); return student;
 }
 
@@ -755,7 +776,7 @@ function deleteStudent(id) {
 // Student payments now match the cap already enforced on staff salaries: the
 // account cannot be paid beyond what it owes.
 function assertWithinOutstanding(student, amount, excludePaymentId = null) {
-  const payments = data.studentPayments.filter(x => Number(x.studentId) === Number(student.id) && Number(x.id) !== Number(excludePaymentId));
+  const payments = live(data.studentPayments).filter(x => Number(x.studentId) === Number(student.id) && Number(x.id) !== Number(excludePaymentId));
   // Future months are not current debt, but remain payable in advance up to the
   // balance scheduled for the school year.
   const outstanding = dues.ledgerFor(student, payments, feeSettings()).scheduledOutstanding;
@@ -766,8 +787,8 @@ function assertWithinOutstanding(student, amount, excludePaymentId = null) {
 // One receipt. Callers check the cap first, then save: `addStudentPayments`
 // enters several at once and must weigh them against the balance together.
 function pushStudentPayment(student, month, amount, date, notes) {
-  const payment = { id:nextId('studentPayments'), invoiceNo:nextInvoiceNo(), studentId:Number(student.id), month,
-    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, time: currentTime(), notes };
+  const payment = stampNew({ id:nextId('studentPayments'), invoiceNo:nextInvoiceNo(), studentId:Number(student.id), month,
+    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, time: currentTime(), notes });
   data.studentPayments.push(payment);
   return payment;
 }
@@ -827,15 +848,38 @@ function addStudentPayments(input) {
 }
 function updateStudentPayment(id,p) {
   const payment = data.studentPayments.find(x=>Number(x.id)===Number(id)); if(!payment)throw new Error('الدفعة غير موجودة.');
+  assertNotCancelled(payment);
   const student=data.students.find(x=>Number(x.id)===Number(payment.studentId)); if(!student)throw new Error('الطالب غير موجود.');
   // The label is kept unless the caller sends one: the fees a receipt settles
   // follow from the allocation order, so the form no longer asks for it.
   const amount=Number(p.amount)||0, month=clean(p.month)||clean(payment.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount, payment.id);
-  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:assertDate(p.date, 'تاريخ الدفع')||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
+  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:assertDate(p.date, 'تاريخ الدفع')||payment.date,notes:clean(p.notes)}); stampUpdate(payment); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
 }
 function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filter(x=>Number(x.id)!==Number(id));save();}
+
+// A receipt is never erased once issued: the paper copy exists and the series
+// must stay continuous. Cancelling keeps it in the register, marked, with who
+// cancelled it and why, and takes it out of every allocation and total.
+const RECEIPT_LABELS = { studentPayments: 'الدفعة', teacherPayments: 'دفعة الراتب', teacherAdvances: 'السلفة' };
+function assertNotCancelled(record) {
+  if (record.cancelled) throw new Error('هذا الوصل ملغى ولا يمكن تعديله.');
+}
+function cancelReceipt(collection, id, input) {
+  const record = data[collection].find(x => Number(x.id) === Number(id));
+  if (!record) throw new Error(`${RECEIPT_LABELS[collection]} غير موجودة.`);
+  if (record.cancelled) throw new Error('هذا الوصل ملغى أصلًا.');
+  const reason = clean(input && input.reason);
+  if (!reason) throw new Error('اذكر سبب الإلغاء.');
+  if (reason.length > 200) throw new Error('سبب الإلغاء طويل جدًا.');
+  Object.assign(record, { cancelled: true, cancelledAt: new Date().toISOString(), cancelReason: reason });
+  if (actor) record.cancelledBy = actor;
+  save(); return record;
+}
+const cancelStudentPayment = (id, input) => cancelReceipt('studentPayments', id, input);
+const cancelTeacherPayment = (id, input) => cancelReceipt('teacherPayments', id, input);
+const cancelTeacherAdvance = (id, input) => cancelReceipt('teacherAdvances', id, input);
 
 // An employee who left keeps every record and only drops out of the payment
 // lists: deleting a record would leave « محذوف » in the salary history.
@@ -856,6 +900,7 @@ function addTeacher(t) {
   };
   if(!teacher.name)throw new Error('اسم الموظف مطلوب.');
   if(teacher.phone && !/^\d{8}$/.test(teacher.phone))throw new Error('الهاتف يجب أن يتكون من 8 أرقام.');
+  stampNew(teacher);
   data.teachers.push(teacher);save();return teacher;
 }
 function updateTeacher(id,t){
@@ -863,6 +908,7 @@ function updateTeacher(id,t){
   const role=clean(t.role)||'أخرى';
   if(!staffRoles().includes(role))throw new Error('اختر طبيعة العمل من القائمة المحددة في الإعدادات.');
   Object.assign(teacher,{name:clean(t.name),phone:clean(t.phone),role,stage:clean(t.stage),subject:clean(t.subject),fixedSalary:Math.max(0,Number(t.fixedSalary)||0),hourlyRate:Math.max(0,Number(t.hourlyRate)||0),startDate:clean(t.startDate),notes:clean(t.notes),...teacherStatusFields(t)});
+  stampUpdate(teacher);
   save();return teacher;
 }
 function deleteTeacher(id){const n=Number(id);data.teachers=data.teachers.filter(x=>Number(x.id)!==n);data.teacherPayments=data.teacherPayments.filter(x=>Number(x.teacherId)!==n);data.teacherAdvances=data.teacherAdvances.filter(x=>Number(x.teacherId)!==n);save();}
@@ -879,7 +925,7 @@ function salaryEstimate(teacher,p){
   const salaryDue=teacher.role==='أستاذ'?Math.max(0,Number(p.salaryDue)||hours*hourlyRate):Math.max(0,Number(p.salaryDue)||teacher.fixedSalary||0);
   return {hours,hourlyRate,salaryDue};
 }
-const sumMonth=(rows,teacherId,month,exceptId=null)=>rows.filter(x=>Number(x.teacherId)===Number(teacherId)&&clean(x.month)===month&&Number(x.id)!==Number(exceptId)).reduce((a,x)=>a+Number(x.amount||0),0);
+const sumMonth=(rows,teacherId,month,exceptId=null)=>live(rows).filter(x=>Number(x.teacherId)===Number(teacherId)&&clean(x.month)===month&&Number(x.id)!==Number(exceptId)).reduce((a,x)=>a+Number(x.amount||0),0);
 // A month cannot receive more than it is worth, advances included. The cashier
 // may still record a deliberate extra (bonus, arrears) after confirming in the
 // form: the payment is then flagged `extra`, so the exception stays visible in
@@ -898,12 +944,13 @@ function addTeacherPayment(p){
   const estimate=salaryEstimate(teacher,p);
   const extra=Boolean(p.extra);
   if(!extra)assertSalaryWithinDue(teacher,month,amount,estimate.salaryDue);
-  const payment={id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month,amount,date,time:currentTime(),notes:clean(p.notes),...estimate,...(extra?{extra:true}:{})};
+  const payment=stampNew({id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month,amount,date,time:currentTime(),notes:clean(p.notes),...estimate,...(extra?{extra:true}:{})});
   data.teacherPayments.push(payment);save();return payment;
 }
 function updateTeacherPayment(id,p){
   const payment=data.teacherPayments.find(x=>Number(x.id)===Number(id));
   if(!payment)throw new Error('دفعة الراتب غير موجودة.');
+  assertNotCancelled(payment);
   const teacher=data.teachers.find(x=>Number(x.id)===Number(payment.teacherId));
   if(!teacher)throw new Error('الموظف غير موجود.');
   const amount=Number(p.amount)||0, month=clean(p.month);
@@ -917,6 +964,7 @@ function updateTeacherPayment(id,p){
   assertSalaryEarned(month,date);
   Object.assign(payment,{month,amount,date,notes:clean(p.notes),...estimate});
   if(extra)payment.extra=true;else delete payment.extra;
+  stampUpdate(payment);
   save();return payment;
 }
 function deleteTeacherPayment(id){data.teacherPayments=data.teacherPayments.filter(x=>Number(x.id)!==Number(id));save();}
@@ -940,12 +988,13 @@ function addTeacherAdvance(p){
   assertSalaryMonth(month);
   const due=advanceDue(teacher,p);
   assertAdvanceWithinDue(teacher,month,amount,due);
-  const advance={id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month,amount,date:assertDate(p.date,'تاريخ السلفة')||todayIso(),time:currentTime(),notes:clean(p.notes),salaryDue:due};
+  const advance=stampNew({id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month,amount,date:assertDate(p.date,'تاريخ السلفة')||todayIso(),time:currentTime(),notes:clean(p.notes),salaryDue:due});
   data.teacherAdvances.push(advance);save();return advance;
 }
 function updateTeacherAdvance(id,p){
   const advance=data.teacherAdvances.find(x=>Number(x.id)===Number(id));
   if(!advance)throw new Error('السلفة غير موجودة.');
+  assertNotCancelled(advance);
   const teacher=data.teachers.find(x=>Number(x.id)===Number(advance.teacherId));
   if(!teacher)throw new Error('الموظف غير موجود.');
   const amount=Number(p.amount)||0,month=clean(p.month);
@@ -954,6 +1003,7 @@ function updateTeacherAdvance(id,p){
   const due=advanceDue(teacher,p,Number(advance.salaryDue)||0);
   assertAdvanceWithinDue(teacher,month,amount,due,advance.id);
   Object.assign(advance,{month,amount,date:assertDate(p.date,'تاريخ السلفة')||advance.date,notes:clean(p.notes),salaryDue:due});
+  stampUpdate(advance);
   save();return advance;
 }
 function deleteTeacherAdvance(id){data.teacherAdvances=data.teacherAdvances.filter(x=>Number(x.id)!==Number(id));save();}
@@ -965,8 +1015,8 @@ function expenseFields(e,previousDate){
   if(!fields.category||fields.amount<=0)throw Error('نوع المصروف والمبلغ مطلوبان.');
   return fields;
 }
-function addExpense(e){const o={id:nextId('expenses'),...expenseFields(e,todayIso())};data.expenses.push(o);save();return o;}
-function updateExpense(id,e){const o=data.expenses.find(x=>Number(x.id)===Number(id));if(!o)throw Error('المصروف غير موجود.');Object.assign(o,expenseFields(e,o.date));save();return o;}
+function addExpense(e){const o=stampNew({id:nextId('expenses'),...expenseFields(e,todayIso())});data.expenses.push(o);save();return o;}
+function updateExpense(id,e){const o=data.expenses.find(x=>Number(x.id)===Number(id));if(!o)throw Error('المصروف غير موجود.');Object.assign(o,expenseFields(e,o.date));stampUpdate(o);save();return o;}
 function deleteExpense(id){data.expenses=data.expenses.filter(x=>Number(x.id)!==Number(id));save();}
 
 
@@ -1002,12 +1052,13 @@ function saveExamRecord(input) {
   }).filter(r=>r.name);
   const idx=data.exams.findIndex(x=>Number(x.examNo)===examNo && Number(x.studentId)===studentId && clean(x.department)===department);
   const rec={id:idx>=0?data.exams[idx].id:nextExamId(),examNo,department,studentId,studentName:student.name,className:student.className,results,date:clean(input.date)||new Date().toISOString().slice(0,10)};
-  if(idx>=0)data.exams[idx]=rec;else data.exams.push(rec);
+  if(idx>=0){const previous=data.exams[idx];if(previous.createdAt)rec.createdAt=previous.createdAt;if(previous.createdBy)rec.createdBy=previous.createdBy;stampUpdate(rec);data.exams[idx]=rec;}
+  else{stampNew(rec);data.exams.push(rec);}
   save(); return clone(rec);
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.
@@ -1043,6 +1094,21 @@ for (const [name, operation] of Object.entries(module.exports)) {
     }
   };
 }
+// The same operations, signed: `db.as(username).addStudent(...)` records who
+// did it. The name is set for the duration of the (synchronous) call only, so
+// two requests awaiting their bodies cannot sign each other's writes.
+function as(username) {
+  const signed = {};
+  for (const [name, operation] of Object.entries(module.exports)) {
+    if (typeof operation !== 'function') continue;
+    signed[name] = (...args) => {
+      actor = clean(username) || null;
+      try { return operation(...args); } finally { actor = null; }
+    };
+  }
+  return signed;
+}
+module.exports.as = as;
 // Many operations in one transaction: one read, one write, one fsync instead
 // of one of each per record. An error anywhere rolls the whole batch back.
 // Meant for the seeding scripts, which record thousands of receipts in a row.

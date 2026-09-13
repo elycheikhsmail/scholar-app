@@ -273,18 +273,24 @@ function renderPaymentHistory() {
     return !invalidRange && (!studentId || String(payment.studentId) === studentId) && (!month || allocationsOf(payment).some(a => a.month === month))
       && (!from || payment.date >= from) && (!to || payment.date <= to) && searchText.includes(query);
   }).sort((a,b)=>b.id-a.id);
-  $('collectionTotals').textContent = `عدد الدفعات المعروضة: ${rows.length} — إجمالي التحصيل المعروض: ${money(rows.reduce((total,payment)=>total+Number(payment.amount||0),0))} أوقية`;
+  const liveRows = live(rows);
+  $('collectionTotals').textContent = `عدد الدفعات المعروضة: ${liveRows.length} — إجمالي التحصيل المعروض: ${money(sumAmount(liveRows))} أوقية`
+    + (rows.length > liveRows.length ? ` — ملغاة: ${rows.length - liveRows.length}` : '');
   $('studentPaymentHistory').innerHTML = rows.map(p => {
     const student = students.get(String(p.studentId));
-    return `<tr>
+    const actions = p.cancelled
+      ? `<button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button>`
+      : `<button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="cancelStudentPayment(${p.id})">إلغاء</button>`;
+    return `<tr${p.cancelled ? ' class="receipt-cancelled"' : ''}>
       <td>${esc(invoiceNo(p))}</td>
       <td>${esc(student?.name||'محذوف')}</td>
-      <td class="paid-months">${esc(settledText(p))}</td>
+      <td class="paid-months">${p.cancelled ? `<span class="status-unpaid">${esc(cancelledText(p))}</span>` : esc(settledText(p))}</td>
       <td>${money(p.amount)}</td>
       <td>${esc(dateTime(p))}</td>
-      <td class="actions"><button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td>
+      <td>${esc(p.createdBy || '—')}</td>
+      <td class="actions">${actions}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="6">${invalidRange?'صحّح الفترة الزمنية لعرض الدفعات.':'لا توجد دفعات مطابقة للتصفية.'}</td></tr>`;
+  }).join('') || `<tr><td colspan="7">${invalidRange?'صحّح الفترة الزمنية لعرض الدفعات.':'لا توجد دفعات مطابقة للتصفية.'}</td></tr>`;
 }
 
 // Reçu d'un versement, imprimé sur un rouleau de 80 mm. Il rappelle le reste dû sur
@@ -312,6 +318,7 @@ function printStudentReceipt(paymentId){
     +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
     +`<div class="line"></div>`
     +`<div class="center title">وصل دفع</div>`
+    +(payment.cancelled?`<div class="center title cancelled">${esc(cancelledText(payment))}</div>`:'')
     +line('رقم الفاتورة',esc(invoiceNo(payment)))
     +line('التاريخ',dateTime(payment)||western(today()))
     +`<div class="line"></div>`
@@ -324,6 +331,7 @@ function printStudentReceipt(paymentId){
     +amountLine('remaining',futurePayment?`إجمالي المتبقي حتى شهر ${esc(lastCharge.month)}`:'إجمالي المتبقي على الطالب',money(receiptOutstanding))
     +(credit>0?amountLine('remaining','رصيد لصالح الطالب',money(credit)):'')
     +`<div class="line"></div>`
+    +(payment.createdBy?line('المحاسب',esc(payment.createdBy)):'')
     +`<div class="signature">توقيع المحاسب: __________________</div>`
     +`<div class="center small" style="margin-top:10px">شكراً لكم</div>`
     +`<button class="print" onclick="window.print()">طباعة الفاتورة</button>`
@@ -345,6 +353,7 @@ function printStudentReceipt(paymentId){
 window.editStudentPayment=async id=>{
   const payment=state.data.studentPayments.find(x=>Number(x.id)===Number(id));
   if(!payment)return;
+  if(payment.cancelled)return toast('هذا الوصل ملغى ولا يمكن تعديله.');
   if(!(await requirePassword()))return;
   const student=state.data.students.find(x=>Number(x.id)===Number(payment.studentId));
   $('paymentEditId').value=payment.id;
@@ -371,4 +380,4 @@ $('paymentEditForm').addEventListener('submit',async event=>{
 });
 $('closePaymentEdit').onclick=()=>$('paymentEditDialog').close();
 $('cancelPaymentEdit').onclick=()=>$('paymentEditDialog').close();
-window.deleteStudentPayment=async id=>{await deleteWithPassword(`/student-payments/${id}`,'هل تريد حذف دفعة الطالب؟','تم حذف دفعة الطالب.');};
+window.cancelStudentPayment=async id=>{await cancelWithPassword(`/student-payments/${id}/cancel`,'سبب إلغاء هذه الفاتورة (تبقى في السجل مع علامة «ملغاة»):','تم إلغاء الفاتورة.');};

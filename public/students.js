@@ -133,7 +133,7 @@ function ledgers(){
   if(ledgerCache&&ledgerData===state.data&&ledgerSettings===state.settings&&ledgerDepartments===state.departments)return ledgerCache;
   const settings=feeSettings();
   const byStudent=new Map();
-  for(const p of state.data.studentPayments){
+  for(const p of live(state.data.studentPayments)){
     const key=Number(p.studentId);
     const list=byStudent.get(key);
     if(list)list.push(p);
@@ -471,7 +471,7 @@ $('studentFeesForm').onsubmit = async event => {
     toast(`تم تسجيل دفعة واحدة بقيمة ${money(amount)} أوقية وتوزيعها تلقائيًا.`);
     if(print){
       // Le reçu vient de la réponse ; à défaut, la dernière facture de l'élève.
-      const own=state.data.studentPayments.filter(p=>Number(p.studentId)===Number(student.id));
+      const own=live(state.data.studentPayments).filter(p=>Number(p.studentId)===Number(student.id));
       const receipt=own.find(p=>Number(p.id)===Number(created?.id))||own.sort((a,b)=>Number(b.id)-Number(a.id))[0];
       if(receipt)printStudentReceipt(receipt.id);
     }
@@ -489,7 +489,7 @@ function openStudentChargeDetails(index){
     const payment=payments.get(Number(allocation.paymentId));
     if(!payment)return '';
     return `<tr><td>${esc(invoiceNo(payment))}</td><td class="paid-months">${esc(settledText(payment))}</td><td>${money(allocation.amount)}</td><td>${money(payment.amount)}</td><td>${esc(dateTime(payment))}</td>`
-      + `<td class="actions"><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${payment.id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${payment.id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${payment.id})">حذف</button></td></tr>`;
+      + `<td class="actions"><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${payment.id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${payment.id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('cancel',${payment.id})">إلغاء</button></td></tr>`;
   }).join('');
   $('studentChargeDetailsBody').innerHTML=`<div class="charge-detail-summary">
       <span><small>تاريخ الاستحقاق</small><b>${esc(western(row.dueDate))}</b></span><span><small>الفترة</small><b>${period}</b></span>
@@ -504,7 +504,7 @@ window.runChargeInvoiceAction=(action,id)=>{
   if($('studentChargeDetailsDialog').open)$('studentChargeDetailsDialog').close();
   if(action==='print')return printStudentReceipt(id);
   if(action==='edit')return editStudentPayment(id);
-  if(action==='delete')return deleteStudentPayment(id);
+  if(action==='cancel')return cancelStudentPayment(id);
 };
 // Period follows the school-year timeline (October … June of the next calendar
 // year), not the due date: June is payable at enrolment yet still lies ahead
@@ -541,11 +541,15 @@ function refreshStudentFeeDetails() {
     .sort((a,b) => Number(b.id) - Number(a.id)); // newest receipt first, in issue order like the allocation
   $('studentLedgerRows').innerHTML = invoices.map(p => {
     const id = Number(p.id);
-    const note = esc(settledText(p,'\n')).replace(/\n/g,'<br>');
-    return `<tr data-payment-id="${id}">
-      <td>${esc(dateTime(p)) || '—'}</td>
+    const note = p.cancelled ? `<span class="status-unpaid">${esc(cancelledText(p))}</span>` : esc(settledText(p,'\n')).replace(/\n/g,'<br>');
+    const by = recordedBy(p);
+    const actions = p.cancelled
+      ? `<button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${id})">طباعة</button>`
+      : `<button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('cancel',${id})">إلغاء</button>`;
+    return `<tr data-payment-id="${id}"${p.cancelled ? ' class="receipt-cancelled"' : ''}>
+      <td>${esc(dateTime(p)) || '—'}${by ? `<br><small>${esc(by)}</small>` : ''}</td>
       <td class="paid-months">${note}</td>
-      <td class="actions ledger-actions-cell"><div class="ledger-invoice-actions"><small>${esc(invoiceNo(p))}</small><span><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${id})">حذف</button></span></div></td>
+      <td class="actions ledger-actions-cell"><div class="ledger-invoice-actions"><small>${esc(invoiceNo(p))}</small><span>${actions}</span></div></td>
     </tr>`;
   }).join('') || '<tr class="ledger-empty"><td colspan="3">لا توجد فواتير مسجلة لهذا الطالب حتى الآن.</td></tr>';
   renderStudentFeeEntries();

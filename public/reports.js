@@ -121,9 +121,9 @@ function renderDashboard(){
   const d=state.data;
   const male=d.students.filter(s=>s.gender==='ذكر').length;
   const female=d.students.filter(s=>s.gender==='أنثى').length;
-  const fees=sumAmount(d.studentPayments);
-  const salaries=sumAmount(d.teacherPayments);
-  const advances=sumAmount(d.teacherAdvances);
+  const fees=sumAmount(live(d.studentPayments));
+  const salaries=sumAmount(live(d.teacherPayments));
+  const advances=sumAmount(live(d.teacherAdvances));
   const expenses=sumAmount(d.expenses);
 
   $('sStudents').textContent=money(d.students.length);
@@ -147,8 +147,8 @@ function renderDashboard(){
   $('dMonth').textContent=month;
   $('dFees').textContent=money(monthPaid);
   $('dFeesRemaining').textContent=`المتبقي من رسوم الشهر: ${money(round2(monthDue-monthPaid))}`;
-  $('dCollected').textContent=money(period?sumAmount(d.studentPayments.filter(x=>x.date>=period.start&&x.date<=period.end)):0);
-  $('dSalary').textContent=money(sumAmount(d.teacherPayments.filter(x=>x.month===month)));
+  $('dCollected').textContent=money(period?sumAmount(live(d.studentPayments).filter(x=>x.date>=period.start&&x.date<=period.end)):0);
+  $('dSalary').textContent=money(sumAmount(live(d.teacherPayments).filter(x=>x.month===month)));
   $('dExpenses').textContent=money(sumAmount(d.expenses.filter(x=>x.date.slice(0,7)===thisMonth)));
 }
 
@@ -184,7 +184,7 @@ function renderDuesReports(period){
   // les reçus datés avant cette fin comptent, et le mois suivant n'est pas encore dû.
   const settings={...feeSettings(),asOf:period.end};
   const byStudent=new Map();
-  for(const p of state.data.studentPayments){
+  for(const p of live(state.data.studentPayments)){
     if(p.date>period.end)continue;
     const list=byStudent.get(Number(p.studentId));
     if(list)list.push(p);else byStudent.set(Number(p.studentId),[p]);
@@ -240,9 +240,9 @@ function renderReports(){
   const d=state.data;
   const period=renderReportPeriods();
   const within=x=>x.date>=period.start&&x.date<=period.end;
-  const fees=sumAmount(d.studentPayments.filter(within));
-  const salaries=sumAmount(d.teacherPayments.filter(within));
-  const advances=sumAmount(d.teacherAdvances.filter(within));
+  const fees=sumAmount(live(d.studentPayments).filter(within));
+  const salaries=sumAmount(live(d.teacherPayments).filter(within));
+  const advances=sumAmount(live(d.teacherAdvances).filter(within));
   const expenses=sumAmount(d.expenses.filter(within));
   const out=salaries+advances+expenses;
   $('rIncome').textContent=money(fees);

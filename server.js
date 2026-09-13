@@ -260,6 +260,8 @@ async function api(req, res) {
   const session = auth(req);
   if (!session) return json(res, 401, { error: "يجب تسجيل الدخول." });
   const { user } = session;
+  // Writes are signed with the account doing them (createdBy / updatedBy).
+  const who = db.as(user.username);
   if (!allowed(user.role, parts[1], method)) return json(res, 403, { error: PERMISSION_MESSAGE });
 
   if (parts[1] === "logout" && method === "POST") {
@@ -335,11 +337,11 @@ async function api(req, res) {
 
     // Accounts: admins manage the school's users, everyone changes their own password.
     if (parts[1] === "users" && method === "GET") return json(res, 200, db.listUsers(user.role));
-    if (parts[1] === "users" && method === "POST") return json(res, 200, db.addUser(await body(req)));
-    if (parts[1] === "users" && method === "PUT") return json(res, 200, db.updateUser(parts[2], await body(req)));
+    if (parts[1] === "users" && method === "POST") return json(res, 200, who.addUser(await body(req)));
+    if (parts[1] === "users" && method === "PUT") return json(res, 200, who.updateUser(parts[2], await body(req)));
     if (parts[1] === "users" && method === "DELETE") {
       if (Number(parts[2]) === Number(user.id)) return json(res, 400, { error: "لا يمكنك حذف حسابك الحالي." });
-      db.deleteUser(parts[2]);
+      who.deleteUser(parts[2]);
       // Whoever was signed in on the removed account is out.
       for (const [token, other] of sessions) if (Number(other.user.id) === Number(parts[2])) sessions.delete(token);
       return json(res, 200, { ok: true });
@@ -349,56 +351,56 @@ async function api(req, res) {
       return json(res, 200, { ok: true, user: db.changePassword(user.id, b.currentPassword, b.newPassword) });
     }
     if (parts[1] === "exams" && method === "GET") return json(res, 200, db.getExamData());
-    if (parts[1] === "exam-settings" && method === "PUT") return json(res, 200, db.saveExamSettings(await body(req)));
-    if (parts[1] === "exam-records" && method === "POST") return json(res, 200, db.saveExamRecord(await body(req)));
-    if (parts[1] === "exam-records" && method === "DELETE") { db.deleteExamRecord(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "exam-settings" && method === "PUT") return json(res, 200, who.saveExamSettings(await body(req)));
+    if (parts[1] === "exam-records" && method === "POST") return json(res, 200, who.saveExamRecord(await body(req)));
+    if (parts[1] === "exam-records" && method === "DELETE") { who.deleteExamRecord(parts[2]); return json(res, 200, { ok: true }); }
 
-    if (parts[1] === "fee-settings" && method === "PUT") return json(res, 200, db.updateFeeSettings(await body(req)));
-    if (parts[1] === "staff-roles" && method === "POST") return json(res, 200, db.addStaffRole(await body(req)));
-    if (parts[1] === "staff-roles" && method === "PUT") return json(res, 200, db.updateStaffRole(parts[2], await body(req)));
-    if (parts[1] === "staff-roles" && method === "DELETE") return json(res, 200, db.deleteStaffRole(parts[2]));
+    if (parts[1] === "fee-settings" && method === "PUT") return json(res, 200, who.updateFeeSettings(await body(req)));
+    if (parts[1] === "staff-roles" && method === "POST") return json(res, 200, who.addStaffRole(await body(req)));
+    if (parts[1] === "staff-roles" && method === "PUT") return json(res, 200, who.updateStaffRole(parts[2], await body(req)));
+    if (parts[1] === "staff-roles" && method === "DELETE") return json(res, 200, who.deleteStaffRole(parts[2]));
 
     if (parts[1] === "departments" && method === "GET") return json(res, 200, db.getDepartments());
-    if (parts[1] === "departments" && method === "POST") return json(res, 200, db.addDepartment(await body(req)));
-    if (parts[1] === "departments" && method === "PUT") return json(res, 200, db.updateDepartment(parts[2], await body(req)));
-    if (parts[1] === "departments" && method === "DELETE") { db.deleteDepartment(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "departments" && method === "POST") return json(res, 200, who.addDepartment(await body(req)));
+    if (parts[1] === "departments" && method === "PUT") return json(res, 200, who.updateDepartment(parts[2], await body(req)));
+    if (parts[1] === "departments" && method === "DELETE") { who.deleteDepartment(parts[2]); return json(res, 200, { ok: true }); }
 
-    if (parts[1] === "students" && method === "POST") return json(res, 200, db.addStudent(await body(req)));
-    if (parts[1] === "students" && parts[3] === "discount" && method === "PUT") return json(res, 200, db.updateStudentDiscount(parts[2], await body(req)));
-    if (parts[1] === "students" && method === "PUT") return json(res, 200, db.updateStudent(parts[2], await body(req)));
-    if (parts[1] === "students" && method === "DELETE") { db.deleteStudent(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "students" && method === "POST") return json(res, 200, who.addStudent(await body(req)));
+    if (parts[1] === "students" && parts[3] === "discount" && method === "PUT") return json(res, 200, who.updateStudentDiscount(parts[2], await body(req)));
+    if (parts[1] === "students" && method === "PUT") return json(res, 200, who.updateStudent(parts[2], await body(req)));
+    if (parts[1] === "students" && method === "DELETE") { who.deleteStudent(parts[2]); return json(res, 200, { ok: true }); }
 
-    if (parts[1] === "student-payments" && parts[2] === "batch" && method === "POST") return json(res, 200, db.addStudentPayments(await body(req)));
-    if (parts[1] === "student-payments" && method === "POST") return json(res, 200, db.addStudentPayment(await body(req)));
-    if (parts[1] === "student-payments" && method === "PUT") return json(res, 200, db.updateStudentPayment(parts[2], await body(req)));
-    if (parts[1] === "student-payments" && method === "DELETE") { db.deleteStudentPayment(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "student-payments" && parts[2] === "batch" && method === "POST") return json(res, 200, who.addStudentPayments(await body(req)));
+    if (parts[1] === "student-payments" && parts[3] === "cancel" && method === "POST") return json(res, 200, who.cancelStudentPayment(parts[2], await body(req)));
+    if (parts[1] === "student-payments" && method === "POST") return json(res, 200, who.addStudentPayment(await body(req)));
+    if (parts[1] === "student-payments" && method === "PUT") return json(res, 200, who.updateStudentPayment(parts[2], await body(req)));
 
-    if (parts[1] === "teachers" && method === "POST") return json(res, 200, db.addTeacher(await body(req)));
-    if (parts[1] === "teachers" && method === "PUT") return json(res, 200, db.updateTeacher(parts[2], await body(req)));
-    if (parts[1] === "teachers" && method === "DELETE") { db.deleteTeacher(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "teachers" && method === "POST") return json(res, 200, who.addTeacher(await body(req)));
+    if (parts[1] === "teachers" && method === "PUT") return json(res, 200, who.updateTeacher(parts[2], await body(req)));
+    if (parts[1] === "teachers" && method === "DELETE") { who.deleteTeacher(parts[2]); return json(res, 200, { ok: true }); }
 
-    if (parts[1] === "teacher-payments" && method === "POST") return json(res, 200, db.addTeacherPayment(await body(req)));
-    if (parts[1] === "teacher-payments" && method === "PUT") return json(res, 200, db.updateTeacherPayment(parts[2], await body(req)));
-    if (parts[1] === "teacher-payments" && method === "DELETE") { db.deleteTeacherPayment(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "teacher-payments" && parts[3] === "cancel" && method === "POST") return json(res, 200, who.cancelTeacherPayment(parts[2], await body(req)));
+    if (parts[1] === "teacher-payments" && method === "POST") return json(res, 200, who.addTeacherPayment(await body(req)));
+    if (parts[1] === "teacher-payments" && method === "PUT") return json(res, 200, who.updateTeacherPayment(parts[2], await body(req)));
 
-    if (parts[1] === "teacher-advances" && method === "POST") return json(res, 200, db.addTeacherAdvance(await body(req)));
-    if (parts[1] === "teacher-advances" && method === "PUT") return json(res, 200, db.updateTeacherAdvance(parts[2], await body(req)));
-    if (parts[1] === "teacher-advances" && method === "DELETE") { db.deleteTeacherAdvance(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "teacher-advances" && parts[3] === "cancel" && method === "POST") return json(res, 200, who.cancelTeacherAdvance(parts[2], await body(req)));
+    if (parts[1] === "teacher-advances" && method === "POST") return json(res, 200, who.addTeacherAdvance(await body(req)));
+    if (parts[1] === "teacher-advances" && method === "PUT") return json(res, 200, who.updateTeacherAdvance(parts[2], await body(req)));
 
-    if (parts[1] === "expenses" && method === "POST") return json(res, 200, db.addExpense(await body(req)));
-    if (parts[1] === "expenses" && method === "PUT") return json(res, 200, db.updateExpense(parts[2], await body(req)));
-    if (parts[1] === "expenses" && method === "DELETE") { db.deleteExpense(parts[2]); return json(res, 200, { ok: true }); }
+    if (parts[1] === "expenses" && method === "POST") return json(res, 200, who.addExpense(await body(req)));
+    if (parts[1] === "expenses" && method === "PUT") return json(res, 200, who.updateExpense(parts[2], await body(req)));
+    if (parts[1] === "expenses" && method === "DELETE") { who.deleteExpense(parts[2]); return json(res, 200, { ok: true }); }
 
     if (parts[1] === "reset-data" && method === "POST") {
       const b = await body(req);
       if (!db.checkLogin(user.username, b.password)) return json(res, 403, { error: "كلمة المرور غير صحيحة." });
-      const backup = db.clearOperationalData();
+      const backup = who.clearOperationalData();
       return json(res, 200, { ok: true, backup });
     }
 
     // Remote read-only copy: where to push the snapshot, and the push itself.
     if (parts[1] === "sync-settings" && method === "PUT") {
-      return json(res, 200, { ok: true, settings: { ...db.updateSyncSettings(await body(req)), applicationMode } });
+      return json(res, 200, { ok: true, settings: { ...who.updateSyncSettings(await body(req)), applicationMode } });
     }
     if (parts[1] === "sync-remote" && method === "POST") {
       const result = await syncRemote();
@@ -408,7 +410,7 @@ async function api(req, res) {
     if (parts[1] === "settings" && method === "PUT") {
       const b = await body(req);
       if (!db.checkLogin(user.username, b.currentPassword)) return json(res, 403, { error: "كلمة المرور الحالية غير صحيحة." });
-      return json(res, 200, { ok: true, settings: { ...db.updateSettings(b), applicationMode } });
+      return json(res, 200, { ok: true, settings: { ...who.updateSettings(b), applicationMode } });
     }
   } catch (error) {
     // Refused requests are warnings: useful to reconstruct what the user tried.

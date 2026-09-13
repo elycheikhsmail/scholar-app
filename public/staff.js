@@ -189,11 +189,11 @@ function salaryDue(teacher,month,hoursOverride=null,rateOverride=null){
 }
 
 function latestHours(id,month){
-  const payment=state.data.teacherPayments.find(x=>x.teacherId===id&&x.month===month&&Number(x.hours)>=0);
+  const payment=live(state.data.teacherPayments).find(x=>x.teacherId===id&&x.month===month&&Number(x.hours)>=0);
   return payment?Number(payment.hours||0):0;
 }
 
-const monthRows=(rows,teacherId,month)=>rows.filter(x=>Number(x.teacherId)===Number(teacherId)&&x.month===month);
+const monthRows=(rows,teacherId,month)=>live(rows).filter(x=>Number(x.teacherId)===Number(teacherId)&&x.month===month);
 
 function teacherAdvance(teacherId,month){
   return sumAmount(monthRows(state.data.teacherAdvances,teacherId,month));
@@ -207,7 +207,7 @@ function teacherPaid(teacherId,month){
 // le dernier versement : une augmentation décidée plus tard ne rouvre pas les
 // mois passés dans le كشف. Un mois sans versement suit la fiche actuelle.
 function storedSalaryDue(id,month){
-  const paid=state.data.teacherPayments.filter(x=>Number(x.teacherId)===Number(id)&&x.month===month&&Number(x.salaryDue)>0).sort((a,b)=>Number(b.id)-Number(a.id))[0];
+  const paid=live(state.data.teacherPayments).filter(x=>Number(x.teacherId)===Number(id)&&x.month===month&&Number(x.salaryDue)>0).sort((a,b)=>Number(b.id)-Number(a.id))[0];
   return paid?Number(paid.salaryDue):null;
 }
 function monthDue(t,month,hoursOverride=null){
@@ -233,7 +233,7 @@ function renderTeacherRoleFilter(){
   select.value=[...select.options].some(o=>o.value===current)?current:'';
 }
 function lastPaymentOf(teacherId){
-  return state.data.teacherPayments.filter(p=>Number(p.teacherId)===Number(teacherId)).sort((a,b)=>Number(b.id)-Number(a.id))[0]||null;
+  return live(state.data.teacherPayments).filter(p=>Number(p.teacherId)===Number(teacherId)).sort((a,b)=>Number(b.id)-Number(a.id))[0]||null;
 }
 function filteredTeachers(){
   const query=teacherQuery('teacherSearch');
@@ -578,6 +578,7 @@ function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}
     +`<div class="center small">السنة الدراسية: ${esc(state.settings?.schoolYear||'')}</div>`
     +`<div class="line"></div>`
     +`<div class="center title">${title}</div>`
+    +(record.cancelled?`<div class="center title cancelled">${esc(cancelledText(record))}</div>`:'')
     +line('رقم الوصل',esc(number))
     +line('التاريخ',dateTime(record)||western(today()))
     +`<div class="line"></div>`
@@ -589,6 +590,7 @@ function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}
     +`<div class="row amount"><span>${amountLabel}</span><span>${money(amount)} أوقية</span></div>`
     +(record.notes?line('ملاحظات',esc(record.notes)):'')
     +`<div class="line"></div>`
+    +(record.createdBy?line('المحاسب',esc(record.createdBy)):'')
     +`<div class="signature">توقيع المحاسب: __________________</div>`
     +`<div class="signature">توقيع المستلم: __________________</div>`
     +`<button class="print" onclick="window.print()">طباعة الوصل</button>`
@@ -670,23 +672,30 @@ function renderSalary(){
   }).sort((a,b)=>b.p.id-a.p.id);
 
   salaryLogRows=payments.map(({p,t,due,adv})=>({p,t,due,adv,allPaid:teacherPaid(p.teacherId,p.month),rem:Math.max(0,due-adv-teacherPaid(p.teacherId,p.month))}));
-  $('salaryLogTotals').innerHTML=`<span>عدد الدفعات المعروضة: ${money(payments.length)}</span><span>إجمالي المدفوع المعروض: ${money(sumAmount(payments.map(x=>x.p)))} أوقية</span>`;
+  const livePayments=live(payments.map(x=>x.p));
+  $('salaryLogTotals').innerHTML=`<span>عدد الدفعات المعروضة: ${money(livePayments.length)}</span><span>إجمالي المدفوع المعروض: ${money(sumAmount(livePayments))} أوقية</span>`
+    +(payments.length>livePayments.length?`<span>ملغاة: ${money(payments.length-livePayments.length)}</span>`:'');
   const rows=salaryLogRows.map(({p,t,due,adv,allPaid,rem})=>{
     // Le reste du mois tient compte de tous les versements, pas seulement celui-ci.
-    return `<tr>
+    // Un reçu annulé reste listé, barré, imprimable seulement.
+    const actions=p.cancelled
+      ?`<button class="btn-pay" onclick="printSalaryReceipt(${p.id})">وصل</button>`
+      :`<button class="btn-pay" onclick="printSalaryReceipt(${p.id})">وصل</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="cancelSalaryPayment(${p.id})">إلغاء</button>`;
+    return `<tr${p.cancelled?' class="receipt-cancelled"':''}>
       <td>${esc(salaryReceiptNo(p))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
       <td>${esc(western(t?.phone||'—'))}</td>
-      <td>${esc(p.month)}${p.extra?' <span class="status-partial">(دفعة إضافية)</span>':''}</td>
+      <td>${esc(p.month)}${p.extra?' <span class="status-partial">(دفعة إضافية)</span>':''}${p.cancelled?` <span class="status-unpaid">${esc(cancelledText(p))}</span>`:''}</td>
       <td>${money(due)}</td>
       <td>${money(adv)}</td>
       <td>${money(allPaid)}</td>
       <td class="${rem>0?'overdue-soft':'status-paid'}">${money(rem)}</td>
       <td>${esc(dateTime(p))}</td>
-      <td class="actions"><button class="btn-pay" onclick="printSalaryReceipt(${p.id})">وصل</button><button class="btn-edit" onclick="editSalaryPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteSalaryPayment(${p.id})">حذف</button></td>
+      <td>${esc(p.createdBy||'—')}</td>
+      <td class="actions">${actions}</td>
     </tr>`;
   }).join('');
-  $('salaryTable').innerHTML=rows||`<tr><td colspan="10">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
+  $('salaryTable').innerHTML=rows||`<tr><td colspan="11">${state.data.teacherPayments.length?'لا توجد دفعات مطابقة للتصفية.':'لا توجد دفعات رواتب.'}</td></tr>`;
   renderPayroll();
 }
 const SALARY_EXPORT_COLUMNS=[
@@ -704,7 +713,9 @@ const SALARY_EXPORT_COLUMNS=[
   {key:'time',label:'الساعة',value:r=>r.p.time||''},
   {key:'hours',label:'الساعات',value:r=>Number(r.p.hours||0)},
   {key:'hourlyRate',label:'سعر الساعة',value:r=>Number(r.p.hourlyRate||0)},
-  {key:'notes',label:'ملاحظات',value:r=>r.p.notes||''}
+  {key:'notes',label:'ملاحظات',value:r=>r.p.notes||''},
+  {key:'createdBy',label:'سجّلها',value:r=>r.p.createdBy||''},
+  {key:'cancelled',label:'الحالة',value:r=>r.p.cancelled?cancelledText(r.p):''}
 ];
 $('exportSalaryLog').onclick=()=>openColumnExport({
   storageKey:'salaryExportColumns',columns:SALARY_EXPORT_COLUMNS,rows:salaryLogRows,
@@ -714,6 +725,7 @@ $('exportSalaryLog').onclick=()=>openColumnExport({
 window.editSalaryPayment=id=>{
   const p=state.data.teacherPayments.find(x=>Number(x.id)===Number(id));
   if(!p)return;
+  if(p.cancelled)return toast('هذا الوصل ملغى ولا يمكن تعديله.');
   const t=state.data.teachers.find(x=>x.id===p.teacherId);
   if(!t)return;
   $('salaryEditId').value=p.id;
@@ -766,8 +778,8 @@ $('closeSalaryEdit').onclick=()=>$('salaryEditDialog').close();
 $('cancelSalaryEdit').onclick=()=>$('salaryEditDialog').close();
 $('salaryEditDialog').onclick=event=>{if(event.target===$('salaryEditDialog'))$('salaryEditDialog').close()};
 
-window.deleteSalaryPayment=async id=>{
-  await deleteWithPassword(`/teacher-payments/${id}`,'هل تريد حذف دفعة الراتب؟','تم حذف دفعة الراتب.');
+window.cancelSalaryPayment=async id=>{
+  await cancelWithPassword(`/teacher-payments/${id}/cancel`,'سبب إلغاء وصل الراتب (يبقى في السجل مع علامة «ملغاة»):','تم إلغاء وصل الراتب.');
 };
 
 function resetSalaryDates(){
@@ -860,20 +872,26 @@ function renderAdvances(){
   if(!state.data)return;
   renderLogFilters('advanceLog');
   advanceLogRows=state.data.teacherAdvances.filter(a=>logFilterMatches('advanceLog',a)).map(a=>({a,t:state.data.teachers.find(x=>x.id===a.teacherId)}));
-  $('advanceLogTotals').innerHTML=`<span>عدد السلف المعروضة: ${money(advanceLogRows.length)}</span><span>إجمالي السلف المعروضة: ${money(sumAmount(advanceLogRows.map(x=>x.a)))} أوقية</span>`;
+  const liveAdvances=live(advanceLogRows.map(x=>x.a));
+  $('advanceLogTotals').innerHTML=`<span>عدد السلف المعروضة: ${money(liveAdvances.length)}</span><span>إجمالي السلف المعروضة: ${money(sumAmount(liveAdvances))} أوقية</span>`
+    +(advanceLogRows.length>liveAdvances.length?`<span>ملغاة: ${money(advanceLogRows.length-liveAdvances.length)}</span>`:'');
   const rows=advanceLogRows.map(({a,t})=>{
-    return `<tr>
+    const actions=a.cancelled
+      ?`<button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">وصل</button>`
+      :`<button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">وصل</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="cancelAdvance(${a.id})">إلغاء</button>`;
+    return `<tr${a.cancelled?' class="receipt-cancelled"':''}>
       <td>${esc(advanceReceiptNo(a))}</td>
       <td>${esc(t?.name||'محذوف')}</td>
       <td>${esc(western(t?.phone||'—'))}</td>
-      <td>${esc(a.month)}</td>
+      <td>${esc(a.month)}${a.cancelled?` <span class="status-unpaid">${esc(cancelledText(a))}</span>`:''}</td>
       <td>${money(a.amount)}</td>
       <td>${esc(dateTime(a))}</td>
       <td>${esc(a.notes)}</td>
-      <td class="actions"><button class="btn-pay" onclick="printAdvanceReceipt(${a.id})">وصل</button><button class="btn-edit" onclick="editAdvance(${a.id})">تعديل</button><button class="btn-delete" onclick="deleteAdvance(${a.id})">حذف</button></td>
+      <td>${esc(a.createdBy||'—')}</td>
+      <td class="actions">${actions}</td>
     </tr>`;
   }).join('');
-  $('advanceTable').innerHTML=rows||`<tr><td colspan="8">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
+  $('advanceTable').innerHTML=rows||`<tr><td colspan="9">${state.data.teacherAdvances.length?'لا توجد سلف مطابقة للتصفية.':'لا توجد سلف.'}</td></tr>`;
   renderPayroll();
 }
 const ADVANCE_EXPORT_COLUMNS=[
@@ -885,7 +903,9 @@ const ADVANCE_EXPORT_COLUMNS=[
   {key:'amount',label:'السلفة',value:r=>Number(r.a.amount||0)},
   {key:'date',label:'التاريخ',value:r=>r.a.date||''},
   {key:'time',label:'الساعة',value:r=>r.a.time||''},
-  {key:'notes',label:'ملاحظات',value:r=>r.a.notes||''}
+  {key:'notes',label:'ملاحظات',value:r=>r.a.notes||''},
+  {key:'createdBy',label:'سجّلها',value:r=>r.a.createdBy||''},
+  {key:'cancelled',label:'الحالة',value:r=>r.a.cancelled?cancelledText(r.a):''}
 ];
 $('exportAdvanceLog').onclick=()=>openColumnExport({
   storageKey:'advanceExportColumns',columns:ADVANCE_EXPORT_COLUMNS,rows:advanceLogRows,
@@ -893,9 +913,10 @@ $('exportAdvanceLog').onclick=()=>openColumnExport({
 });
 
 window.editAdvance=async id=>{
-  if(!(await requirePassword()))return;
   const a=state.data.teacherAdvances.find(x=>x.id===id);
   if(!a)return;
+  if(a.cancelled)return toast('هذا الوصل ملغى ولا يمكن تعديله.');
+  if(!(await requirePassword()))return;
   const amount=await askInput('مبلغ السلفة الجديد',a.amount);
   if(amount===null)return;
   const date=await askInput('تاريخ السلفة بصيغة YYYY-MM-DD',a.date);
@@ -917,8 +938,8 @@ window.editAdvance=async id=>{
   }
 };
 
-window.deleteAdvance=async id=>{
-  await deleteWithPassword(`/teacher-advances/${id}`,'هل تريد حذف السلفة؟','تم حذف السلفة.');
+window.cancelAdvance=async id=>{
+  await cancelWithPassword(`/teacher-advances/${id}/cancel`,'سبب إلغاء وصل السلفة (يبقى في السجل مع علامة «ملغاة»):','تم إلغاء وصل السلفة.');
 };
 
 function resetAdvance(){

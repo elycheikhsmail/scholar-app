@@ -34,6 +34,7 @@ test('browser scripts support login, all sections, student fees and session rest
   const errors = [];
   const salaryRequests = [];
   const studentPaymentRequests = [];
+  const cancelRequests = [];
   const databaseRequests = [];
   page.on('pageerror', error => errors.push(error.message));
   page.on('requestfailed', request => errors.push(request.url()));
@@ -63,6 +64,10 @@ test('browser scripts support login, all sections, student fees and session rest
       const created={id:900+studentPaymentRequests.length,invoiceNo:`F-000${900+studentPaymentRequests.length}`,time:'09:00',...body};
       responses['/api/data'].studentPayments.push(created);
       return route.fulfill({json:created});
+    }
+    if(/^\/api\/student-payments\/\d+\/cancel$/.test(pathname)){
+      cancelRequests.push({path:pathname,body:route.request().postDataJSON()});
+      return route.fulfill({json:{ok:true}});
     }
     if(pathname==='/api/students'&&route.request().method()==='POST'){
       const created={id:77,callNo:'2',status:'نشط',leaveDate:'',discountType:'',discountValue:0,discountReason:'',...route.request().postDataJSON()};
@@ -823,7 +828,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(juneInvoice).toContainText('F-000092');
   await expect(juneInvoice.getByText('طباعة')).toBeVisible();
   await expect(juneInvoice.getByText('تعديل')).toBeVisible();
-  await expect(juneInvoice.getByText('حذف')).toBeVisible();
+  await expect(juneInvoice.getByText('إلغاء')).toBeVisible();
+  await expect(juneInvoice.getByText('حذف')).toHaveCount(0);
   await expect(page.locator('#studentLedgerPayments')).toHaveCount(0);
   await expect(page.locator('#studentLedger .ledger-period-filters')).toHaveCount(0);
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
@@ -843,6 +849,44 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#collectionMonth').selectOption('');
   await expect(page.locator('#paymentEditMonth')).toHaveCount(0);
   await expect(page.locator('#paymentEditSettled')).toHaveCount(1);
+  // A cancelled receipt stays listed, struck through with its reason, counts
+  // for nothing and can only be printed; the author of each receipt is shown.
+  await page.evaluate(()=>{
+    const student=state.data.students[0];
+    state.data.studentPayments.push({id:93,invoiceNo:'F-000093',studentId:student.id,month:'يونيو',amount:700,date:'2026-09-12',createdBy:'sami',cancelled:true,cancelledBy:'yaghoub',cancelReason:'مبلغ خاطئ'});
+    state.data.studentPayments[0].createdBy='sami';
+    ledgerCache=null;
+    renderPaymentHistory();
+  });
+  await expect(page.locator('#studentPaymentHistory tr')).toHaveCount(3);
+  const cancelledRow=page.locator('#studentPaymentHistory tr.receipt-cancelled');
+  await expect(cancelledRow).toHaveCount(1);
+  await expect(cancelledRow).toContainText('ملغاة (yaghoub) — مبلغ خاطئ');
+  await expect(cancelledRow.getByText('إلغاء')).toHaveCount(0);
+  await expect(cancelledRow.getByText('تعديل')).toHaveCount(0);
+  await expect(cancelledRow.getByText('طباعة')).toBeVisible();
+  await expect(page.locator('#collectionTotals')).toContainText('عدد الدفعات المعروضة: 2');
+  await expect(page.locator('#collectionTotals')).toContainText('ملغاة: 1');
+  await expect(page.locator('#studentPaymentHistory tr').filter({hasText:'F-000091'})).toContainText('sami');
+  // «إلغاء» asks for the reason, then the password, and posts to the cancel route.
+  await page.locator('#studentPaymentHistory tr').filter({hasText:'F-000092'}).getByText('إلغاء').click();
+  await expect(page.locator('.input-dialog[open] h3')).toContainText('سبب إلغاء');
+  await page.locator('.input-dialog[open] input').fill('وصل مكرر');
+  await page.locator('.input-dialog[open] button.primary').click();
+  await expect(page.locator('.input-dialog[open] h3')).toContainText('كلمة المرور');
+  await page.locator('.input-dialog[open] input').fill('secret');
+  await page.locator('.input-dialog[open] button.primary').click();
+  await expect.poll(()=>cancelRequests.length).toBe(1);
+  assert.deepEqual(cancelRequests[0],{path:'/api/student-payments/92/cancel',body:{reason:'وصل مكرر'}});
+  await page.evaluate(()=>{
+    const student=state.data.students[0];
+    state.data.studentPayments=[
+      {id:91,invoiceNo:'F-000091',studentId:student.id,month:REGISTRATION,amount:200,date:'2026-09-11'},
+      {id:92,invoiceNo:'F-000092',studentId:student.id,month:'يونيو',amount:1000,date:'2026-09-11',time:'14:05'}
+    ];
+    ledgerCache=null;
+    renderPaymentHistory();
+  });
   await page.locator('.nav-item[data-section="fees"]').click();
   await page.locator('#feesTable .fee-row-actions .btn-edit').first().click();
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);

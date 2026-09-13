@@ -11,6 +11,12 @@ const western=v=>String(v??'').replace(/[٠-٩۰-۹]/g,d=>String(Math.max('٠١�
 const dateTime=row=>[western(row?.date),western(row?.time)].filter(Boolean).join(' ');
 // Totalise le champ `amount` d'une liste d'enregistrements (paiements, avances, dépenses).
 const sumAmount=rows=>rows.reduce((total,row)=>total+Number(row.amount||0),0);
+// Reçus encore valables : un reçu annulé (ملغى) reste dans les registres mais
+// ne compte plus nulle part (affectation, plafonds, totaux, rapports).
+const live=rows=>rows.filter(row=>!row.cancelled);
+// Ligne « سجّلها فلان » / « ألغاها فلان » d'un enregistrement, si l'auteur est connu.
+const recordedBy=row=>row?.createdBy?`سجّلها: ${row.createdBy}`:'';
+const cancelledText=row=>row?.cancelled?`ملغاة${row.cancelledBy?` (${row.cancelledBy})`:''}${row.cancelReason?` — ${row.cancelReason}`:''}`:'';
 
 // Every password field gets a show/hide toggle (login, settings, users, salary edit, sync, dialogs).
 const EYE_ICON='<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -470,6 +476,22 @@ async function refreshAll(){
     renderSettings();
     renderDepartments();
     renderStaffRoles();
+  }
+}
+// Un reçu ne se supprime pas : il s'annule, avec un motif, après le mot de passe.
+async function cancelWithPassword(path, promptMessage, successMessage){
+  const reason=await askInput(promptMessage);
+  if(reason===null)return false;
+  if(!reason.trim()){toast('اذكر سبب الإلغاء.');return false}
+  if(!(await requirePassword())) return false;
+  try{
+    await api(path,{method:'POST',body:JSON.stringify({reason:reason.trim()})});
+    await refreshAll();
+    toast(successMessage);
+    return true;
+  }catch(error){
+    toast(error.message || 'تعذر إلغاء الوصل.');
+    return false;
   }
 }
 async function deleteWithPassword(path, confirmMessage, successMessage){
