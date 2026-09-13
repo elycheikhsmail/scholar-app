@@ -3,6 +3,34 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.63.0 — 2026-09-13
+
+- **طرق الدفع** : nouvel onglet الإعدادات ← طرق الدفع (admin) avec la liste
+  « نقدًا، Bankily، Masrvi، Sedad، تحويل بنكي، شيك » — ajout, renommage (les
+  enregistrements suivent), suppression refusée si la méthode est utilisée ;
+  « نقدًا » est la valeur par défaut et ne se retire pas. Chaque فاتورة, راتب,
+  سلفة et مصروف porte sa méthode (`paymentMethod`, validée contre la liste) :
+  champ dans l'استمارة des frais, les formulaires de paie, de سلفة et de
+  dépense, et dans les fenêtres de modification (paiement, salaire) ; colonne
+  dans سجل التحصيل et سجل المصروفات ; ligne « طريقة الدفع » sur tous les
+  reçus.
+- استمارة رسوم الطالب : champ « ملاحظة » libre (imprimé sur le reçu) à la
+  place de la mention automatique « دفعة موزعة تلقائيًا ».
+- **يومية الصندوق** dans التقارير : toutes les entrées (فواتير) et sorties
+  (رواتب, سلف, مصروفات) de la période, non annulées, dans l'ordre des dates,
+  avec le reçu, la partie, le détail (frais réglés / mois / nature), la
+  méthode de paiement, l'auteur ; « رصيد ما قبل الفترة » (net de tout ce qui
+  précède), داخل, خارج, رصيد نهاية الفترة ; répartition par méthode de
+  paiement pour rapprocher la caisse et les comptes ; export Excel et reprise
+  dans le rapport imprimé. Le sélecteur de période gagne « اليوم » et « فترة
+  مخصصة (من – إلى) » en plus des mois et de l'année.
+- Technique : `paymentMethods` / `assertPaymentMethod` / routes
+  `payment-methods` (admin) ; `fillPaymentMethodSelects` / `setPaymentMethod`
+  (`core.js`) ; `journalMovements` / `renderCashJournal` (`reports.js`) ;
+  tests db, HTTP et UI. Points 2.3 et 2.4 de
+  `REVIEW-ACCOUNTING-UX-1.56.1.md` (la modification d'une سلفة, en boîtes
+  de dialogue successives, ne change pas encore la méthode).
+
 ## 1.62.0 — 2026-09-13
 
 - Chaque enregistrement (élève, reçu, employé, salaire, سلفة, dépense, قسم,

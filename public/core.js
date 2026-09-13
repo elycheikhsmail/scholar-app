@@ -283,7 +283,29 @@ setInterval(tick,1000);tick();
 document.addEventListener('input',e=>{if(e.target.matches('input[type=number],input[inputmode="numeric"]'))e.target.value=western(e.target.value)});
 
 async function load(){state.data=await api('/data');state.departments=await api('/departments');state.examData=await api('/exams');populateDepartments();populateExamDepartments();refreshStudentFeeDetails()}
-function applySettings(){applyApplicationMode(state.settings.applicationMode);$('schoolName').textContent=state.settings.schoolName;$('schoolYear').textContent=state.settings.schoolYear;$('loginSchoolName').textContent=state.settings.schoolName;$('managerNameHome').textContent=state.settings.managerName||'غير محدد';$('managerPhoneHome').textContent=western(state.settings.managerPhone||'');$('appVersion').textContent=western(state.settings.version||window.schoolAPI?.version||'—')}
+function applySettings(){fillPaymentMethodSelects();applyApplicationMode(state.settings.applicationMode);$('schoolName').textContent=state.settings.schoolName;$('schoolYear').textContent=state.settings.schoolYear;$('loginSchoolName').textContent=state.settings.schoolName;$('managerNameHome').textContent=state.settings.managerName||'غير محدد';$('managerPhoneHome').textContent=western(state.settings.managerPhone||'');$('appVersion').textContent=western(state.settings.version||window.schoolAPI?.version||'—')}
+// « طرق الدفع » : la liste des réglages remplit chaque <select data-payment-methods>
+// (frais, salaire, سلفة, dépense, fenêtres de modification). La valeur en cours
+// est gardée si elle existe encore ; « نقدًا » est proposé par défaut.
+const DEFAULT_PAYMENT_METHOD='نقدًا';
+function paymentMethodList(){
+  const list=Array.isArray(state.settings?.paymentMethods)?state.settings.paymentMethods:[];
+  return list.length?list:[DEFAULT_PAYMENT_METHOD];
+}
+function fillPaymentMethodSelects(root=document){
+  const methods=paymentMethodList();
+  for(const select of root.querySelectorAll('select[data-payment-methods]')){
+    const current=select.value;
+    select.innerHTML=methods.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('');
+    select.value=methods.includes(current)?current:(methods.includes(DEFAULT_PAYMENT_METHOD)?DEFAULT_PAYMENT_METHOD:methods[0]);
+  }
+}
+function setPaymentMethod(id,value){
+  const select=$(id);
+  if(!select)return;
+  const methods=paymentMethodList();
+  select.value=methods.includes(value)?value:(methods.includes(DEFAULT_PAYMENT_METHOD)?DEFAULT_PAYMENT_METHOD:methods[0]);
+}
 function setupMonths(id){$(id).innerHTML=months.map(m=>`<option value="${esc(m)}">${esc(m)}</option>`).join('')}
 $('feeMonth').innerHTML=monthOptionsHtml();setupMonths('salaryMonth');setupMonths('advanceMonth');setupMonths('payrollMonth');$('payrollMonth').value=currentMonth();$('feeMonth').value=currentMonth();$('salaryMonth').value=currentMonth();$('advanceMonth').value=currentMonth();
 
@@ -336,7 +358,7 @@ function go(id,{historyMode='push'}={}){
   if(id==='expenses')renderExpenses();
   if(id==='exams')renderExamSection();
   if(id==='reports')renderReports();
-  if(id==='settings'){renderSettings();renderDepartments();renderStaffRoles()}
+  if(id==='settings'){renderSettings();renderDepartments();renderStaffRoles();renderPaymentMethods()}
   updatePageBackButtons();
 }
 function updatePageBackButtons(){
@@ -476,6 +498,7 @@ async function refreshAll(){
     renderSettings();
     renderDepartments();
     renderStaffRoles();
+    renderPaymentMethods();
   }
 }
 // Un reçu ne se supprime pas : il s'annule, avec un motif, après le mot de passe.

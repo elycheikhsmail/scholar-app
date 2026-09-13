@@ -415,6 +415,7 @@ $('salaryForm').onsubmit=async e=>{
       month,
       amount,
       date:$('salaryDate').value||today(),
+      paymentMethod:$('salaryMethod').value,
       notes:$('salaryNotes').value,
       hours,
       hourlyRate:rate,
@@ -585,6 +586,7 @@ function staffReceiptHtml({title,number,record,teacher,lines,amountLabel,amount}
     +line('الموظف',esc(teacher?.name||'محذوف'))
     +line('طبيعة العمل',esc(teacher?.role||''))
     +line('الشهر',esc(record.month))
+    +line('طريقة الدفع',esc(record.paymentMethod||DEFAULT_PAYMENT_METHOD))
     +`<div class="line"></div>`
     +lines.map(([label,value,cls])=>`<div class="row ${cls||''}"><span class="label">${label}</span><span>${value}</span></div>`).join('')
     +`<div class="row amount"><span>${amountLabel}</span><span>${money(amount)} أوقية</span></div>`
@@ -736,6 +738,8 @@ window.editSalaryPayment=id=>{
   $('salaryEditDate').value=p.date||today();
   $('salaryEditHours').value=Number(p.hours||0);
   $('salaryEditNotes').value=p.notes||'';
+  fillPaymentMethodSelects($('salaryEditForm'));
+  setPaymentMethod('salaryEditMethod',p.paymentMethod||DEFAULT_PAYMENT_METHOD);
   $('salaryEditPassword').value='';
   $('salaryEditHoursWrap').classList.toggle('hidden-field',roleNeedsFixed(t.role));
   const dialog=$('salaryEditDialog');
@@ -760,6 +764,7 @@ $('salaryEditForm').onsubmit=async event=>{
       month:$('salaryEditMonth').value,
       amount:western($('salaryEditAmount').value),
       date:$('salaryEditDate').value,
+      paymentMethod:$('salaryEditMethod').value,
       notes:$('salaryEditNotes').value,
       hours,
       hourlyRate,
@@ -787,6 +792,7 @@ function resetSalaryDates(){
   $('salaryAmount').dataset.auto='1';
   $('salaryMonth').value=currentMonth();
   $('salaryDate').value=today();
+  setPaymentMethod('salaryMethod',DEFAULT_PAYMENT_METHOD);
   if(state.data)populateStaffSelects();
 }
 // Après un versement, la liste passe à l'employé suivant qui reste à payer pour
@@ -853,6 +859,7 @@ $('advanceForm').onsubmit=async e=>{
       month,
       amount,
       date:$('advanceDate').value||today(),
+      paymentMethod:$('advanceMethod').value,
       notes:$('advanceNotes').value,
       salaryDue:due
     })});
@@ -946,5 +953,6 @@ function resetAdvance(){
   $('advanceForm').reset();
   $('advanceMonth').value=currentMonth();
   $('advanceDate').value=today();
+  setPaymentMethod('advanceMethod',DEFAULT_PAYMENT_METHOD);
   if(state.data){populateStaffSelects();updateAdvanceHint()}
 }

@@ -161,6 +161,8 @@
           <div class="form-actions"><button class="primary" id="saveStudentFees">تسجيل وطباعة الوصل</button><button class="secondary" id="saveStudentFeesOnly">تسجيل فقط</button><button type="button" class="secondary" id="resetStudentFees">مسح المبلغ</button></div>
         </div>
         <label class="fee-entry-date">تاريخ الدفع<input id="studentFeeEntryDate" type="date" class="date-dmy" required></label>
+        <label class="fee-entry-method">طريقة الدفع<select id="studentFeeMethod" data-payment-methods aria-label="طريقة الدفع"></select></label>
+        <label class="fee-entry-note">ملاحظة<input id="studentFeeNote" maxlength="200" placeholder="مثال: دفع العم عبر Bankily"></label>
       </div>
       <div id="studentFeeEntryFilters" class="ledger-period-tools fee-entry-filters">
         <div class="fee-entry-filter-groups">
@@ -224,7 +226,7 @@
     <p id="collectionFilterError" role="alert" class="status-unpaid hidden">تاريخ البداية يجب ألا يتجاوز تاريخ النهاية.</p>
     <div id="collectionTotals" class="totals-line" role="status" aria-live="polite"></div>
   </div>
-  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل التحصيل والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>ما سدّدته الفاتورة</th><th>المبلغ</th><th>التاريخ</th><th>سجّلها</th><th>إجراءات</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
+  <div class="panel"><h3 class="table-title" id="studentPaymentHistoryTitle">سجل التحصيل والفواتير</h3><div class="table-scroll"><table aria-labelledby="studentPaymentHistoryTitle"><thead><tr><th>رقم الفاتورة</th><th>الطالب</th><th>ما سدّدته الفاتورة</th><th>المبلغ</th><th>طريقة الدفع</th><th>التاريخ</th><th>سجّلها</th><th>إجراءات</th></tr></thead><tbody id="studentPaymentHistory"></tbody></table></div></div>
 </section>
 
 <section id="staff" class="section">
@@ -279,7 +281,7 @@
     <div class="table-scroll"><table aria-labelledby="teachersTableTitle"><thead><tr><th>الموظف</th><th>طبيعة العمل</th><th>الحالة</th><th>المرحلة</th><th>المادة</th><th>الثابت</th><th>سعر الساعة</th><th>الهاتف</th><th>آخر دفعة</th><th>إجراءات</th></tr></thead><tbody id="teachersTable"></tbody></table></div></div>
 
   <div role="tabpanel" tabindex="0" id="staffPanel-salaries" data-staff-panel="salaries" aria-labelledby="staffTab-salaries" class="hidden panel"><h3>الرواتب الشهرية</h3><form id="salaryForm" data-write-only class="inline-form salary-form" novalidate>
-    <input id="salaryTeacherSearch" type="search" placeholder="ابحث بالاسم أو الهاتف" aria-label="بحث عن موظف بالاسم أو الهاتف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>
+    <input id="salaryTeacherSearch" type="search" placeholder="ابحث بالاسم أو الهاتف" aria-label="بحث عن موظف بالاسم أو الهاتف"><select id="salaryTeacher" required aria-label="الموظف"></select><select id="salaryMonth" required aria-label="الشهر"></select><span id="salaryHoursWrap"><input id="salaryHours" type="number" min="0" placeholder="عدد الساعات" class="hours-field"></span><input id="salaryAmount" type="number" min="1" placeholder="المبلغ المدفوع" required><input id="salaryDate" type="date" aria-label="تاريخ الدفعة"><select id="salaryMethod" data-payment-methods aria-label="طريقة الدفع"></select><input id="salaryNotes" placeholder="ملاحظات"><button class="primary">تسجيل دفعة</button>
   </form><div id="salaryDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="salaryTableTitle">سجل دفعات الرواتب</h3>
   <div class="fee-toolbar staff-toolbar">
     <label>الموظف<select id="salaryLogTeacher"><option value="">الكل</option></select></label>
@@ -302,13 +304,14 @@
       <label>المبلغ المدفوع<input id="salaryEditAmount" type="number" min="1" step="0.01" required></label>
       <label>تاريخ الدفعة<input id="salaryEditDate" type="date" required></label>
       <label id="salaryEditHoursWrap">عدد ساعات الشهر<input id="salaryEditHours" type="number" min="0" step="0.01"></label>
+      <label>طريقة الدفع<select id="salaryEditMethod" data-payment-methods></select></label>
       <label class="wide-field">ملاحظات<input id="salaryEditNotes"></label>
       <label class="wide-field">كلمة المرور<input id="salaryEditPassword" type="password" autocomplete="current-password" required></label>
       <div class="form-actions"><button class="primary">حفظ التعديل</button><button type="button" class="secondary" id="cancelSalaryEdit">إلغاء</button></div>
     </form>
   </dialog>
 
-  <div role="tabpanel" tabindex="0" id="staffPanel-advances" data-staff-panel="advances" aria-labelledby="staffTab-advances" class="hidden panel"><h3>السلف</h3><form id="advanceForm" data-write-only class="inline-form salary-form"><input id="advanceTeacherSearch" type="search" placeholder="ابحث بالاسم أو الهاتف" aria-label="بحث عن موظف بالاسم أو الهاتف"><select id="advanceTeacher" required aria-label="الموظف"></select><select id="advanceMonth" required aria-label="الشهر"></select><span id="advanceHoursWrap" class="hidden-field"><input id="advanceHours" type="number" min="0" placeholder="عدد ساعات الشهر" class="hours-field"></span><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date" aria-label="تاريخ السلفة"><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div id="advanceDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3>
+  <div role="tabpanel" tabindex="0" id="staffPanel-advances" data-staff-panel="advances" aria-labelledby="staffTab-advances" class="hidden panel"><h3>السلف</h3><form id="advanceForm" data-write-only class="inline-form salary-form"><input id="advanceTeacherSearch" type="search" placeholder="ابحث بالاسم أو الهاتف" aria-label="بحث عن موظف بالاسم أو الهاتف"><select id="advanceTeacher" required aria-label="الموظف"></select><select id="advanceMonth" required aria-label="الشهر"></select><span id="advanceHoursWrap" class="hidden-field"><input id="advanceHours" type="number" min="0" placeholder="عدد ساعات الشهر" class="hours-field"></span><input id="advanceAmount" type="number" min="1" placeholder="مبلغ السلفة" required><input id="advanceDate" type="date" aria-label="تاريخ السلفة"><select id="advanceMethod" data-payment-methods aria-label="طريقة الدفع"></select><input id="advanceNotes" placeholder="ملاحظات"><button class="primary">تسجيل سلفة</button></form><div id="advanceDueInfo" class="hint-box due-info" role="status" aria-live="polite"></div><h3 class="table-title" id="advanceTableTitle">سجل سلف الموظفين</h3>
   <div class="fee-toolbar staff-toolbar">
     <label>الموظف<select id="advanceLogTeacher"><option value="">الكل</option></select></label>
     <label>الشهر<select id="advanceLogMonth"><option value="">كل الأشهر</option></select></label>
@@ -321,10 +324,10 @@
 </section>
 
 <section id="expenses" class="section"><div class="section-head"><div><h2>المصروفات</h2><p>تسجيل ومتابعة مصروفات المدرسة</p></div></div>
-  <div class="panel write-only"><form id="expenseForm" class="form-grid expenses-form" novalidate><input type="hidden" id="expenseId"><label>نوع المصروف<input id="expenseCategory" required></label><label>البيان / وصف المصروف<input id="expenseDescription"></label><label>المبلغ<input id="expenseAmount" type="number" min="1" required></label><label>التاريخ<input id="expenseDate" type="date"></label><label>المستفيد<input id="expenseBeneficiary"></label><label class="wide-field">ملاحظات<textarea id="expenseNotes"></textarea></label><div class="form-actions"><button class="primary">حفظ المصروف</button><button type="button" class="secondary" id="cancelExpense">تفريغ النموذج</button></div></form></div>
+  <div class="panel write-only"><form id="expenseForm" class="form-grid expenses-form" novalidate><input type="hidden" id="expenseId"><label>نوع المصروف<input id="expenseCategory" required></label><label>البيان / وصف المصروف<input id="expenseDescription"></label><label>المبلغ<input id="expenseAmount" type="number" min="1" required></label><label>التاريخ<input id="expenseDate" type="date"></label><label>المستفيد<input id="expenseBeneficiary"></label><label>طريقة الدفع<select id="expenseMethod" data-payment-methods></select></label><label class="wide-field">ملاحظات<textarea id="expenseNotes"></textarea></label><div class="form-actions"><button class="primary">حفظ المصروف</button><button type="button" class="secondary" id="cancelExpense">تفريغ النموذج</button></div></form></div>
   <div class="panel"><h3 class="table-title" id="expensesTableTitle">سجل مصروفات المدرسة</h3>
     <div class="table-tools"><label class="report-period">تصفية حسب الشهر<select id="expenseMonth"></select></label><div class="totals-line"><span>عدد المصروفات: <b id="expenseCount">0</b></span><span>الإجمالي: <b id="expenseTotal">0</b></span></div></div>
-    <div class="table-scroll"><table aria-labelledby="expensesTableTitle"><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th><th>المستفيد</th><th>إجراءات</th></tr></thead><tbody id="expensesTable"></tbody></table></div></div>
+    <div class="table-scroll"><table aria-labelledby="expensesTableTitle"><thead><tr><th>النوع</th><th>البيان</th><th>المبلغ</th><th>التاريخ</th><th>المستفيد</th><th>طريقة الدفع</th><th>سجّلها</th><th>إجراءات</th></tr></thead><tbody id="expensesTable"></tbody></table></div></div>
 </section>
 
 
@@ -392,9 +395,17 @@
   </div>
 </section>
 
-<section id="reports" class="section"><div class="section-head"><div><h2>التقارير</h2><p>ملخص الدخل والخارج لشهر محدد</p></div><div class="report-tools"><label class="report-period">الشهر<select id="reportMonth"></select></label><button type="button" class="secondary" id="printReport">🖨️ طباعة التقرير</button></div></div>
+<section id="reports" class="section"><div class="section-head"><div><h2>التقارير</h2><p>ملخص الدخل والخارج لشهر محدد</p></div><div class="report-tools"><label class="report-period">الفترة<select id="reportMonth"></select></label><label class="report-period report-custom hidden" id="reportFromWrap">من<input id="reportFrom" type="date"></label><label class="report-period report-custom hidden" id="reportToWrap">إلى<input id="reportTo" type="date"></label><button type="button" class="secondary" id="printReport">🖨️ طباعة التقرير</button></div></div>
   <p id="reportPeriodInfo" class="hint-box" role="status"></p>
   <div class="cards"><div class="stat-card"><b id="rIncome">0</b><span>إجمالي الدخل</span></div><div class="stat-card"><b id="rOutSalaries">0</b><span>الخارج: الرواتب والسلف</span></div><div class="stat-card"><b id="rOutExpenses">0</b><span>الخارج: المصروفات</span></div><div class="stat-card"><b id="rOut">0</b><span>إجمالي الخارج</span><small>الرواتب والسلف + المصروفات</small></div><div class="stat-card highlight"><b id="rNet">0</b><span>الصافي</span></div></div>
+  <div class="panel">
+    <div class="table-tools"><h3 class="table-title" id="cashJournalTitle">يومية الصندوق</h3><button type="button" class="secondary" id="exportJournal">📊 تصدير Excel</button></div>
+    <p class="hint-box">كل ما دخل الصندوق وخرج منه خلال الفترة، بترتيب التاريخ: الفواتير والرواتب والسلف والمصروفات غير الملغاة، مع طريقة الدفع ومن سجّلها. الرصيد الافتتاحي هو صافي كل ما سبق الفترة.</p>
+    <div id="cashJournalTotals" class="totals-line"></div>
+    <div class="table-scroll"><table aria-labelledby="cashJournalTitle"><thead><tr><th>التاريخ</th><th>الوصل</th><th>النوع</th><th>الطرف</th><th>البيان</th><th>طريقة الدفع</th><th>داخل</th><th>خارج</th><th>سجّلها</th></tr></thead><tbody id="cashJournalTable"></tbody></table></div>
+    <h3 class="table-title" id="cashMethodsTitle">حسب طريقة الدفع</h3>
+    <div class="table-scroll"><table aria-labelledby="cashMethodsTitle"><thead><tr><th>طريقة الدفع</th><th>داخل</th><th>خارج</th><th>الصافي</th></tr></thead><tbody id="cashMethodsTable"></tbody></table></div>
+  </div>
   <div class="panel"><h3 id="reportBreakdownTitle">تفصيل الشهر</h3><div class="summary-grid">
     <div><span>رسوم الطلاب المحصَّلة</span><b id="rFees">0</b></div><div><span>الرواتب المدفوعة</span><b id="rSalaries">0</b></div><div><span>السلف المصروفة</span><b id="rAdvances">0</b></div><div><span>المصروفات</span><b id="rExpenses">0</b></div>
   </div></div>
@@ -414,6 +425,7 @@
     <button type="button" class="settings-tab" role="tab" id="settingsTab-fees" data-settings-tab="fees" data-roles="admin developer" aria-controls="settingsPanel-fees" aria-selected="false" tabindex="-1">الرسوم</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-departments" data-settings-tab="departments" data-roles="admin developer" aria-controls="settingsPanel-departments" aria-selected="false" tabindex="-1">الأقسام</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-roles" data-settings-tab="roles" data-roles="admin developer" aria-controls="settingsPanel-roles" aria-selected="false" tabindex="-1">طبيعة العمل</button>
+    <button type="button" class="settings-tab" role="tab" id="settingsTab-methods" data-settings-tab="methods" data-roles="admin developer" aria-controls="settingsPanel-methods" aria-selected="false" tabindex="-1">طرق الدفع</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-school" data-settings-tab="school" data-roles="admin developer" aria-controls="settingsPanel-school" aria-selected="false" tabindex="-1">بيانات المدرسة</button>
     <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-users" data-settings-tab="users" data-roles="admin developer" aria-controls="settingsPanel-users" aria-selected="false" tabindex="-1">المستخدمون</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-account" data-settings-tab="account" aria-controls="settingsPanel-account" aria-selected="false" tabindex="-1">حسابي</button>
@@ -442,6 +454,10 @@
   </div>
 
   <div role="tabpanel" tabindex="0" id="settingsPanel-departments" data-settings-panel="departments" data-roles="admin developer" aria-labelledby="settingsTab-departments" class="hidden panel"><h3>الرسوم الشهرية لكل مستوى</h3><form id="departmentForm" data-write-only class="department-form"><input id="departmentName" placeholder="اسم القسم" required><input id="departmentFee" type="number" min="0" placeholder="الرسوم الشهرية" required><button class="primary">إضافة قسم</button></form><h3 class="table-title" id="departmentsTableTitle">جدول الأقسام ورسومها</h3><div class="table-scroll"><table aria-labelledby="departmentsTableTitle"><thead><tr><th>القسم</th><th>الرسوم الشهرية</th><th>عدد الطلاب</th><th>إجراءات</th></tr></thead><tbody id="departmentsTable"></tbody></table></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-methods" data-settings-panel="methods" data-roles="admin developer" aria-labelledby="settingsTab-methods" class="hidden panel"><h3>طرق الدفع</h3>
+    <p class="hint-box">تظهر هذه اللائحة في حقل «طريقة الدفع» عند تسجيل فاتورة أو راتب أو سلفة أو مصروف، وتُستعمل في «يومية الصندوق» لمطابقة النقد مع الحسابات البنكية. «نقدًا» هي الطريقة الافتراضية ولا يمكن حذفها. تعديل الاسم يسري على السجلات المرتبطة، ولا يمكن حذف طريقة مستعملة في سجلات.</p>
+    <form id="paymentMethodForm" data-write-only class="department-form"><input id="paymentMethodName" placeholder="طريقة الدفع الجديدة" maxlength="40" required><button class="primary">إضافة</button></form>
+    <h3 class="table-title" id="paymentMethodsTableTitle">جدول طرق الدفع</h3><div class="table-scroll"><table aria-labelledby="paymentMethodsTableTitle"><thead><tr><th>طريقة الدفع</th><th>عدد السجلات</th><th>إجراءات</th></tr></thead><tbody id="paymentMethodsTable"></tbody></table></div></div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-roles" data-settings-panel="roles" data-roles="admin developer" aria-labelledby="settingsTab-roles" class="hidden panel"><h3>لائحة طبيعة العمل</h3>
     <p class="hint-box">هذه اللائحة تظهر في حقل «طبيعة العمل» باستمارة إضافة الموظف. «أستاذ» يُدفع له بالساعة و«أخرى» هي القيمة الافتراضية، لذلك لا يمكن حذفهما. تعديل الاسم يسري على الموظفين المرتبطين به، ولا يمكن حذف طبيعة عمل لها موظفون.</p>
     <form id="staffRoleForm" data-write-only class="department-form"><input id="staffRoleName" placeholder="طبيعة العمل الجديدة" maxlength="40" required><button class="primary">إضافة</button></form>
@@ -508,6 +524,7 @@
     <p id="paymentEditSettled" class="hint-box form-actions"></p>
     <label>المبلغ<input id="paymentEditAmount" type="number" min="0.01" step="0.01" required></label>
     <label>تاريخ الدفع<input id="paymentEditDate" type="date" class="date-dmy" required></label>
+    <label>طريقة الدفع<select id="paymentEditMethod" data-payment-methods></select></label>
     <label>ملاحظات<input id="paymentEditNotes"></label>
     <div class="form-actions"><button class="primary">حفظ التعديل</button><button type="button" class="secondary" id="cancelPaymentEdit">إلغاء</button></div>
   </form>

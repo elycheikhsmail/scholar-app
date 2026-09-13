@@ -26,6 +26,7 @@ $('expenseForm').onsubmit=async e=>{
     amount:western($('expenseAmount').value),
     date:$('expenseDate').value,
     beneficiary:$('expenseBeneficiary').value,
+    paymentMethod:$('expenseMethod').value,
     notes:$('expenseNotes').value
   };
   const errors=expenseFieldErrors(payload);
@@ -61,6 +62,7 @@ function resetExpense(){
   $('expenseForm').reset();
   $('expenseId').value='';
   $('expenseDate').value=today();
+  setPaymentMethod('expenseMethod',DEFAULT_PAYMENT_METHOD);
 }
 
 // Filtre par mois scolaire : les mois déjà commencés (comme les rapports) ou
@@ -90,9 +92,11 @@ function renderExpenses(){
     <td>${money(e.amount)}</td>
     <td>${western(e.date)}</td>
     <td>${esc(e.beneficiary)}</td>
+    <td>${esc(e.paymentMethod||DEFAULT_PAYMENT_METHOD)}</td>
+    <td>${esc(e.createdBy||'—')}</td>
     <td class="actions"><button class="btn-edit" onclick="editExpense(${e.id})">تعديل</button><button class="btn-delete" onclick="removeExpense(${e.id})">حذف</button></td>
   </tr>`).join('');
-  $('expensesTable').innerHTML=rows||`<tr><td colspan="6">${period.value===ALL_EXPENSES?'لا توجد مصروفات مسجلة.':`لا توجد مصروفات في شهر ${esc(period.label)}.`}</td></tr>`;
+  $('expensesTable').innerHTML=rows||`<tr><td colspan="8">${period.value===ALL_EXPENSES?'لا توجد مصروفات مسجلة.':`لا توجد مصروفات في شهر ${esc(period.label)}.`}</td></tr>`;
 }
 
 window.editExpense=id=>{
@@ -108,6 +112,7 @@ window.editExpense=id=>{
     expenseNotes:expense.notes
   };
   for(const [fieldId,value] of Object.entries(fields))$(fieldId).value=value??'';
+  setPaymentMethod('expenseMethod',expense.paymentMethod||DEFAULT_PAYMENT_METHOD);
   showEditForm('expenses','expenseForm','expenseCategory');
 };
 
@@ -169,15 +174,92 @@ function reportPeriods(){
   periods.push({value:YEAR_PERIOD,label:'السنة الدراسية كاملة',start:'',end:today()});
   return periods;
 }
+// Le comptable ferme aussi sa caisse au jour : « اليوم » et une période libre
+// (من – إلى) s'ajoutent aux mois scolaires et à l'année.
+const DAY_PERIOD='__day__',CUSTOM_PERIOD='__custom__';
+function customPeriod(){
+  const from=$('reportFrom').value||today(),to=$('reportTo').value||today();
+  return {value:CUSTOM_PERIOD,label:`من ${western(from)} إلى ${western(to)}`,start:from<=to?from:to,end:from<=to?to:from};
+}
 function renderReportPeriods(){
   const select=$('reportMonth');
-  const periods=reportPeriods();
+  const periods=[{value:DAY_PERIOD,label:`اليوم (${western(today())})`,start:today(),end:today()},...reportPeriods(),{value:CUSTOM_PERIOD,label:'فترة مخصصة (من – إلى)',start:'',end:''}];
   const chosen=periods.some(p=>p.value===select.value)?select.value:currentMonth();
   select.innerHTML=periods.map(p=>`<option value="${esc(p.value)}">${esc(p.label)}</option>`).join('');
-  select.value=periods.some(p=>p.value===chosen)?chosen:periods[periods.length-1].value;
+  select.value=periods.some(p=>p.value===chosen)?chosen:periods[periods.length-2].value;
+  const custom=select.value===CUSTOM_PERIOD;
+  $('reportFromWrap').classList.toggle('hidden',!custom);
+  $('reportToWrap').classList.toggle('hidden',!custom);
+  if(custom){if(!$('reportFrom').value)$('reportFrom').value=today();if(!$('reportTo').value)$('reportTo').value=today();return customPeriod()}
   return periods.find(p=>p.value===select.value);
 }
 $('reportMonth').onchange=renderReports;
+$('reportFrom').onchange=renderReports;
+$('reportTo').onchange=renderReports;
+
+// --- يومية الصندوق ------------------------------------------------------------
+// Chaque mouvement de la période, dans l'ordre : ce qui est entré (فواتير) et
+// sorti (رواتب, سلف, مصروفات), avec la méthode de paiement et l'auteur. Le
+// solde d'ouverture est le net de tout ce qui précède la période.
+const JOURNAL_KINDS={fee:'رسوم طالب',salary:'راتب',advance:'سلفة',expense:'مصروف'};
+function journalMovements(){
+  const d=state.data;
+  const students=new Map(d.students.map(s=>[Number(s.id),s]));
+  const teachers=new Map(d.teachers.map(t=>[Number(t.id),t]));
+  const method=r=>r.paymentMethod||DEFAULT_PAYMENT_METHOD;
+  const rows=[];
+  for(const p of live(d.studentPayments)){
+    const s=students.get(Number(p.studentId));
+    rows.push({date:p.date,time:p.time||'',id:Number(p.id),kind:'fee',ref:invoiceNo(p),party:s?`${s.name} — ${s.className}`:'طالب محذوف',detail:settledText(p),method:method(p),inflow:Number(p.amount)||0,outflow:0,by:p.createdBy||''});
+  }
+  for(const p of live(d.teacherPayments)){
+    const t=teachers.get(Number(p.teacherId));
+    rows.push({date:p.date,time:p.time||'',id:Number(p.id),kind:'salary',ref:salaryReceiptNo(p),party:t?t.name:'موظف محذوف',detail:`راتب ${p.month}${p.extra?' (دفعة إضافية)':''}${p.notes?' — '+p.notes:''}`,method:method(p),inflow:0,outflow:Number(p.amount)||0,by:p.createdBy||''});
+  }
+  for(const a of live(d.teacherAdvances)){
+    const t=teachers.get(Number(a.teacherId));
+    rows.push({date:a.date,time:a.time||'',id:Number(a.id),kind:'advance',ref:advanceReceiptNo(a),party:t?t.name:'موظف محذوف',detail:`سلفة على راتب ${a.month}${a.notes?' — '+a.notes:''}`,method:method(a),inflow:0,outflow:Number(a.amount)||0,by:a.createdBy||''});
+  }
+  for(const e of d.expenses){
+    rows.push({date:e.date,time:'',id:Number(e.id),kind:'expense',ref:'',party:e.beneficiary||'—',detail:[e.category,e.description].filter(Boolean).join(' — '),method:method(e),inflow:0,outflow:Number(e.amount)||0,by:e.createdBy||''});
+  }
+  return rows.sort((a,b)=>String(a.date).localeCompare(String(b.date))||String(a.time).localeCompare(String(b.time))||a.id-b.id);
+}
+let journalView={period:null,rows:[],opening:0,inflow:0,outflow:0,methods:[]};
+function renderCashJournal(period){
+  const all=journalMovements();
+  const before=period.start?all.filter(r=>r.date<period.start):[];
+  const rows=all.filter(r=>r.date>=period.start&&r.date<=period.end);
+  const opening=round2(before.reduce((s,r)=>s+r.inflow-r.outflow,0));
+  const inflow=round2(rows.reduce((s,r)=>s+r.inflow,0)),outflow=round2(rows.reduce((s,r)=>s+r.outflow,0));
+  const byMethod=new Map();
+  for(const r of rows){const m=byMethod.get(r.method)||{inflow:0,outflow:0};m.inflow+=r.inflow;m.outflow+=r.outflow;byMethod.set(r.method,m)}
+  const methods=[...byMethod.entries()].map(([name,m])=>({name,inflow:round2(m.inflow),outflow:round2(m.outflow),net:round2(m.inflow-m.outflow)}));
+  journalView={period,rows,opening,inflow,outflow,methods};
+  const cell=(cls,label,value)=>`<span${cls?` class="${cls}"`:''}><small>${label}</small><b>${money(value)}</b></span>`;
+  $('cashJournalTotals').innerHTML=cell('','رصيد ما قبل الفترة',opening)+cell('status-paid','داخل',inflow)+cell('status-unpaid','خارج',outflow)+cell('','صافي الفترة',round2(inflow-outflow))+cell('status-overpaid','رصيد نهاية الفترة',round2(opening+inflow-outflow))+cell('','عدد الحركات',rows.length);
+  $('cashJournalTable').innerHTML=rows.map(r=>`<tr>
+    <td>${esc(western(r.date))}${r.time?` <small>${esc(western(r.time))}</small>`:''}</td>
+    <td>${esc(r.ref||'—')}</td>
+    <td>${esc(JOURNAL_KINDS[r.kind])}</td>
+    <td>${esc(r.party)}</td>
+    <td class="paid-months">${esc(r.detail)}</td>
+    <td>${esc(r.method)}</td>
+    <td class="journal-in">${r.inflow?money(r.inflow):''}</td>
+    <td class="journal-out">${r.outflow?money(r.outflow):''}</td>
+    <td>${esc(r.by||'—')}</td>
+  </tr>`).join('')||'<tr><td colspan="9">لا توجد حركات في هذه الفترة.</td></tr>';
+  $('cashMethodsTable').innerHTML=methods.map(m=>`<tr><td>${esc(m.name)}</td><td class="journal-in">${money(m.inflow)}</td><td class="journal-out">${money(m.outflow)}</td><td>${money(m.net)}</td></tr>`).join('')||'<tr><td colspan="4">لا توجد حركات.</td></tr>';
+}
+function journalSheetRows(){
+  const head=['التاريخ','الوقت','الوصل','النوع','الطرف','البيان','طريقة الدفع','داخل','خارج','سجّلها'];
+  return [head,...journalView.rows.map(r=>[r.date,r.time,r.ref,JOURNAL_KINDS[r.kind],r.party,r.detail,r.method,r.inflow||'',r.outflow||'',r.by])];
+}
+$('exportJournal').onclick=()=>{
+  if(!journalView.rows.length)return toast('لا توجد حركات لتصديرها.');
+  downloadXlsx(`يومية الصندوق — ${journalView.period.label} — ${today()}.xlsx`,'يومية الصندوق',journalSheetRows());
+  toast('تم تصدير يومية الصندوق إلى Excel.');
+};
 
 function renderDuesReports(period){
   // Les créances telles qu'elles se présentaient à la fin de la période : seuls
@@ -255,11 +337,13 @@ function renderReports(){
   $('rAdvances').textContent=money(advances);
   $('rExpenses').textContent=money(expenses);
   const isYear=period.value===YEAR_PERIOD;
-  $('reportBreakdownTitle').textContent=isYear?'تفصيل السنة الدراسية':`تفصيل شهر ${period.label}`;
-  $('reportPeriodInfo').textContent=`${isYear?'السنة الدراسية':`شهر ${period.label}`}: ${period.start?`من ${western(period.start)} `:'من بداية السنة '}إلى ${western(period.end)} — الدخل والخارج بحسب تاريخ التسجيل الفعلي للدفعات والمصروفات.`;
+  const periodName=isYear?'السنة الدراسية':period.value===DAY_PERIOD?'اليوم':period.value===CUSTOM_PERIOD?'الفترة':`شهر ${period.label}`;
+  $('reportBreakdownTitle').textContent=isYear?'تفصيل السنة الدراسية':`تفصيل ${periodName}`;
+  $('reportPeriodInfo').textContent=`${periodName}: ${period.start?`من ${western(period.start)} `:'من بداية السنة '}إلى ${western(period.end)} — الدخل والخارج بحسب تاريخ التسجيل الفعلي للدفعات والمصروفات.`;
+  renderCashJournal(period);
   const dues=renderDuesReports(period);
   // Ce que le bouton d'impression reproduit : la période affichée, ni plus ni moins.
-  currentReport={period,isYear,fees,salaries,advances,expenses,out,expensesByCategory:expensesByCategory(d.expenses.filter(within)),...dues};
+  currentReport={period,isYear,periodName,fees,salaries,advances,expenses,out,expensesByCategory:expensesByCategory(d.expenses.filter(within)),journal:journalView,...dues};
 }
 
 let currentReport=null;
@@ -274,7 +358,7 @@ function expensesByCategory(expenses){
 $('printReport').onclick=()=>{
   if(!currentReport)renderReports();
   const r=currentReport;
-  const periodLabel=r.isYear?'السنة الدراسية كاملة':`شهر ${r.period.label}`;
+  const periodLabel=r.isYear?'السنة الدراسية كاملة':r.period.value===DAY_PERIOD||r.period.value===CUSTOM_PERIOD?r.period.label:`شهر ${r.period.label}`;
   const range=`${r.period.start?`من ${western(r.period.start)} `:'من بداية السنة '}إلى ${western(r.period.end)}`;
   const line=(label,value,cls='')=>`<tr class="${cls}"><td>${label}</td><td>${money(value)}</td></tr>`;
   const summary=`<h3>${esc(periodLabel)} — ${range}</h3><table><thead><tr><th>البند</th><th>المبلغ (أوقية)</th></tr></thead><tbody>`
@@ -285,7 +369,14 @@ $('printReport').onclick=()=>{
   const categories=r.expensesByCategory.length
     ?`<h3>المصروفات حسب النوع</h3><table><thead><tr><th>نوع المصروف</th><th>المبلغ</th></tr></thead><tbody>${r.expensesByCategory.map(([c,v])=>line(esc(c),v)).join('')}</tbody></table>`
     :'';
+  const j=r.journal;
+  const journal=`<h3>يومية الصندوق</h3><table><thead><tr><th>البند</th><th>المبلغ (أوقية)</th></tr></thead><tbody>`
+    +line('رصيد ما قبل الفترة',j.opening)+line('داخل',j.inflow)+line('خارج',j.outflow)+line('رصيد نهاية الفترة',j.opening+j.inflow-j.outflow,'total')+'</tbody></table>'
+    +(j.methods.length?`<h3>حسب طريقة الدفع</h3><table><thead><tr><th>طريقة الدفع</th><th>داخل</th><th>خارج</th><th>الصافي</th></tr></thead><tbody>${j.methods.map(m=>`<tr><td>${esc(m.name)}</td><td>${money(m.inflow)}</td><td>${money(m.outflow)}</td><td>${money(m.net)}</td></tr>`).join('')}</tbody></table>`:'')
+    +`<h3>حركات الفترة (${money(j.rows.length)})</h3><table><thead><tr><th>التاريخ</th><th>الوصل</th><th>النوع</th><th>الطرف</th><th>البيان</th><th>طريقة الدفع</th><th>داخل</th><th>خارج</th><th>سجّلها</th></tr></thead><tbody>`
+    +(j.rows.map(x=>`<tr><td>${esc(western(x.date))} ${esc(western(x.time))}</td><td>${esc(x.ref)}</td><td>${esc(JOURNAL_KINDS[x.kind])}</td><td>${esc(x.party)}</td><td>${esc(x.detail)}</td><td>${esc(x.method)}</td><td>${x.inflow?money(x.inflow):''}</td><td>${x.outflow?money(x.outflow):''}</td><td>${esc(x.by)}</td></tr>`).join('')||'<tr><td colspan="9">لا توجد حركات.</td></tr>')
+    +`<tr class="total"><td colspan="6">الإجمالي</td><td>${money(j.inflow)}</td><td>${money(j.outflow)}</td><td></td></tr></tbody></table>`;
   const dues=`<h3>ملخص المستحقات حسب القسم</h3><p>${esc(r.duesInfo)}</p><table><thead><tr><th>القسم</th><th>عدد الطلاب</th><th>المستحق</th><th>المدفوع</th><th>المتبقي</th><th>عدد المتأخرين</th></tr></thead><tbody>${r.departmentTable}</tbody></table>`
     +`<h3>أعلى المديونين</h3><table><thead><tr><th>الطالب</th><th>القسم</th><th>ولي الأمر</th><th>الهاتف</th><th>أشهر غير مسدَّدة</th><th>أقدم استحقاق</th><th>المتبقي</th></tr></thead><tbody>${r.debtorTable}</tbody></table>`;
-  openPrintWindow(`التقرير المالي — ${periodLabel}`,`${summary}${categories}${dues}`);
+  openPrintWindow(`التقرير المالي — ${periodLabel}`,`${summary}${categories}${journal}${dues}`);
 };

@@ -136,8 +136,16 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#today')).toHaveText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)، \d{2} \S+ \d{4}$/);
   // The settings screen shows one form at a time, behind its own tab list.
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]')).toHaveCount(10);
-  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(9, 'the database tab is for the developer');
+  await expect(page.locator('[data-settings-tab]')).toHaveCount(11);
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(10, 'the database tab is for the developer');
+  // Payment methods live in the settings; « نقدًا » is the default and stays.
+  await page.locator('[data-settings-tab="methods"]').click();
+  await expect(page.locator('#paymentMethodsTable tr')).toHaveCount(6);
+  await expect(page.locator('#paymentMethodsTable tr').first()).toContainText('نقدًا');
+  await expect(page.locator('#paymentMethodsTable tr').first()).toContainText('افتراضية');
+  await expect(page.locator('#paymentMethodsTable .btn-delete')).toHaveCount(5);
+  assert.deepEqual(await page.locator('#expenseMethod option').allTextContents(), ['نقدًا','Bankily','Masrvi','Sedad','تحويل بنكي','شيك']);
+  await expect(page.locator('#studentFeeMethod')).toHaveValue('نقدًا');
   await expect(page.locator('[data-settings-panel]:visible')).toHaveCount(1);
   await expect(page.locator('#currentUser')).toHaveText('yaghoub · مدير النظام');
   // Admins manage the accounts; their own row has no delete button.
@@ -157,6 +165,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#staffRolesTable tr')).toHaveCount(6);
   await expect(page.locator('#staffRolesTable')).toContainText('معلم');
   assert.deepEqual(await page.locator('#teacherRole option').allTextContents(),['أستاذ','معلم','محاسب','مراقب','عامل يدوي','أخرى']);
+  await page.locator('#settings .settings-tab.active').press('ArrowLeft');
+  await expect(page.locator('#paymentMethodsTable')).toBeVisible();
   await page.locator('#settings .settings-tab.active').press('ArrowLeft');
   await expect(page.locator('#setSchoolName')).toBeVisible();
   // A test date (mode tab) makes the app behave as on that day on this device:
@@ -191,8 +201,9 @@ test('browser scripts support login, all sections, student fees and session rest
   // Reports are monthly: any month already begun can be chosen, the current one
   // by default; income and outgoings follow the dates of the receipts.
   await page.locator('.nav-item[data-section="reports"]').click();
-  assert.deepEqual(await page.locator('#reportMonth option').allTextContents(), ['أكتوبر', 'نوفمبر', 'ديسمبر', 'السنة الدراسية كاملة']);
+  assert.deepEqual(await page.locator('#reportMonth option').allTextContents(), ['اليوم (2026-12-15)', 'أكتوبر', 'نوفمبر', 'ديسمبر', 'السنة الدراسية كاملة', 'فترة مخصصة (من – إلى)']);
   await expect(page.locator('#reportMonth')).toHaveValue('ديسمبر');
+  await expect(page.locator('#reportFromWrap')).toBeHidden();
   await expect(page.locator('#rOut')).toHaveText('0');
   await page.locator('#reportMonth').selectOption('أكتوبر');
   await expect(page.locator('#rOut')).toHaveText('3\u00a0000');
@@ -201,6 +212,26 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#rSalaries')).toHaveText('3\u00a0000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-10-31');
   await expect(page.locator('#departmentDuesInfo')).toContainText('2026-10-31');
+  // The cash journal lists every movement of the period with its payment
+  // method and author; the opening balance is the net of everything before.
+  await expect(page.locator('#cashJournalTable tr')).toHaveCount(1);
+  await expect(page.locator('#cashJournalTable tr').first()).toContainText('S-000001');
+  await expect(page.locator('#cashJournalTable tr').first()).toContainText('راتب أكتوبر');
+  await expect(page.locator('#cashJournalTable tr').first()).toContainText('نقدًا');
+  await expect(page.locator('#cashJournalTotals')).toContainText('خارج');
+  await expect(page.locator('#cashJournalTotals').locator('span').filter({hasText:'خارج'})).toContainText('3\u00a0000');
+  await expect(page.locator('#cashMethodsTable tr').first()).toContainText('نقدًا');
+  await page.locator('#reportMonth').selectOption('__day__');
+  await expect(page.locator('#reportPeriodInfo')).toContainText('اليوم: من 2026-12-15 إلى 2026-12-15');
+  await expect(page.locator('#cashJournalTable')).toContainText('لا توجد حركات في هذه الفترة.');
+  await expect(page.locator('#cashJournalTotals').locator('span').filter({hasText:'رصيد ما قبل الفترة'})).toContainText('-3\u00a0000');
+  await page.locator('#reportMonth').selectOption('__custom__');
+  await expect(page.locator('#reportFromWrap')).toBeVisible();
+  await page.locator('#reportFrom').fill('2026-10-01');
+  await page.locator('#reportTo').fill('2026-11-30');
+  await expect(page.locator('#reportPeriodInfo')).toContainText('الفترة: من 2026-10-01 إلى 2026-11-30');
+  await expect(page.locator('#cashJournalTable tr')).toHaveCount(1);
+  await page.locator('#reportMonth').selectOption('أكتوبر');
   // The print button reproduces the displayed period in the shared A4 window.
   const printedReport=await page.evaluate(()=>{
     let printed={};const original=window.printWindow;
@@ -215,6 +246,9 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.match(printedReport.body,/الخارج: المصروفات<\/td><td>0/);
   assert.match(printedReport.body,/إجمالي الخارج<\/td><td>3\u00a0000/);
   assert.match(printedReport.body,/ملخص المستحقات حسب القسم/);
+  assert.match(printedReport.body,/يومية الصندوق/);
+  assert.match(printedReport.body,/حسب طريقة الدفع/);
+  assert.match(printedReport.body,/S-000001/);
   await page.locator('#reportMonth').selectOption('__year__');
   await expect(page.locator('#rOut')).toHaveText('3\u00a0000');
   await expect(page.locator('#reportPeriodInfo')).toContainText('إلى 2026-12-15');
@@ -290,7 +324,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.reload();
   await login();
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(10);
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(11);
   await expect(page.locator('[data-settings-tab="database"]')).toBeVisible();
   // Export: the developer's password travels with the request, the file downloads.
   await page.locator('[data-settings-tab="database"]').click();
@@ -549,7 +583,7 @@ test('browser scripts support login, all sections, student fees and session rest
   assert.deepEqual(salaryRequests,[
     {path:'/api/verify-password',body:{password:'secret'}},
     {path:`/api/teacher-payments/${teacher.id}`,body:{
-      month:'أكتوبر',amount:'3500',date:'2026-10-31',notes:'',hours:0,hourlyRate:0,salaryDue:5000
+      month:'أكتوبر',amount:'3500',date:'2026-10-31',paymentMethod:'نقدًا',notes:'',hours:0,hourlyRate:0,salaryDue:5000
     }}
   ]);
   await page.locator('.nav-item[data-section="students"]').click();
@@ -666,7 +700,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.locator('#studentSearch').fill('');
   await studentsPicker.locator('[data-show-all-columns]').click();
   await expect(page.locator('#studentsTable tr td:nth-child(5)')).toBeVisible();
-  await expect(page.locator('.column-picker-bar')).toHaveCount(17);
+  await expect(page.locator('.column-picker-bar')).toHaveCount(20);
   await page.keyboard.press('Escape');
   // Invalid entries are flagged on their own fields (red border, message below,
   // focus on the first) before anything is sent; correcting a field clears it.

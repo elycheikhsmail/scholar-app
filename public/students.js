@@ -313,6 +313,8 @@ window.openStudentFees = (id, showLedger = false) => {
   studentFeeEntryFilter={period:'all',status:'all'};
   $('studentFeePaymentAmount').value='';
   $('studentFeeEntryDate').value = today();
+  $('studentFeeNote').value='';
+  setPaymentMethod('studentFeeMethod',DEFAULT_PAYMENT_METHOD);
   fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
   showEditForm('student-fees','studentFeesForm','studentFeePaymentAmount');
@@ -447,7 +449,7 @@ $('studentFeeEntries').addEventListener('click', event => {
   if(button)openStudentChargeDetails(Number(button.dataset.chargeDetails));
 });
 $('studentFeePaymentAmount').addEventListener('input',()=>renderStudentFeeEntries());
-$('resetStudentFees').onclick = () => { $('studentFeeEntryDate').value = today(); $('studentFeePaymentAmount').value=''; renderStudentFeeEntries(); };
+$('resetStudentFees').onclick = () => { $('studentFeeEntryDate').value = today(); $('studentFeePaymentAmount').value=''; $('studentFeeNote').value=''; setPaymentMethod('studentFeeMethod',DEFAULT_PAYMENT_METHOD); renderStudentFeeEntries(); };
 $('studentFeesForm').onsubmit = async event => {
   event.preventDefault();
   const student = selectedFeeStudent();
@@ -464,9 +466,10 @@ $('studentFeesForm').onsubmit = async event => {
   const print = button.id!=='saveStudentFeesOnly';
   for(const b of [$('saveStudentFees'),$('saveStudentFeesOnly')]) b.disabled = true;
   try {
-    const created=await api('/student-payments', {method:'POST',body:JSON.stringify({studentId:student.id,date,month:first.month,amount,notes:'دفعة موزعة تلقائيًا'})});
+    const created=await api('/student-payments', {method:'POST',body:JSON.stringify({studentId:student.id,date,month:first.month,amount,paymentMethod:$('studentFeeMethod').value,notes:$('studentFeeNote').value.trim()})});
     await load(); renderFees(); renderPaymentHistory(); renderDashboard();
     $('studentFeePaymentAmount').value='';
+    $('studentFeeNote').value='';
     renderStudentFeeEntries();
     toast(`تم تسجيل دفعة واحدة بقيمة ${money(amount)} أوقية وتوزيعها تلقائيًا.`);
     if(print){

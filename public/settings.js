@@ -279,6 +279,52 @@ window.deleteStaffRole=async index=>{
   await saveStaffRoles({path:`/staff-roles/${index}`,method:'DELETE'},'تم حذف طبيعة العمل.');
 };
 
+// --- Liste « طرق الدفع » -----------------------------------------------------
+// Même mécanique que طبيعة العمل ; les <select data-payment-methods> se
+// remplissent à nouveau après chaque changement.
+async function savePaymentMethods(request,message){
+  try{
+    const settings=await api(request.path,{method:request.method,body:request.body?JSON.stringify(request.body):undefined});
+    state.settings={...state.settings,...settings};
+    await load();
+    fillPaymentMethodSelects();
+    renderPaymentMethods();
+    toast(message);
+  }catch(error){toast(error.message)}
+}
+$('paymentMethodForm').onsubmit=async e=>{
+  e.preventDefault();
+  const name=$('paymentMethodName').value.trim();
+  if(!name)return toast('أدخل اسم طريقة الدفع.');
+  await savePaymentMethods({path:'/payment-methods',method:'POST',body:{name}},'تمت إضافة طريقة الدفع.');
+  $('paymentMethodName').value='';
+};
+function renderPaymentMethods(){
+  if(!state.data)return;
+  const records=[...state.data.studentPayments,...state.data.teacherPayments,...state.data.teacherAdvances,...state.data.expenses];
+  const rows=paymentMethodList().map((method,index)=>{
+    const count=records.filter(r=>(r.paymentMethod||DEFAULT_PAYMENT_METHOD)===method).length;
+    const actions=method===DEFAULT_PAYMENT_METHOD
+      ?'<small>افتراضية</small>'
+      :`<button class="btn-edit" onclick="editPaymentMethod(${index})">تعديل</button><button class="btn-delete" onclick="deletePaymentMethod(${index})">حذف</button>`;
+    return `<tr><td>${esc(method)}</td><td>${money(count)}</td><td class="actions">${actions}</td></tr>`;
+  }).join('');
+  $('paymentMethodsTable').innerHTML=rows||'<tr><td colspan="3">لا توجد عناصر.</td></tr>';
+}
+window.editPaymentMethod=async index=>{
+  if(!(await requirePassword()))return;
+  const method=paymentMethodList()[index];
+  if(method===undefined)return;
+  const name=await askInput('الاسم الجديد لطريقة الدفع',method);
+  if(name===null)return;
+  await savePaymentMethods({path:`/payment-methods/${index}`,method:'PUT',body:{name}},'تم تعديل طريقة الدفع.');
+};
+window.deletePaymentMethod=async index=>{
+  if(!(await requirePassword()))return;
+  if(!(await askConfirm('هل تريد حذف طريقة الدفع هذه؟')))return;
+  await savePaymentMethods({path:`/payment-methods/${index}`,method:'DELETE'},'تم حذف طريقة الدفع.');
+};
+
 
 function applyApplicationMode(mode, readOnly = state.readOnly) {
   if (!['test','production'].includes(mode)) return;

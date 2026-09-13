@@ -286,11 +286,12 @@ function renderPaymentHistory() {
       <td>${esc(student?.name||'محذوف')}</td>
       <td class="paid-months">${p.cancelled ? `<span class="status-unpaid">${esc(cancelledText(p))}</span>` : esc(settledText(p))}</td>
       <td>${money(p.amount)}</td>
+      <td>${esc(p.paymentMethod || DEFAULT_PAYMENT_METHOD)}</td>
       <td>${esc(dateTime(p))}</td>
       <td>${esc(p.createdBy || '—')}</td>
       <td class="actions">${actions}</td>
     </tr>`;
-  }).join('') || `<tr><td colspan="7">${invalidRange?'صحّح الفترة الزمنية لعرض الدفعات.':'لا توجد دفعات مطابقة للتصفية.'}</td></tr>`;
+  }).join('') || `<tr><td colspan="8">${invalidRange?'صحّح الفترة الزمنية لعرض الدفعات.':'لا توجد دفعات مطابقة للتصفية.'}</td></tr>`;
 }
 
 // Reçu d'un versement, imprimé sur un rouleau de 80 mm. Il rappelle le reste dû sur
@@ -327,9 +328,11 @@ function printStudentReceipt(paymentId){
     +line('رقم النداء',esc(student.callNo))
     +`<div class="line"></div>`
     +amountLine('amount','المدفوع الآن',money(payment.amount))
+    +line('طريقة الدفع',esc(payment.paymentMethod||DEFAULT_PAYMENT_METHOD))
     +line('سُدِّد به',allocations.join('<br>')||'رصيد لصالح الطالب')
     +amountLine('remaining',futurePayment?`إجمالي المتبقي حتى شهر ${esc(lastCharge.month)}`:'إجمالي المتبقي على الطالب',money(receiptOutstanding))
     +(credit>0?amountLine('remaining','رصيد لصالح الطالب',money(credit)):'')
+    +(payment.notes?line('ملاحظة',esc(payment.notes)):'')
     +`<div class="line"></div>`
     +(payment.createdBy?line('المحاسب',esc(payment.createdBy)):'')
     +`<div class="signature">توقيع المحاسب: __________________</div>`
@@ -361,6 +364,8 @@ window.editStudentPayment=async id=>{
   $('paymentEditSettled').textContent=`سُدِّد به حاليًا: ${settledText(payment)}. يُعاد التوزيع تلقائيًا بعد التعديل.`;
   $('paymentEditAmount').value=payment.amount;
   $('paymentEditDate').value=payment.date||today();
+  fillPaymentMethodSelects($('paymentEditForm'));
+  setPaymentMethod('paymentEditMethod',payment.paymentMethod||DEFAULT_PAYMENT_METHOD);
   $('paymentEditNotes').value=payment.notes||'';
   const dialog=$('paymentEditDialog');
   if(!dialog.open)dialog.showModal();
@@ -369,7 +374,7 @@ window.editStudentPayment=async id=>{
 $('paymentEditForm').addEventListener('submit',async event=>{
   event.preventDefault();
   const id=$('paymentEditId').value;
-  const body={amount:western($('paymentEditAmount').value),date:$('paymentEditDate').value,notes:$('paymentEditNotes').value};
+  const body={amount:western($('paymentEditAmount').value),date:$('paymentEditDate').value,paymentMethod:$('paymentEditMethod').value,notes:$('paymentEditNotes').value};
   try{
     await api(`/student-payments/${id}`,{method:'PUT',body:JSON.stringify(body)});
     $('paymentEditDialog').close();

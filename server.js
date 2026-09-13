@@ -114,7 +114,7 @@ function openSession(user) {
 // the school's daily work and may push the snapshot to the web copy (harmless:
 // the site is read-only); settings, sync parameters and the reset stay with the
 // admin; accounts with the admin and the developer; the database with the developer alone.
-const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'settings', 'sync-settings', 'reset-data']);
+const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'payment-methods', 'settings', 'sync-settings', 'reset-data']);
 const SELF_ROUTES = new Set(['logout', 'verify-password', 'password']);
 const PERMISSION_MESSAGE = 'ليست لديك صلاحية لهذه العملية.';
 function allowed(role, route, method) {
@@ -359,6 +359,9 @@ async function api(req, res) {
     if (parts[1] === "staff-roles" && method === "POST") return json(res, 200, who.addStaffRole(await body(req)));
     if (parts[1] === "staff-roles" && method === "PUT") return json(res, 200, who.updateStaffRole(parts[2], await body(req)));
     if (parts[1] === "staff-roles" && method === "DELETE") return json(res, 200, who.deleteStaffRole(parts[2]));
+    if (parts[1] === "payment-methods" && method === "POST") return json(res, 200, who.addPaymentMethod(await body(req)));
+    if (parts[1] === "payment-methods" && method === "PUT") return json(res, 200, who.updatePaymentMethod(parts[2], await body(req)));
+    if (parts[1] === "payment-methods" && method === "DELETE") return json(res, 200, who.deletePaymentMethod(parts[2]));
 
     if (parts[1] === "departments" && method === "GET") return json(res, 200, db.getDepartments());
     if (parts[1] === "departments" && method === "POST") return json(res, 200, who.addDepartment(await body(req)));

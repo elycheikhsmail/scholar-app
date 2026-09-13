@@ -112,7 +112,8 @@ const DEFAULT_DATA = {
     republic: 'الجمهورية الإسلامية الموريتانية',
     ministry: 'وزارة التعليم',
     regional: 'الإدارة الجهوية للتعليم',
-    staffRoles: ['أستاذ', 'معلم', 'محاسب', 'مراقب', 'عامل يدوي', 'أخرى']
+    staffRoles: ['أستاذ', 'معلم', 'محاسب', 'مراقب', 'عامل يدوي', 'أخرى'],
+    paymentMethods: ['نقدًا', 'Bankily', 'Masrvi', 'Sedad', 'تحويل بنكي', 'شيك']
   },
   departments: [
     { id: 1, name: 'Jardin', monthlyFee: 5000 },
@@ -381,6 +382,7 @@ function publicSettings() {
     ministry: data.settings.ministry || 'وزارة التعليم',
     regional: data.settings.regional || 'الإدارة الجهوية للتعليم',
     staffRoles: staffRoles(),
+    paymentMethods: paymentMethods(),
     testDate: clean(data.settings.testDate),
     testDateIssued: clean(data.settings.testDateIssued),
     // Remote read-only copy (NOTES-WEB-READONLY.md): the token never leaves the server.
@@ -577,6 +579,58 @@ function deleteStaffRole(index) {
   if (data.teachers.some(t => clean(t.role) === roles[i])) throw new Error('لا يمكن حذف طبيعة عمل مرتبطة بموظفين. عدِّل الموظفين أولًا.');
   roles.splice(i, 1);
   data.settings.staffRoles = roles;
+  save();
+  return publicSettings();
+}
+
+// « طرق الدفع » : the ways money comes in or goes out (cash, Bankily, bank
+// transfer…), one per receipt and expense, so the cash box and the accounts
+// can be reconciled at the end of the day. « نقدًا » is the default and stays.
+const DEFAULT_PAYMENT_METHOD = 'نقدًا';
+function paymentMethods() {
+  const list = Array.isArray(data.settings.paymentMethods) ? data.settings.paymentMethods.map(clean).filter(Boolean) : [];
+  const methods = list.length ? [...new Set(list)] : [...DEFAULT_DATA.settings.paymentMethods];
+  if (!methods.includes(DEFAULT_PAYMENT_METHOD)) methods.unshift(DEFAULT_PAYMENT_METHOD);
+  return methods;
+}
+function assertPaymentMethod(value) {
+  const method = clean(value) || DEFAULT_PAYMENT_METHOD;
+  if (!paymentMethods().includes(method)) throw new Error('اختر طريقة الدفع من القائمة المحددة في الإعدادات.');
+  return method;
+}
+function assertPaymentMethodName(name, methods, except) {
+  if (!name) throw new Error('أدخل اسم طريقة الدفع.');
+  if (name.length > 40) throw new Error('اسم طريقة الدفع طويل جدًا.');
+  if (methods.some((method, i) => method === name && i !== except)) throw new Error('طريقة الدفع هذه موجودة بالفعل.');
+}
+const METHOD_COLLECTIONS = ['studentPayments', 'teacherPayments', 'teacherAdvances', 'expenses'];
+function addPaymentMethod(input) {
+  const methods = paymentMethods(), name = clean(input && input.name);
+  assertPaymentMethodName(name, methods);
+  data.settings.paymentMethods = [...methods, name];
+  save();
+  return publicSettings();
+}
+function updatePaymentMethod(index, input) {
+  const methods = paymentMethods(), i = Number(index), name = clean(input && input.name);
+  if (!Number.isInteger(i) || i < 0 || i >= methods.length) throw new Error('طريقة الدفع غير موجودة.');
+  if (methods[i] === DEFAULT_PAYMENT_METHOD) throw new Error(`لا يمكن تغيير «${DEFAULT_PAYMENT_METHOD}» لأنها الطريقة الافتراضية.`);
+  assertPaymentMethodName(name, methods, i);
+  const previous = methods[i];
+  methods[i] = name;
+  data.settings.paymentMethods = methods;
+  // Records follow the renamed method so their history keeps matching the list.
+  for (const collection of METHOD_COLLECTIONS) data[collection].forEach(r => { if (clean(r.paymentMethod) === previous) r.paymentMethod = name; });
+  save();
+  return publicSettings();
+}
+function deletePaymentMethod(index) {
+  const methods = paymentMethods(), i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= methods.length) throw new Error('طريقة الدفع غير موجودة.');
+  if (methods[i] === DEFAULT_PAYMENT_METHOD) throw new Error(`لا يمكن حذف «${DEFAULT_PAYMENT_METHOD}» لأنها الطريقة الافتراضية.`);
+  if (METHOD_COLLECTIONS.some(collection => data[collection].some(r => clean(r.paymentMethod) === methods[i]))) throw new Error('لا يمكن حذف طريقة دفع مستعملة في سجلات. عدِّل السجلات أولًا.');
+  methods.splice(i, 1);
+  data.settings.paymentMethods = methods;
   save();
   return publicSettings();
 }
@@ -786,9 +840,9 @@ function assertWithinOutstanding(student, amount, excludePaymentId = null) {
 
 // One receipt. Callers check the cap first, then save: `addStudentPayments`
 // enters several at once and must weigh them against the balance together.
-function pushStudentPayment(student, month, amount, date, notes) {
+function pushStudentPayment(student, month, amount, date, notes, paymentMethod = DEFAULT_PAYMENT_METHOD) {
   const payment = stampNew({ id:nextId('studentPayments'), invoiceNo:nextInvoiceNo(), studentId:Number(student.id), month,
-    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, time: currentTime(), notes });
+    paymentType: month === dues.REGISTRATION ? 'registration' : 'monthly', amount, date, time: currentTime(), notes, paymentMethod });
   data.studentPayments.push(payment);
   return payment;
 }
@@ -822,7 +876,7 @@ function addStudentPayment(p) {
   if (!month || amount <= 0) throw new Error('أدخل الشهر والمبلغ بشكل صحيح.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount);
-  const payment = pushStudentPayment(student, month, amount, assertDate(p.date, 'تاريخ الدفع') || todayIso(), clean(p.notes));
+  const payment = pushStudentPayment(student, month, amount, assertDate(p.date, 'تاريخ الدفع') || todayIso(), clean(p.notes), assertPaymentMethod(p.paymentMethod));
   save(); return payment;
 }
 
@@ -843,7 +897,8 @@ function addStudentPayments(input) {
     assertPaymentMonth(entry.month);
   }
   assertWithinOutstanding(student, dues.round2(entries.reduce((total, entry) => total + entry.amount, 0)));
-  const payments = entries.map(entry => pushStudentPayment(student, entry.month, entry.amount, date, clean(input.notes)));
+  const method = assertPaymentMethod(input.paymentMethod);
+  const payments = entries.map(entry => pushStudentPayment(student, entry.month, entry.amount, date, clean(input.notes), method));
   save(); return payments;
 }
 function updateStudentPayment(id,p) {
@@ -855,7 +910,7 @@ function updateStudentPayment(id,p) {
   const amount=Number(p.amount)||0, month=clean(p.month)||clean(payment.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount, payment.id);
-  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:assertDate(p.date, 'تاريخ الدفع')||payment.date,notes:clean(p.notes)}); stampUpdate(payment); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
+  Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:assertDate(p.date, 'تاريخ الدفع')||payment.date,notes:clean(p.notes),paymentMethod:assertPaymentMethod(p.paymentMethod||payment.paymentMethod)}); stampUpdate(payment); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;
 }
 function deleteStudentPayment(id){data.studentPayments=data.studentPayments.filter(x=>Number(x.id)!==Number(id));save();}
 
@@ -944,7 +999,7 @@ function addTeacherPayment(p){
   const estimate=salaryEstimate(teacher,p);
   const extra=Boolean(p.extra);
   if(!extra)assertSalaryWithinDue(teacher,month,amount,estimate.salaryDue);
-  const payment=stampNew({id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month,amount,date,time:currentTime(),notes:clean(p.notes),...estimate,...(extra?{extra:true}:{})});
+  const payment=stampNew({id:nextId('teacherPayments'),receiptNo:nextReceiptNo('teacherPayments'),teacherId:teacher.id,month,amount,date,time:currentTime(),notes:clean(p.notes),paymentMethod:assertPaymentMethod(p.paymentMethod),...estimate,...(extra?{extra:true}:{})});
   data.teacherPayments.push(payment);save();return payment;
 }
 function updateTeacherPayment(id,p){
@@ -962,7 +1017,7 @@ function updateTeacherPayment(id,p){
   if(!extra)assertSalaryWithinDue(teacher,month,amount,estimate.salaryDue,payment.id);
   const date=assertDate(p.date,'تاريخ الدفع')||payment.date;
   assertSalaryEarned(month,date);
-  Object.assign(payment,{month,amount,date,notes:clean(p.notes),...estimate});
+  Object.assign(payment,{month,amount,date,notes:clean(p.notes),paymentMethod:assertPaymentMethod(p.paymentMethod||payment.paymentMethod),...estimate});
   if(extra)payment.extra=true;else delete payment.extra;
   stampUpdate(payment);
   save();return payment;
@@ -988,7 +1043,7 @@ function addTeacherAdvance(p){
   assertSalaryMonth(month);
   const due=advanceDue(teacher,p);
   assertAdvanceWithinDue(teacher,month,amount,due);
-  const advance=stampNew({id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month,amount,date:assertDate(p.date,'تاريخ السلفة')||todayIso(),time:currentTime(),notes:clean(p.notes),salaryDue:due});
+  const advance=stampNew({id:nextId('teacherAdvances'),receiptNo:nextReceiptNo('teacherAdvances'),teacherId:teacher.id,month,amount,date:assertDate(p.date,'تاريخ السلفة')||todayIso(),time:currentTime(),notes:clean(p.notes),paymentMethod:assertPaymentMethod(p.paymentMethod),salaryDue:due});
   data.teacherAdvances.push(advance);save();return advance;
 }
 function updateTeacherAdvance(id,p){
@@ -1002,7 +1057,7 @@ function updateTeacherAdvance(id,p){
   assertSalaryMonth(month);
   const due=advanceDue(teacher,p,Number(advance.salaryDue)||0);
   assertAdvanceWithinDue(teacher,month,amount,due,advance.id);
-  Object.assign(advance,{month,amount,date:assertDate(p.date,'تاريخ السلفة')||advance.date,notes:clean(p.notes),salaryDue:due});
+  Object.assign(advance,{month,amount,date:assertDate(p.date,'تاريخ السلفة')||advance.date,notes:clean(p.notes),paymentMethod:assertPaymentMethod(p.paymentMethod||advance.paymentMethod),salaryDue:due});
   stampUpdate(advance);
   save();return advance;
 }
@@ -1010,13 +1065,13 @@ function deleteTeacherAdvance(id){data.teacherAdvances=data.teacherAdvances.filt
 
 // The same checks on entry and on edit: an edit cannot leave an expense without
 // a category or with a zero amount that entry would have refused.
-function expenseFields(e,previousDate){
-  const fields={category:clean(e.category),description:clean(e.description),amount:Math.max(0,Number(e.amount)||0),date:assertDate(e.date,'تاريخ المصروف')||previousDate,beneficiary:clean(e.beneficiary),notes:clean(e.notes)};
+function expenseFields(e,previousDate,previousMethod){
+  const fields={category:clean(e.category),description:clean(e.description),amount:Math.max(0,Number(e.amount)||0),date:assertDate(e.date,'تاريخ المصروف')||previousDate,beneficiary:clean(e.beneficiary),notes:clean(e.notes),paymentMethod:assertPaymentMethod(e.paymentMethod||previousMethod)};
   if(!fields.category||fields.amount<=0)throw Error('نوع المصروف والمبلغ مطلوبان.');
   return fields;
 }
 function addExpense(e){const o=stampNew({id:nextId('expenses'),...expenseFields(e,todayIso())});data.expenses.push(o);save();return o;}
-function updateExpense(id,e){const o=data.expenses.find(x=>Number(x.id)===Number(id));if(!o)throw Error('المصروف غير موجود.');Object.assign(o,expenseFields(e,o.date));stampUpdate(o);save();return o;}
+function updateExpense(id,e){const o=data.expenses.find(x=>Number(x.id)===Number(id));if(!o)throw Error('المصروف غير موجود.');Object.assign(o,expenseFields(e,o.date,o.paymentMethod));stampUpdate(o);save();return o;}
 function deleteExpense(id){data.expenses=data.expenses.filter(x=>Number(x.id)!==Number(id));save();}
 
 
@@ -1058,7 +1113,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

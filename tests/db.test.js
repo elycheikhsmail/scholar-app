@@ -208,6 +208,39 @@ test('records carry who created and changed them; receipts are cancelled with a 
   assert.equal(db.getData().teacherAdvances.length, 1);
 });
 
+test('payment methods are managed from the settings and recorded on receipts and expenses', () => {
+  const dir = temp(); db.init(dir);
+  assert.deepEqual(db.publicSettings().paymentMethods, ['نقدًا', 'Bankily', 'Masrvi', 'Sedad', 'تحويل بنكي', 'شيك']);
+  const s = db.addStudent(student);
+  // Empty means cash; anything else must be in the list.
+  assert.equal(db.addStudentPayment({ studentId: s.id, amount: 10, month: 'أكتوبر' }).paymentMethod, 'نقدًا');
+  const bankily = db.addStudentPayment({ studentId: s.id, amount: 10, month: 'أكتوبر', paymentMethod: 'Bankily' });
+  assert.equal(bankily.paymentMethod, 'Bankily');
+  assert.throws(() => db.addStudentPayment({ studentId: s.id, amount: 10, month: 'أكتوبر', paymentMethod: 'ذهب' }), /اختر طريقة الدفع/);
+  assert.equal(db.updateStudentPayment(bankily.id, { amount: 12 }).paymentMethod, 'Bankily', 'an edit without a method keeps it');
+  assert.equal(db.updateStudentPayment(bankily.id, { amount: 12, paymentMethod: 'شيك' }).paymentMethod, 'شيك');
+  assert.equal(db.addStudentPayments({ studentId: s.id, paymentMethod: 'Sedad', entries: [{ month: 'نوفمبر', amount: 5 }] })[0].paymentMethod, 'Sedad');
+  const t = db.addTeacher({ name: 'م', role: 'معلم', fixedSalary: 1000 });
+  assert.equal(db.addTeacherPayment({ teacherId: t.id, month: 'أكتوبر', amount: 500, date: '2026-10-31', paymentMethod: 'تحويل بنكي' }).paymentMethod, 'تحويل بنكي');
+  assert.throws(() => db.addTeacherAdvance({ teacherId: t.id, month: 'نوفمبر', amount: 100, paymentMethod: 'x' }), /اختر طريقة الدفع/);
+  assert.equal(db.addTeacherAdvance({ teacherId: t.id, month: 'نوفمبر', amount: 100 }).paymentMethod, 'نقدًا');
+  const e = db.addExpense({ category: 'ورق', amount: 5, paymentMethod: 'Masrvi' });
+  assert.equal(e.paymentMethod, 'Masrvi');
+  assert.equal(db.updateExpense(e.id, { category: 'ورق', amount: 6 }).paymentMethod, 'Masrvi');
+  // The list: add, rename (records follow), delete (refused while in use), the default stays.
+  assert.equal(db.addPaymentMethod({ name: 'Click' }).paymentMethods.at(-1), 'Click');
+  assert.throws(() => db.addPaymentMethod({ name: 'Click' }), /موجودة بالفعل/);
+  assert.throws(() => db.addPaymentMethod({ name: '' }), /أدخل اسم طريقة الدفع/);
+  const index = db.publicSettings().paymentMethods.indexOf('Masrvi');
+  db.updatePaymentMethod(index, { name: 'Masrvi Pay' });
+  assert.equal(db.getData().expenses[0].paymentMethod, 'Masrvi Pay');
+  assert.throws(() => db.deletePaymentMethod(index), /مستعملة في سجلات/);
+  assert.throws(() => db.deletePaymentMethod(0), /الطريقة الافتراضية/);
+  assert.throws(() => db.updatePaymentMethod(0, { name: 'كاش' }), /الطريقة الافتراضية/);
+  const click = db.publicSettings().paymentMethods.indexOf('Click');
+  assert.equal(db.deletePaymentMethod(click).paymentMethods.includes('Click'), false);
+});
+
 test('databases without an invoice sequence resume after the highest number issued', () => {
   const dir = temp(); db.init(dir);
   const s = db.addStudent(student);
@@ -706,6 +739,8 @@ test('HTTP roles: reads for everyone, records for the secretary, settings and ac
     assert.deepEqual([cancelled.cancelled, cancelled.cancelledBy, cancelled.cancelReason], [true, 'sec', 'خطأ']);
     assert.equal((await (await request('/data', 'GET', sec.token)).json()).studentPayments.length, 1, 'the cancelled receipt stays in the register');
     assert.equal((await request('/fee-settings', 'PUT', sec.token, { registrationFee: 1, defaultMonthlyFee: 1 })).status, 403);
+    assert.equal((await request('/payment-methods', 'POST', sec.token, { name: 'Click' })).status, 403, 'the payment-method list stays with the admin');
+    assert.equal((await request('/payment-methods', 'POST', admin.token, { name: 'Click' })).status, 200);
     assert.equal((await request('/users', 'GET', sec.token)).status, 403);
     assert.equal((await request('/reset-data', 'POST', sec.token, { password: 'sec-pass' })).status, 403);
     assert.equal((await request('/sync-settings', 'PUT', sec.token, { syncUrl: 'https://school.example/api/sync', syncToken: 'x' })).status, 403, 'the sync parameters stay with the admin');
