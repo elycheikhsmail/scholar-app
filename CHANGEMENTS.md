@@ -3,6 +3,34 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.59.0 — 2026-09-13
+
+- Le « mois » enregistré sur un reçu d'élève n'était qu'une étiquette : le
+  moteur des frais règle toujours le frais le plus ancien en premier. Tout ce
+  qui disait à quoi un reçu a servi lit désormais cette affectation réelle :
+  - سجل التحصيل والفواتير : la colonne « النوع » devient « ما سدّدته الفاتورة »
+    (« رسوم التسجيل: 200، يونيو: 11 800 ») et le filtre « نوع الرسوم / الشهر »
+    retient les reçus qui ont réellement réglé ce frais, en tout ou partie ;
+  - وصل الدفع : plus de « نوع الرسوم / إجمالي الرسوم / المتبقي لهذه الرسوم »
+    lus sur l'étiquette ; une seule ligne « سُدِّد به » avec, par frais, le
+    montant affecté et ce qui y reste dû, et « إجمالي المتبقي حتى شهر … » court
+    jusqu'au dernier frais réellement touché ;
+  - نافذة تعديل الدفعة : le champ « الرسوم التي تخصها الدفعة » disparaît (il ne
+    changeait rien) ; la fenêtre rappelle ce que le reçu règle actuellement et
+    que la répartition est refaite après modification ;
+  - تفاصيل الرسم : la colonne « نوع الدفعة المسجلة » devient « ما سدّدته
+    الفاتورة ».
+- الرئيسية ← ملخص الشهر الجاري : « رسوم الطلاب » (somme des reçus étiquetés du
+  mois, qui contredisait le rapport) est remplacé par deux chiffres explicites :
+  « المحصَّل من رسوم الشهر » (ce qui est réellement affecté au frais de ce mois,
+  avec le reste dû en dessous) et « المقبوض خلال الشهر (بتاريخ الدفع) », le
+  même chiffre que شاشة التقارير ; une note explique la différence.
+- Technique : `allocationsByPayment` / `allocationsOf` / `settledText`
+  (`students.js`, cache lié aux relevés) ; `paymentLabel` supprimé ;
+  `updateStudentPayment` garde l'étiquette si le formulaire n'en envoie pas ;
+  `.summary-grid-5` ; tests db et UI ajustés. Point 1.2 de
+  `REVIEW-ACCOUNTING-UX-1.56.1.md`.
+
 ## 1.58.0 — 2026-09-12
 
 - Le serveur refuse désormais ce que les formulaires refusaient déjà (une

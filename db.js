@@ -828,7 +828,9 @@ function addStudentPayments(input) {
 function updateStudentPayment(id,p) {
   const payment = data.studentPayments.find(x=>Number(x.id)===Number(id)); if(!payment)throw new Error('الدفعة غير موجودة.');
   const student=data.students.find(x=>Number(x.id)===Number(payment.studentId)); if(!student)throw new Error('الطالب غير موجود.');
-  const amount=Number(p.amount)||0, month=clean(p.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
+  // The label is kept unless the caller sends one: the fees a receipt settles
+  // follow from the allocation order, so the form no longer asks for it.
+  const amount=Number(p.amount)||0, month=clean(p.month)||clean(payment.month); if(!month||amount<=0)throw new Error('بيانات الدفعة غير صحيحة.');
   assertPaymentMonth(month);
   assertWithinOutstanding(student, amount, payment.id);
   Object.assign(payment,{month,paymentType: month === 'رسوم التسجيل' ? 'registration' : 'monthly',amount,date:assertDate(p.date, 'تاريخ الدفع')||payment.date,notes:clean(p.notes)}); if(!payment.invoiceNo) payment.invoiceNo=nextInvoiceNo(); save(); return payment;

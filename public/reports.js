@@ -134,12 +134,20 @@ function renderDashboard(){
   $('sExpenses').textContent=money(expenses);
   $('sNet').textContent=money(fees-salaries-advances-expenses);
 
-  // Les paiements portent le mois qu'ils règlent ; une dépense porte seulement
-  // sa date, donc le mois courant s'y lit sur le préfixe `AAAA-MM`.
+  // Le mois en cours se lit de deux façons, toutes deux affichées : ce que le
+  // moteur a réellement affecté au frais de ce mois (toutes factures
+  // confondues), et ce qui est entré en caisse d'après la date des reçus — le
+  // même chiffre que le rapport du mois. Un salaire porte son mois ; une
+  // dépense porte seulement sa date, donc le mois courant s'y lit sur `AAAA-MM`.
   const month=currentMonth();
   const thisMonth=today().slice(0,7);
+  const period=reportPeriods().find(p=>p.value===month);
+  let monthPaid=0,monthDue=0;
+  for(const ledger of ledgers().values()){const row=ledger.byMonth.get(month);if(row){monthPaid+=row.paid;monthDue+=row.amount}}
   $('dMonth').textContent=month;
-  $('dFees').textContent=money(sumAmount(d.studentPayments.filter(x=>x.month===month)));
+  $('dFees').textContent=money(monthPaid);
+  $('dFeesRemaining').textContent=`المتبقي من رسوم الشهر: ${money(round2(monthDue-monthPaid))}`;
+  $('dCollected').textContent=money(period?sumAmount(d.studentPayments.filter(x=>x.date>=period.start&&x.date<=period.end)):0);
   $('dSalary').textContent=money(sumAmount(d.teacherPayments.filter(x=>x.month===month)));
   $('dExpenses').textContent=money(sumAmount(d.expenses.filter(x=>x.date.slice(0,7)===thisMonth)));
 }

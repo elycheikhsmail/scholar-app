@@ -564,11 +564,13 @@ test('browser scripts support login, all sections, student fees and session rest
     state.data=originalData;state.settings=originalSettings;state.departments=originalDepartments;
     return body;
   });
-  assert.match(receiptBody,/إجمالي المدفوع لهذه الرسوم[\s\S]*0 أوقية/);
+  // The receipt was entered under «نوفمبر» but the engine settled October with
+  // it: the receipt says what the money actually paid, and the balance line
+  // runs to that fee, not to the label.
   assert.doesNotMatch(receiptBody,/نسخة للتجريب فقط/);
-  assert.match(receiptBody,/توزيع الدفعة الفعلي[\s\S]*أكتوبر: 3\u00a0000 أوقية/);
-  assert.match(receiptBody,/المتبقي لهذه الرسوم[\s\S]*13\u00a0000 أوقية/);
-  assert.match(receiptBody,/إجمالي المتبقي حتى شهر نوفمبر[\s\S]*20\u00a0000 أوقية/);
+  assert.doesNotMatch(receiptBody,/نوع الرسوم|رسوم شهر نوفمبر/);
+  assert.match(receiptBody,/سُدِّد به[\s\S]*أكتوبر: 3\u00a0000 أوقية \(بقي 7\u00a0000\)/);
+  assert.match(receiptBody,/إجمالي المتبقي حتى شهر أكتوبر[\s\S]*7\u00a0000 أوقية/);
   // The filters, the chips and the rows all read from the one dues vocabulary.
   await expect(page.locator('#feeStatus option')).toHaveCount(5);
   await expect(page.locator('#feeStatus option').nth(2)).toHaveText('متأخر');
@@ -757,6 +759,20 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
   await page.locator('#closeStudentFees').click();
   await expect(page.locator('#students')).toHaveClass(/active-section/);
+  // The collections log and its fee filter read the actual allocation, not the
+  // label the receipt was entered under; the edit form no longer offers a month.
+  await page.locator('.nav-item[data-section="collections"]').click();
+  await page.evaluate(()=>renderPaymentHistory());
+  await expect(page.locator('#studentPaymentHistory tr')).toHaveCount(2);
+  await expect(page.locator('#studentPaymentHistory tr').filter({hasText:'F-000092'})).toContainText('يونيو: 1\u00a0000');
+  await page.locator('#collectionMonth').selectOption('يونيو');
+  await expect(page.locator('#studentPaymentHistory tr')).toHaveCount(1);
+  await expect(page.locator('#studentPaymentHistory tr').first()).toContainText('F-000092');
+  await page.locator('#collectionMonth').selectOption('رسوم التسجيل');
+  await expect(page.locator('#studentPaymentHistory tr').first()).toContainText('F-000091');
+  await page.locator('#collectionMonth').selectOption('');
+  await expect(page.locator('#paymentEditMonth')).toHaveCount(0);
+  await expect(page.locator('#paymentEditSettled')).toHaveCount(1);
   await page.locator('.nav-item[data-section="fees"]').click();
   await page.locator('#feesTable .fee-row-actions .btn-edit').first().click();
   await expect(page.locator('#student-fees')).toHaveClass(/active-section/);

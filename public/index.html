@@ -60,9 +60,9 @@
     <div class="stat-card highlight"><b id="sNet">0</b><span>الصافي</span></div>
   </div>
   <div class="panel manager-panel"><div class="manager-title">إدارة المدرسة</div><div class="manager-info"><div><span>المدير</span><strong id="managerNameHome">سيد محمد بوشارب</strong></div><div><span>هاتف المدير</span><strong id="managerPhoneHome">22037331</strong></div></div></div>
-  <div class="panel"><h3>ملخص الشهر الجاري</h3><div class="summary-grid">
-    <div><span>الشهر</span><b id="dMonth"></b></div><div><span>رسوم الطلاب</span><b id="dFees"></b></div><div><span>الرواتب</span><b id="dSalary"></b></div><div><span>المصروفات</span><b id="dExpenses"></b></div>
-  </div></div>
+  <div class="panel"><h3>ملخص الشهر الجاري</h3><div class="summary-grid summary-grid-5">
+    <div><span>الشهر</span><b id="dMonth"></b></div><div><span>المحصَّل من رسوم الشهر</span><b id="dFees"></b><small id="dFeesRemaining"></small></div><div><span>المقبوض خلال الشهر (بتاريخ الدفع)</span><b id="dCollected"></b></div><div><span>الرواتب</span><b id="dSalary"></b></div><div><span>المصروفات</span><b id="dExpenses"></b></div>
+  </div><p class="hint-box">«المحصَّل من رسوم الشهر» هو ما وُزِّع فعليًا على رسم هذا الشهر من كل الفواتير أيًّا كان تاريخها، و«المقبوض خلال الشهر» هو ما دخل الصندوق بتاريخ الدفع كما في شاشة التقارير.</p></div>
 </section>
 
 <section id="students" class="section">
@@ -505,7 +505,7 @@
   </div>
   <form id="paymentEditForm" class="form-grid">
     <input type="hidden" id="paymentEditId">
-    <label>الرسوم التي تخصها الدفعة<select id="paymentEditMonth" required></select></label>
+    <p id="paymentEditSettled" class="hint-box form-actions"></p>
     <label>المبلغ<input id="paymentEditAmount" type="number" min="0.01" step="0.01" required></label>
     <label>تاريخ الدفع<input id="paymentEditDate" type="date" class="date-dmy" required></label>
     <label>ملاحظات<input id="paymentEditNotes"></label>

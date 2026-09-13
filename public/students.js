@@ -152,8 +152,34 @@ function paidFor(sid,m){const row=chargeOf(studentById(sid),m);return row?row.pa
 function remainingFor(student,month){const row=chargeOf(student,month);return row?row.remaining:0}
 function totalOutstandingFor(student){return ledgerOf(student).outstanding}
 function creditFor(student){return ledgerOf(student).credit}
-function paymentLabel(p){return p.month==='رسوم التسجيل'?'رسوم التسجيل':`رسوم شهر ${p.month}`}
 function invoiceNo(p){return p?.invoiceNo||`F-${String(p?.id||0).padStart(6,'0')}`}
+// What a receipt actually settled, as the fee engine allocated it (oldest fee
+// first). The `month` stored on a payment is only the label it was entered
+// under; every screen that says what a receipt paid for reads this instead.
+let allocationCache=null,allocationLedgers=null;
+function allocationsByPayment(){
+  const map=ledgers();
+  if(allocationCache&&allocationLedgers===map)return allocationCache;
+  const index=new Map();
+  for(const ledger of map.values()){
+    for(const row of ledger.rows){
+      for(const a of row.allocations){
+        const list=index.get(Number(a.paymentId))||[];
+        list.push({month:row.month,amount:a.amount});
+        index.set(Number(a.paymentId),list);
+      }
+    }
+  }
+  allocationLedgers=map;
+  allocationCache=index;
+  return index;
+}
+function allocationsOf(payment){return allocationsByPayment().get(Number(payment?.id))||[]}
+// « رسوم التسجيل: 200، يونيو: 11 800 » — or the credit note when nothing is settled yet.
+function settledText(payment,separator='، '){
+  const list=allocationsOf(payment);
+  return list.length?list.map(a=>`${a.month}: ${money(a.amount)}`).join(separator):'لم تُخصَّص لأي رسم بعد (رصيد دائن)';
+}
 function lateFor(student,month){const row=chargeOf(student,month);return !!row&&row.remaining>0&&today()>row.dueDate}
 function statusFor(student,month){return feeStatusOf(chargeOf(student,month),today())}
 // La recherche porte sur le département, le nom, le numéro scolaire, le NNI,
@@ -445,7 +471,7 @@ function openStudentChargeDetails(index){
   const invoiceRows=row.allocations.map(allocation=>{
     const payment=payments.get(Number(allocation.paymentId));
     if(!payment)return '';
-    return `<tr><td>${esc(invoiceNo(payment))}</td><td>${esc(paymentLabel(payment))}</td><td>${money(allocation.amount)}</td><td>${money(payment.amount)}</td><td>${esc(dateTime(payment))}</td>`
+    return `<tr><td>${esc(invoiceNo(payment))}</td><td class="paid-months">${esc(settledText(payment))}</td><td>${money(allocation.amount)}</td><td>${money(payment.amount)}</td><td>${esc(dateTime(payment))}</td>`
       + `<td class="actions"><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('print',${payment.id})">طباعة</button><button type="button" class="btn-edit" onclick="runChargeInvoiceAction('edit',${payment.id})">تعديل</button><button type="button" class="btn-delete" onclick="runChargeInvoiceAction('delete',${payment.id})">حذف</button></td></tr>`;
   }).join('');
   $('studentChargeDetailsBody').innerHTML=`<div class="charge-detail-summary">
@@ -454,7 +480,7 @@ function openStudentChargeDetails(index){
       <span><small>المستحق</small><b>${money(row.amount)}</b></span><span><small>المدفوع</small><b>${money(row.paid)}</b></span>
       <span><small>المتبقي</small><b class="${row.remaining>0?'status-unpaid':'status-paid'}">${money(row.remaining)}</b></span>
     </div><h4 class="table-title">الفواتير المرتبطة بهذا الرسم</h4>
-    <div class="table-scroll"><table><thead><tr><th>رقم الفاتورة</th><th>نوع الدفعة المسجلة</th><th>المخصَّص لهذا الرسم</th><th>إجمالي الفاتورة</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>${invoiceRows||'<tr><td colspan="6">لا توجد فاتورة مرتبطة بهذا الرسم حتى الآن.</td></tr>'}</tbody></table></div>`;
+    <div class="table-scroll"><table><thead><tr><th>رقم الفاتورة</th><th>ما سدّدته الفاتورة</th><th>المخصَّص لهذا الرسم</th><th>إجمالي الفاتورة</th><th>التاريخ</th><th>إجراءات</th></tr></thead><tbody>${invoiceRows||'<tr><td colspan="6">لا توجد فاتورة مرتبطة بهذا الرسم حتى الآن.</td></tr>'}</tbody></table></div>`;
   $('studentChargeDetailsDialog').showModal();
 }
 window.runChargeInvoiceAction=(action,id)=>{
@@ -494,19 +520,11 @@ function refreshStudentFeeDetails() {
     + `.`;
   // One row per invoice: the note lists the fees (registration and months)
   // the receipt settled, fully or in part, as allocated by the fee engine.
-  const settledByInvoice = new Map();
-  for (const month of [REGISTRATION,...months]) {
-    for (const a of ledger.byMonth.get(month)?.allocations || []) {
-      const list = settledByInvoice.get(Number(a.paymentId)) || [];
-      list.push(`${esc(month)}: ${money(a.amount)}`);
-      settledByInvoice.set(Number(a.paymentId), list);
-    }
-  }
   const invoices = state.data.studentPayments.filter(p => Number(p.studentId) === Number(student.id))
     .sort((a,b) => Number(b.id) - Number(a.id)); // newest receipt first, in issue order like the allocation
   $('studentLedgerRows').innerHTML = invoices.map(p => {
     const id = Number(p.id);
-    const note = (settledByInvoice.get(id) || []).join('<br>') || 'لم تُخصَّص لأي رسم بعد (رصيد دائن)';
+    const note = esc(settledText(p,'\n')).replace(/\n/g,'<br>');
     return `<tr data-payment-id="${id}">
       <td>${esc(dateTime(p)) || '—'}</td>
       <td class="paid-months">${note}</td>

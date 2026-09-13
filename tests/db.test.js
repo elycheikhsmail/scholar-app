@@ -146,6 +146,9 @@ test('server refuses what the forms refuse: salary and advance caps, school mont
   assert.match(payment.date, /^\d{4}-\d{2}-\d{2}$/);
   assert.throws(() => db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 10, date: '10-10-2026' }), /تاريخ الدفع/);
   assert.equal(db.updateStudentPayment(payment.id, { month: 'أكتوبر', amount: 10, date: '' }).date, payment.date, 'an empty date keeps the recorded one');
+  // The edit form no longer sends the label under which the receipt was entered; it is kept.
+  assert.equal(db.updateStudentPayment(payment.id, { amount: 12, date: '' }).month, 'أكتوبر');
+  assert.throws(() => db.updateStudentPayment(payment.id, { month: 'شهر وهمي', amount: 12 }), /اختر الرسم/);
   const expense = db.addExpense({ category: 'ورق', amount: 10, date: '2026-10-05' });
   assert.throws(() => db.updateExpense(expense.id, { category: 'ورق', amount: 10, date: '5/10/2026' }), /تاريخ المصروف/);
   // An edit cannot leave an expense at zero or without a category, as entry refuses both.

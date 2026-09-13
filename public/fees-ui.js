@@ -265,10 +265,12 @@ function renderPaymentHistory() {
   const from = $('collectionFrom').value, to = $('collectionTo').value;
   const invalidRange = Boolean(from && to && from > to);
   $('collectionFilterError').classList.toggle('hidden',!invalidRange);
+  // The fee filter keeps the receipts that actually settled that fee, in
+  // full or in part, as the engine allocated them — not the label entered.
   const rows = state.data.studentPayments.filter(payment => {
     const student = students.get(String(payment.studentId));
     const searchText = western([student?.name,student?.schoolNo,invoiceNo(payment)].join(' ')).toLowerCase();
-    return !invalidRange && (!studentId || String(payment.studentId) === studentId) && (!month || payment.month === month)
+    return !invalidRange && (!studentId || String(payment.studentId) === studentId) && (!month || allocationsOf(payment).some(a => a.month === month))
       && (!from || payment.date >= from) && (!to || payment.date <= to) && searchText.includes(query);
   }).sort((a,b)=>b.id-a.id);
   $('collectionTotals').textContent = `عدد الدفعات المعروضة: ${rows.length} — إجمالي التحصيل المعروض: ${money(rows.reduce((total,payment)=>total+Number(payment.amount||0),0))} أوقية`;
@@ -277,7 +279,7 @@ function renderPaymentHistory() {
     return `<tr>
       <td>${esc(invoiceNo(p))}</td>
       <td>${esc(student?.name||'محذوف')}</td>
-      <td>${esc(paymentLabel(p))}</td>
+      <td class="paid-months">${esc(settledText(p))}</td>
       <td>${money(p.amount)}</td>
       <td>${esc(dateTime(p))}</td>
       <td class="actions"><button class="btn-edit" onclick="printStudentReceipt(${p.id})">طباعة</button><button class="btn-edit" onclick="editStudentPayment(${p.id})">تعديل</button><button class="btn-delete" onclick="deleteStudentPayment(${p.id})">حذف</button></td>
@@ -293,16 +295,14 @@ function printStudentReceipt(paymentId){
   const student=state.data.students.find(x=>Number(x.id)===Number(payment.studentId));
   if(!student)return;
   const ledger=ledgerOf(student);
-  const charge=ledger.byMonth.get(payment.month)||null;
-  const due=charge?charge.amount:0;
-  const paidForCharge=charge?charge.paid:0;
-  const remaining=charge?charge.remaining:0;
-  const receiptOutstanding=outstandingThrough(ledger,payment.month);
-  const futurePayment=charge&&!ledger.accruedRows.includes(charge);
+  // The receipt states what the money actually settled, fee by fee, with what
+  // is still owed on each; the balance line runs to the last fee it touched.
+  const settled=allocationsOf(payment).map(a=>({...a,charge:ledger.byMonth.get(a.month)}));
+  const lastCharge=settled.length?settled[settled.length-1].charge:null;
+  const receiptOutstanding=outstandingThrough(ledger,lastCharge?lastCharge.month:'');
+  const futurePayment=!!lastCharge&&!ledger.accruedRows.includes(lastCharge);
   const credit=creditFor(student);
-  const allocations=ledger.rows.flatMap(row=>row.allocations
-    .filter(allocation=>Number(allocation.paymentId)===Number(payment.id))
-    .map(allocation=>`${esc(row.month)}: ${money(allocation.amount)} أوقية`));
+  const allocations=settled.map(a=>`${esc(a.month)}: ${money(a.amount)} أوقية`+(a.charge&&a.charge.remaining>0?` (بقي ${money(a.charge.remaining)})`:''));
   const school=state.settings?.schoolName||'مدرسة مكارم الأخلاق الحرة';
 
   const line=(label,value)=>`<div class="row"><span class="label">${label}</span><span>${value}</span></div>`;
@@ -319,13 +319,9 @@ function printStudentReceipt(paymentId){
     +line('القسم',esc(student.className))
     +line('رقم النداء',esc(student.callNo))
     +`<div class="line"></div>`
-    +line('نوع الرسوم',esc(paymentLabel(payment)))
-    +line('إجمالي الرسوم',`${money(due)} أوقية`)
-    +amountLine('amount','إجمالي المدفوع لهذه الرسوم',money(paidForCharge))
     +amountLine('amount','المدفوع الآن',money(payment.amount))
-    +line('توزيع الدفعة الفعلي',allocations.join('<br>')||'رصيد لصالح الطالب')
-    +amountLine('remaining','المتبقي لهذه الرسوم',money(remaining))
-    +amountLine('remaining',futurePayment?`إجمالي المتبقي حتى شهر ${esc(payment.month)}`:'إجمالي المتبقي على الطالب',money(receiptOutstanding))
+    +line('سُدِّد به',allocations.join('<br>')||'رصيد لصالح الطالب')
+    +amountLine('remaining',futurePayment?`إجمالي المتبقي حتى شهر ${esc(lastCharge.month)}`:'إجمالي المتبقي على الطالب',money(receiptOutstanding))
     +(credit>0?amountLine('remaining','رصيد لصالح الطالب',money(credit)):'')
     +`<div class="line"></div>`
     +`<div class="signature">توقيع المحاسب: __________________</div>`
@@ -344,8 +340,8 @@ function printStudentReceipt(paymentId){
   });
 }
 // One form for both places a payment is listed: the collections table and the
-// student ledger. It edits the fee the payment settles too, so a payment entered
-// against the wrong month is corrected without deleting and re-entering it.
+// student ledger. Amount, date and note only: which fees a receipt settles is
+// decided by the engine (oldest first), so there is nothing to choose here.
 window.editStudentPayment=async id=>{
   const payment=state.data.studentPayments.find(x=>Number(x.id)===Number(id));
   if(!payment)return;
@@ -353,8 +349,7 @@ window.editStudentPayment=async id=>{
   const student=state.data.students.find(x=>Number(x.id)===Number(payment.studentId));
   $('paymentEditId').value=payment.id;
   $('paymentEditIdentity').textContent=`${invoiceNo(payment)} — ${student?`${student.name} — القسم: ${student.className}`:'طالب محذوف'}`;
-  $('paymentEditMonth').innerHTML=monthOptionsHtml();
-  $('paymentEditMonth').value=payment.month;
+  $('paymentEditSettled').textContent=`سُدِّد به حاليًا: ${settledText(payment)}. يُعاد التوزيع تلقائيًا بعد التعديل.`;
   $('paymentEditAmount').value=payment.amount;
   $('paymentEditDate').value=payment.date||today();
   $('paymentEditNotes').value=payment.notes||'';
@@ -365,7 +360,7 @@ window.editStudentPayment=async id=>{
 $('paymentEditForm').addEventListener('submit',async event=>{
   event.preventDefault();
   const id=$('paymentEditId').value;
-  const body={month:$('paymentEditMonth').value,amount:western($('paymentEditAmount').value),date:$('paymentEditDate').value,notes:$('paymentEditNotes').value};
+  const body={amount:western($('paymentEditAmount').value),date:$('paymentEditDate').value,notes:$('paymentEditNotes').value};
   try{
     await api(`/student-payments/${id}`,{method:'PUT',body:JSON.stringify(body)});
     $('paymentEditDialog').close();
