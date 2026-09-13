@@ -64,8 +64,19 @@ function toggleTeacherStatusFields(){
 }
 $('teacherStatus').onchange=toggleTeacherStatusFields;
 const isActiveTeacher=t=>(t.status||'active')!=='stopped';
-// Only employees still in service are proposed for payments and advances.
 const activeTeachers=()=>state.data.teachers.filter(isActiveTeacher);
+// Un employé compte pour un mois s'il y était en service : entré au plus tard
+// le dernier jour du mois et, s'il a quitté, parti au plus tôt le premier. Le
+// كشف, la paie et les avances d'un mois ne proposent que ceux-là : un employé
+// entré en février ne « doit » rien pour octobre, et celui qui est parti garde
+// ses mois travaillés (un arrêt sans date de fin retire tous les mois).
+function employedIn(t,month){
+  const startYear=schoolStartYear();
+  if(t.startDate&&t.startDate>monthDate(month,startYear,31))return false;
+  if(isActiveTeacher(t))return true;
+  return !!t.endDate&&t.endDate>=monthDate(month,startYear,1);
+}
+const teachersEmployedIn=month=>state.data.teachers.filter(t=>employedIn(t,month));
 // Recherche partagée par le registre, le كشف, la paie et les avances : le nom,
 // طبيعة العمل ou le téléphone (chiffres arabes acceptés) suffisent.
 const teacherQuery=id=>western($(id).value||'').trim().toLowerCase();
@@ -192,8 +203,21 @@ function teacherPaid(teacherId,month){
   return sumAmount(monthRows(state.data.teacherPayments,teacherId,month));
 }
 
+// L'استحقاق d'un mois déjà versé (en tout ou partie) est celui enregistré sur
+// le dernier versement : une augmentation décidée plus tard ne rouvre pas les
+// mois passés dans le كشف. Un mois sans versement suit la fiche actuelle.
+function storedSalaryDue(id,month){
+  const paid=state.data.teacherPayments.filter(x=>Number(x.teacherId)===Number(id)&&x.month===month&&Number(x.salaryDue)>0).sort((a,b)=>Number(b.id)-Number(a.id))[0];
+  return paid?Number(paid.salaryDue):null;
+}
+function monthDue(t,month,hoursOverride=null){
+  if(hoursOverride!==null)return salaryDue(t,month,hoursOverride);
+  const stored=storedSalaryDue(t.id,month);
+  return stored===null?salaryDue(t,month):stored;
+}
+
 function teacherMonthState(t,m){
-  const due=salaryDue(t,m);
+  const due=monthDue(t,m);
   const adv=teacherAdvance(t.id,m);
   const paid=teacherPaid(t.id,m);
   return {due,adv,paid,rem:Math.max(0,due-adv-paid)};
@@ -257,7 +281,7 @@ function populateStaffSelects(){
   const query=teacherQuery('salaryTeacherSearch');
   const month=$('salaryMonth').value;
   const previous=$('salaryTeacher').value;
-  const visible=activeTeachers().filter(t=>teacherMatches(t,query));
+  const visible=teachersEmployedIn(month).filter(t=>teacherMatches(t,query));
   $('salaryTeacher').innerHTML=visible.map(t=>{
     const st=month?teacherMonthState(t,month):null;
     const settled=!!st&&st.due>0&&st.rem<=0;
@@ -265,7 +289,7 @@ function populateStaffSelects(){
   }).join('');
   if(visible.some(t=>String(t.id)===previous))$('salaryTeacher').value=previous;
   const advancePrevious=$('advanceTeacher').value;
-  const advanceVisible=activeTeachers().filter(t=>teacherMatches(t,teacherQuery('advanceTeacherSearch')));
+  const advanceVisible=teachersEmployedIn($('advanceMonth').value).filter(t=>teacherMatches(t,teacherQuery('advanceTeacherSearch')));
   $('advanceTeacher').innerHTML=advanceVisible.map(t=>`<option value="${t.id}">${esc(t.name)} - ${esc(t.role)}</option>`).join('');
   if(advanceVisible.some(t=>String(t.id)===advancePrevious))$('advanceTeacher').value=advancePrevious;
   updateSalaryHint();
@@ -332,14 +356,14 @@ function updateSalaryHoursVisibility(){
 function missingSalaryTeacherText(){
   const query=$('salaryTeacherSearch').value.trim();
   if(query)return `⚠️ لا يوجد موظف مطابق للبحث «${query}». امسح حقل البحث أو اكتب اسم الموظف أو رقم هاتفه.`;
-  return activeTeachers().length?'⚠️ اختر الموظف من القائمة.':'⚠️ لا يوجد موظفون نشطون؛ أضف موظفًا أولًا.';
+  return teachersEmployedIn($('salaryMonth').value).length?'⚠️ اختر الموظف من القائمة.':'⚠️ لا يوجد موظف في الخدمة في هذا الشهر.';
 }
 function updateSalaryHint(){
   const t=selectedSalaryTeacher();
   if(!t){$('salaryDueInfo').textContent=missingSalaryTeacherText();return}
   const month=$('salaryMonth').value;
   const enteredHours=$('salaryHours').value;
-  const due=salaryDue(t,month,enteredHours||null);
+  const due=monthDue(t,month,enteredHours||null);
   const st=teacherMonthState(t,month);
   const remaining=Math.max(0,due-st.adv-st.paid);
   suggestSalaryAmount(remaining);
@@ -365,7 +389,7 @@ $('salaryForm').onsubmit=async e=>{
   const isTeacher=!roleNeedsFixed(t.role);
   const hours=isTeacher?Number($('salaryHours').value)||0:0;
   const rate=isTeacher?Number(t.hourlyRate||0):0;
-  const due=salaryDue(t,month,hours,rate);
+  const due=isTeacher?salaryDue(t,month,hours,rate):monthDue(t,month);
   const st=teacherMonthState(t,month);
   const available=Math.max(0,due-st.adv-st.paid);
   const amount=Number($('salaryAmount').value)||0;
@@ -429,7 +453,7 @@ function payrollStatusOf(t,st,earned=true){
 }
 function monthlyPayroll(month){
   const earned=salaryEarned(month);
-  return activeTeachers().map(t=>{
+  return teachersEmployedIn(month).map(t=>{
     const st=teacherMonthState(t,month);
     return {teacher:t,...st,status:payrollStatusOf(t,st,earned)};
   });
@@ -449,7 +473,7 @@ function renderPayroll(){
   const dueNote=salaryEarned(month)?'':`<span class="payroll-pending-note">⚠️ لم يحل موعد الاستحقاق بعد: ${western(salaryDueDateOf(month))}</span>`;
   $('payrollSummary').innerHTML=rows.length
     ?`${dueNote}<span>الموظفون: ${money(rows.length)}</span><span>مسدَّد: ${money(settled)}</span><span>إجمالي الاستحقاق: ${money(totals.due)}</span><span>السلف: ${money(totals.adv)}</span><span>المدفوع: ${money(totals.paid)}</span><span class="${totals.rem>0?'overdue-soft':'status-paid'}">المتبقي: ${money(totals.rem)}</span>`
-    :'<span class="payroll-summary-empty">لا يوجد موظفون مسجلون.</span>';
+    :'<span class="payroll-summary-empty">لا يوجد موظف في الخدمة في هذا الشهر.</span>';
   const query=teacherQuery('payrollSearch');
   const visible=rows.filter(r=>payrollFilterMatches(r.status)&&teacherMatches(r.teacher,query));
   payrollVisibleRows=visible;
@@ -459,8 +483,8 @@ function renderPayroll(){
     else if(status==='hours')actions.push(`<button class="btn-edit" onclick="prefillSalaryForm(${t.id},true)">أدخل الساعات</button>`);
     else if(rem>0)actions.push(`<button class="btn-pay" onclick="prefillSalaryForm(${t.id})">صرف المتبقي</button>`);
     actions.push(`<button class="btn-edit" onclick="prefillAdvanceForm(${t.id})">سلفة</button>`);
-    return `<tr data-payroll-status="${status}" data-teacher-id="${t.id}">
-      <td>${esc(t.name)}</td>
+    return `<tr data-payroll-status="${status}" data-teacher-id="${t.id}"${isActiveTeacher(t)?'':' class="staff-row-stopped"'}>
+      <td>${esc(t.name)}${isActiveTeacher(t)?'':` <span class="staff-status-stopped">(متوقف منذ ${esc(western(t.endDate))})</span>`}</td>
       <td>${esc(western(t.phone||'—'))}</td>
       <td>${esc(t.role)}</td>
       <td>${status==='hours'?'—':money(due)}</td>
@@ -470,7 +494,7 @@ function renderPayroll(){
       <td class="payroll-status ${status}">${PAYROLL_STATUS_LABELS[status]}</td>
       <td class="actions">${actions.join('')}</td>
     </tr>`;
-  }).join('')||`<tr><td colspan="9">${!rows.length?'لا يوجد موظفون مسجلون.':query?`لا يوجد موظف مطابق للبحث «${esc($('payrollSearch').value.trim())}».`:'لا يوجد موظف بهذه الحالة لهذا الشهر.'}</td></tr>`;
+  }).join('')||`<tr><td colspan="9">${!rows.length?'لا يوجد موظف في الخدمة في هذا الشهر.':query?`لا يوجد موظف مطابق للبحث «${esc($('payrollSearch').value.trim())}».`:'لا يوجد موظف بهذه الحالة لهذا الشهر.'}</td></tr>`;
   syncFilterButtons('#payrollPanel [data-payroll-status]','payrollStatus',payrollStatusFilter);
 }
 $('payrollMonth').onchange=renderPayroll;
@@ -756,7 +780,7 @@ function resetSalaryDates(){
 // Après un versement, la liste passe à l'employé suivant qui reste à payer pour
 // le mois, dans l'ordre de la liste : « payer tout le monde » s'enchaîne.
 function nextUnpaidTeacherId(afterId,month){
-  const list=activeTeachers();
+  const list=teachersEmployedIn(month);
   const start=list.findIndex(t=>Number(t.id)===Number(afterId));
   for(let i=1;i<=list.length;i++){
     const t=list[(start+i)%list.length];
@@ -775,7 +799,7 @@ const selectedAdvanceTeacher=()=>state.data?.teachers.find(x=>Number(x.id)===Num
 function missingAdvanceTeacherText(){
   const query=$('advanceTeacherSearch').value.trim();
   if(query)return `⚠️ لا يوجد موظف مطابق للبحث «${query}». امسح حقل البحث أو اكتب اسم الموظف أو رقم هاتفه.`;
-  return activeTeachers().length?'':'⚠️ لا يوجد موظفون نشطون؛ أضف موظفًا أولًا.';
+  return teachersEmployedIn($('advanceMonth').value).length?'':'⚠️ لا يوجد موظف في الخدمة في هذا الشهر.';
 }
 function updateAdvanceHint(){
   const t=selectedAdvanceTeacher();
@@ -785,7 +809,7 @@ function updateAdvanceHint(){
   $('advanceHoursWrap').classList.toggle('hidden-field',!hourly);
   if(!hourly)$('advanceHours').value='';
   else if(!$('advanceHours').value&&latestHours(t.id,month))$('advanceHours').value=String(latestHours(t.id,month));
-  const due=salaryDue(t,month,hourly?($('advanceHours').value||null):null);
+  const due=monthDue(t,month,hourly?($('advanceHours').value||null):null);
   const available=Math.max(0,due-teacherAdvance(t.id,month)-teacherPaid(t.id,month));
   $('advanceDueInfo').textContent=hourly
     ?`الاستحقاق = ${money(Number($('advanceHours').value||0))} × ${money(t.hourlyRate)} = ${money(due)}. السلف السابقة: ${money(teacherAdvance(t.id,month))}. المدفوع: ${money(teacherPaid(t.id,month))}. المتاح للسلفة: ${money(available)}.`
@@ -793,7 +817,7 @@ function updateAdvanceHint(){
 }
 $('advanceTeacher').onchange=updateAdvanceHint;
 $('advanceTeacherSearch').oninput=debounce(()=>{populateStaffSelects();updateAdvanceHint()},150);
-$('advanceMonth').onchange=updateAdvanceHint;
+$('advanceMonth').onchange=()=>{populateStaffSelects();updateAdvanceHint()};
 $('advanceHours').oninput=updateAdvanceHint;
 $('advanceForm').onsubmit=async e=>{
   e.preventDefault();
@@ -801,7 +825,7 @@ $('advanceForm').onsubmit=async e=>{
   if(!t){toast(missingAdvanceTeacherText()||'⚠️ اختر الموظف من القائمة.');$($('advanceTeacherSearch').value.trim()?'advanceTeacherSearch':'advanceTeacher').focus();return}
   const month=$('advanceMonth').value;
   const hours=roleNeedsFixed(t.role)?0:Number($('advanceHours').value)||0;
-  const due=salaryDue(t,month,hours);
+  const due=roleNeedsFixed(t.role)?monthDue(t,month):salaryDue(t,month,hours);
   const amount=Number($('advanceAmount').value)||0;
   const available=Math.max(0,due-teacherAdvance(t.id,month)-teacherPaid(t.id,month));
   if(amount<=0)return toast('أدخل مبلغ السلفة.');

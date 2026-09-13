@@ -3,6 +3,27 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.61.0 — 2026-09-13
+
+- كشف رواتب الشهر suit les dates de service : un employé n'y figure (et n'est
+  proposé dans les formulaires de paie et de سلفة de ce mois) que s'il était
+  en service — entré au plus tard le dernier jour du mois et, s'il a quitté,
+  parti au plus tôt le premier. Un employé embauché en février n'apparaît plus
+  « لم يُصرف » pour octobre ; un employé arrêté garde ses mois travaillés,
+  signalés « (متوقف منذ …) » dans le كشف, et disparaît des mois suivants. Un
+  arrêt sans date de fin retire tous les mois, comme avant.
+- L'استحقاق d'un mois déjà versé (en tout ou partie) est celui enregistré sur
+  le dernier versement : une augmentation du salaire fixe ou du taux horaire
+  décidée plus tard ne rouvre pas les mois passés avec un reste fictif. Les
+  mois sans versement suivent la fiche actuelle. Le formulaire de paie et
+  celui de سلفة lisent la même valeur que le كشف.
+- Messages : « لا يوجد موظف في الخدمة في هذا الشهر » remplace « لا يوجد
+  موظفون نشطون » dans le كشف et sous les formulaires.
+- Technique : `employedIn`, `teachersEmployedIn`, `storedSalaryDue`,
+  `monthDue` (`staff.js`) ; `populateStaffSelects` filtre sur le mois choisi
+  et le changement de mois de سلفة recharge la liste ; test UI étendu. Point
+  1.4 de `REVIEW-ACCOUNTING-UX-1.56.1.md`.
+
 ## 1.60.0 — 2026-09-13
 
 - الطلاب : après « حفظ الطالب » d'un **nouvel** élève, l'استمارة رسوم الطالب

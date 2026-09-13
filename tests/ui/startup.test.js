@@ -11,7 +11,7 @@ test('browser scripts support login, all sections, student fees and session rest
   t.after(() => { db.close(); fs.rmSync(directory, { recursive: true, force: true }); });
   db.init(directory);
   db.addStudent({ name: 'طالب تجريبي', schoolNo: 'UI1', nni: '1234567890', className: '6AF', gender: 'ذكر', guardianName: 'ولي الأمر', guardianPhone: '22334455' });
-  const teacher=db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000, phone: '33445566' });
+  const teacher=db.addTeacher({ name: 'موظف تجريبي', role: 'معلم', fixedSalary: 5000, phone: '33445566', startDate: '2026-09-01' });
   db.addTeacherPayment({ teacherId:teacher.id, month:'أكتوبر', amount:3000, date:'2026-10-31', salaryDue:5000 });
   const settings = { ...db.publicSettings(), applicationMode: 'production', version:require('../../package.json').version };
   const responses = {
@@ -412,6 +412,39 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(payrollRow).toContainText('33445566');
   await expect(payrollRow).toContainText('2\u00a0000');
   await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2\u00a0000');
+  // The sheet follows the service dates: an employee hired in November owes
+  // nothing for October, one who left mid-October keeps that month and drops
+  // out of November; a raise decided later does not reopen a month already
+  // paid (its due stays the one stored on the payment).
+  await page.evaluate(()=>{
+    state.data.teachers.push(
+      {id:501,name:'موظف جديد',role:'معلم',fixedSalary:6000,phone:'',startDate:'2026-11-15',status:'active',endDate:''},
+      {id:502,name:'موظف سابق',role:'معلم',fixedSalary:4000,phone:'',startDate:'2026-09-01',status:'stopped',endDate:'2026-10-15'});
+    state.data.teacherPayments.push({id:601,receiptNo:'S-000601',teacherId:502,month:'أكتوبر',amount:4000,date:'2026-10-31',salaryDue:4000,hours:0,hourlyRate:0});
+    state.data.teachers[0].fixedSalary=7000;
+    renderPayroll();
+  });
+  const payrollRows=page.locator('#payrollTable tr[data-teacher-id]');
+  await expect(payrollRows).toHaveCount(2);
+  await expect(page.locator('#payrollTable tr[data-teacher-id="501"]')).toHaveCount(0);
+  await expect(page.locator('#payrollTable tr[data-teacher-id="502"]')).toContainText('متوقف منذ 2026-10-15');
+  await expect(page.locator('#payrollTable tr[data-teacher-id="502"]')).toHaveAttribute('data-payroll-status','paid');
+  await expect(payrollRow.first()).toContainText('5\u00a0000');
+  await expect(page.locator('#payrollSummary')).toContainText('إجمالي الاستحقاق: 9\u00a0000');
+  await expect(page.locator('#payrollSummary')).toContainText('المتبقي: 2\u00a0000');
+  await page.locator('#payrollMonth').selectOption('نوفمبر');
+  await expect(payrollRows).toHaveCount(2);
+  await expect(page.locator('#payrollTable tr[data-teacher-id="502"]')).toHaveCount(0);
+  await expect(page.locator('#payrollTable tr[data-teacher-id="501"]')).toContainText('6\u00a0000');
+  await expect(page.locator('#payrollSummary')).toContainText('إجمالي الاستحقاق: 13\u00a0000');
+  await page.locator('#payrollMonth').selectOption('أكتوبر');
+  await page.evaluate(()=>{
+    state.data.teachers=state.data.teachers.filter(t=>t.id<500);
+    state.data.teacherPayments=state.data.teacherPayments.filter(p=>p.id<600);
+    state.data.teachers[0].fixedSalary=5000;
+    renderPayroll();
+  });
+  await expect(payrollRows).toHaveCount(1);
   await page.locator('#payrollPanel [data-payroll-status="paid"]').click();
   await expect(page.locator('#payrollTable tr[data-teacher-id]')).toHaveCount(0);
   await page.locator('#payrollPanel [data-payroll-status="all"]').click();
