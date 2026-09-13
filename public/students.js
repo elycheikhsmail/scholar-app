@@ -93,19 +93,25 @@ $('studentForm').addEventListener('submit',async e=>{
   clearFormErrors($('studentForm'));
   try{
     const id=$('studentId').value;
+    let created=null;
     if(id){
       // Modifier une fiche existante demande la confirmation du mot de passe.
       if(!(await requirePassword()))return;
       await api(`/students/${id}`,{method:'PUT',body:JSON.stringify(payload)});
     }else{
-      await api('/students',{method:'POST',body:JSON.stringify(payload)});
+      created=await api('/students',{method:'POST',body:JSON.stringify(payload)});
     }
     await load();
     resetStudent();
     renderStudents();
     renderFees();
     renderPaymentHistory();
-    toast('تم حفظ الطالب.');
+    // Un nouvel élève est inscrit pour payer : l'استمارة des frais s'ouvre
+    // aussitôt, sans le rechercher dans le registre.
+    if(created&&studentById(created.id)){
+      toast('تم حفظ الطالب. سجّل الآن رسوم التسجيل.');
+      openStudentFees(created.id);
+    }else toast('تم حفظ الطالب.');
   }catch(error){
     const field=serverErrorField(error.message,STUDENT_SERVER_ERROR_FIELDS);
     if(field)showFormErrors($('studentForm'),{[field]:error.message});
@@ -407,7 +413,9 @@ $('studentFeeEntryFilters').addEventListener('click',event=>{
   applyStudentFeeEntryFilter();
 });
 function updateStudentFeeSummary() {
-  const box = $('studentFeeEntrySummary'), save = $('saveStudentFees');
+  const box = $('studentFeeEntrySummary');
+  // Both save buttons (with and without the receipt) follow the same checks.
+  const save = { set disabled(value) { $('saveStudentFees').disabled = value; $('saveStudentFeesOnly').disabled = value; } };
   if (!selectedFeeStudent()) { box.textContent = ''; box.className = 'fee-preview hidden'; return; }
   const student=selectedFeeStudent(),amount=enteredStudentPaymentAmount(),ledger=ledgerOf(student);
   const typed=$('studentFeePaymentAmount').value.trim();
@@ -450,14 +458,23 @@ $('studentFeesForm').onsubmit = async event => {
   const date = $('studentFeeEntryDate').value;
   if (!date) return toast('أدخل تاريخ الدفع.');
   const first=previewStudentPayment(student,amount).find(row=>row.allocated>0);
-  const button = event.submitter;
-  button.disabled = true;
+  // Le bouton par défaut enregistre et imprime le reçu que le parent attend au
+  // guichet ; « تسجيل فقط » enregistre sans l'ouvrir.
+  const button = event.submitter||$('saveStudentFees');
+  const print = button.id!=='saveStudentFeesOnly';
+  for(const b of [$('saveStudentFees'),$('saveStudentFeesOnly')]) b.disabled = true;
   try {
-    await api('/student-payments', {method:'POST',body:JSON.stringify({studentId:student.id,date,month:first.month,amount,notes:'دفعة موزعة تلقائيًا'})});
+    const created=await api('/student-payments', {method:'POST',body:JSON.stringify({studentId:student.id,date,month:first.month,amount,notes:'دفعة موزعة تلقائيًا'})});
     await load(); renderFees(); renderPaymentHistory(); renderDashboard();
     $('studentFeePaymentAmount').value='';
     renderStudentFeeEntries();
     toast(`تم تسجيل دفعة واحدة بقيمة ${money(amount)} أوقية وتوزيعها تلقائيًا.`);
+    if(print){
+      // Le reçu vient de la réponse ; à défaut, la dernière facture de l'élève.
+      const own=state.data.studentPayments.filter(p=>Number(p.studentId)===Number(student.id));
+      const receipt=own.find(p=>Number(p.id)===Number(created?.id))||own.sort((a,b)=>Number(b.id)-Number(a.id))[0];
+      if(receipt)printStudentReceipt(receipt.id);
+    }
   } catch(error) { toast(error.message); } finally { updateStudentFeeSummary(); }
 };
 function openStudentChargeDetails(index){

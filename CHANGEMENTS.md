@@ -3,6 +3,23 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.60.0 — 2026-09-13
+
+- الطلاب : après « حفظ الطالب » d'un **nouvel** élève, l'استمارة رسوم الطالب
+  s'ouvre aussitôt sur son compte (message « سجّل الآن رسوم التسجيل ») au lieu
+  de le rechercher dans le registre puis cliquer « المالية ». La modification
+  d'une fiche existante garde le comportement précédent.
+- استمارة رسوم الطالب : le bouton par défaut devient « تسجيل وطباعة الوصل » —
+  la dépense est enregistrée puis le وصل s'ouvre aussitôt pour le parent au
+  guichet ; « تسجيل فقط » enregistre sans l'ouvrir. Les deux boutons suivent
+  les mêmes contrôles (montant vide, plafond).
+- Technique : `openStudentFees(created.id)` après `POST /students`
+  (`students.js`) ; le reçu imprimé est celui renvoyé par le serveur, sinon la
+  dernière facture du compte ; `#saveStudentFeesOnly` (`index.html`) ; test UI
+  étendu (mock `POST /api/students` et reçu renvoyé par `POST
+  /api/student-payments`). Points 2.1 et 2.2 de
+  `REVIEW-ACCOUNTING-UX-1.56.1.md`.
+
 ## 1.59.0 — 2026-09-13
 
 - Le « mois » enregistré sur un reçu d'élève n'était qu'une étiquette : le

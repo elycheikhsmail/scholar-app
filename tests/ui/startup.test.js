@@ -57,8 +57,17 @@ test('browser scripts support login, all sections, student fees and session rest
       return route.fulfill({json:{ok:true,backup:'x',counts:{students:12,departments:18}}});
     }
     if(pathname==='/api/student-payments'&&route.request().method()==='POST'){
-      studentPaymentRequests.push(route.request().postDataJSON());
-      return route.fulfill({json:{ok:true}});
+      const body=route.request().postDataJSON();
+      studentPaymentRequests.push(body);
+      // The receipt the real server returns, visible to the next load().
+      const created={id:900+studentPaymentRequests.length,invoiceNo:`F-000${900+studentPaymentRequests.length}`,time:'09:00',...body};
+      responses['/api/data'].studentPayments.push(created);
+      return route.fulfill({json:created});
+    }
+    if(pathname==='/api/students'&&route.request().method()==='POST'){
+      const created={id:77,callNo:'2',status:'نشط',leaveDate:'',discountType:'',discountValue:0,discountReason:'',...route.request().postDataJSON()};
+      responses['/api/data'].students.push(created);
+      return route.fulfill({json:created});
     }
     if (Object.hasOwn(responses, pathname)) return route.fulfill({ json: responses[pathname] });
     const name = pathname === '/' ? 'index.html' : pathname.slice(1);
@@ -634,7 +643,23 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#studentForm .field-invalid')).toHaveCount(4);
   await page.locator('#cancelStudent').click();
   await expect(page.locator('#studentForm .field-invalid')).toHaveCount(0);
-  await page.locator('#studentsTable .btn-edit').click();
+  // A new student is registered to pay: the fee form opens on the new account
+  // straight away, without searching the register.
+  await page.locator('#className').selectOption('6AF');
+  await page.locator('#schoolNo').fill('UI2');
+  await page.locator('#studentName').fill('طالب جديد');
+  await page.locator('#gender').selectOption('ذكر');
+  await page.locator('#nni').fill('2234567890');
+  await page.locator('#studentForm button.primary').click();
+  await expect(page.locator('#student-fees')).toHaveClass(/active-section/);
+  await expect(page.locator('#studentFeesIdentity')).toContainText('طالب جديد');
+  await expect(page.locator('#studentFeesIdentity')).toContainText('UI2');
+  await expect(page.locator('#studentName')).toHaveValue('');
+  await page.locator('#closeStudentFees').click();
+  await expect(page.locator('#students')).toHaveClass(/active-section/);
+  responses['/api/data'].students=responses['/api/data'].students.filter(s=>s.id!==77);
+  await page.evaluate(()=>{state.data.students=state.data.students.filter(s=>s.id!==77);ledgerCache=null;renderStudents();renderFees();});
+  await page.locator('#studentsTable .btn-edit').first().click();
   await expect(page.locator('#studentName')).toHaveValue('طالب تجريبي');
   await expect(page.locator('#studentsTable .btn-pay')).toHaveText('المالية');
   await page.locator('#studentsTable .btn-pay').click();
@@ -688,12 +713,24 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(october).toContainText('مسدَّد جزئياً');
   await expect(october).toContainText('المتبقي بعدها: 11\u00a0000');
   await expect(page.locator('#saveStudentFees')).toBeEnabled();
-  await page.locator('#saveStudentFees').click();
+  await expect(page.locator('#saveStudentFeesOnly')).toBeEnabled();
+  // The default button records and prints the receipt the parent is waiting
+  // for; «تسجيل فقط» records without opening it.
+  await page.evaluate(()=>{window.printedReceipts=[];window.printWindow=options=>{window.printedReceipts.push(options.title)}});
+  await page.locator('#saveStudentFeesOnly').click();
   await expect.poll(()=>studentPaymentRequests.length).toBe(1);
   assert.equal(studentPaymentRequests[0].amount,13200);
   assert.equal(studentPaymentRequests[0].month,'رسوم التسجيل');
   await expect(page.locator('#studentFeePaymentAmount')).toHaveValue('');
   await expect(page.locator('#saveStudentFees')).toBeDisabled();
+  await expect(page.locator('#saveStudentFeesOnly')).toBeDisabled();
+  assert.deepEqual(await page.evaluate(()=>window.printedReceipts),[]);
+  await page.locator('#studentFeePaymentAmount').fill('500');
+  await page.locator('#saveStudentFees').click();
+  await expect.poll(()=>studentPaymentRequests.length).toBe(2);
+  await expect.poll(()=>page.evaluate(()=>window.printedReceipts)).toEqual(['F-000902']);
+  responses['/api/data'].studentPayments.length=0;
+  await page.evaluate(()=>{state.data.studentPayments=[];ledgerCache=null;renderStudentFeeEntries();});
   // Each charge exposes its amounts and the invoices allocated to it without
   // leaving the unified fee form.
   await page.evaluate(()=>{
