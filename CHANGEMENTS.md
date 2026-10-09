@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.65.1 — 2026-10-09
+
+- Le bouton « إخفاء المزامنة مع الموقع » désactive maintenant aussi la
+  synchronisation, y compris l'envoi automatique à la fermeture : réglage
+  `syncHidden` enregistré côté serveur (`PUT /sync-hidden`), vérifié par
+  `syncRemote`. L'URL et le jeton sont conservés.
+
 ## 1.65.0 — 2026-10-09
 
 - **وضع الاستخدام** : bouton « إخفاء/إظهار المزامنة مع الموقع » qui masque

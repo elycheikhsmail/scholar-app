@@ -114,7 +114,7 @@ function openSession(user) {
 // the school's daily work and may push the snapshot to the web copy (harmless:
 // the site is read-only); settings, sync parameters and the reset stay with the
 // admin; accounts with the admin and the developer; the database with the developer alone.
-const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'payment-methods', 'settings', 'logo', 'sync-settings', 'reset-data']);
+const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'payment-methods', 'settings', 'logo', 'sync-settings', 'sync-hidden', 'reset-data']);
 const SELF_ROUTES = new Set(['logout', 'verify-password', 'password']);
 const PERMISSION_MESSAGE = 'ليست لديك صلاحية لهذه العملية.';
 function allowed(role, route, method) {
@@ -405,6 +405,9 @@ async function api(req, res) {
     if (parts[1] === "sync-settings" && method === "PUT") {
       return json(res, 200, { ok: true, settings: { ...who.updateSyncSettings(await body(req)), applicationMode } });
     }
+    if (parts[1] === "sync-hidden" && method === "PUT") {
+      return json(res, 200, { ok: true, settings: { ...who.setSyncHidden((await body(req)).hidden), applicationMode } });
+    }
     if (parts[1] === "sync-remote" && method === "POST") {
       const result = await syncRemote();
       return json(res, result.ok ? 200 : 502, result.ok ? { ...result, settings: publicSettings() } : { error: result.error });
@@ -437,7 +440,8 @@ async function syncRemote({ timeout = 20000 } = {}) {
   try {
     // Test data must never replace the school's real data on the web copy.
     if (applicationMode === 'test') return { ok: false, error: "المزامنة متاحة في وضع الإنتاج فقط." };
-    const { url, token } = db.syncSettings();
+    const { url, token, hidden } = db.syncSettings();
+    if (hidden) return { ok: false, error: "المزامنة مخفية ومعطّلة (الإعدادات ← وضع الاستخدام)." };
     if (!url) return { ok: false, error: "لم يُضبط رابط المزامنة بعد (الإعدادات ← المزامنة)." };
     if (!token) return { ok: false, error: "لم يُضبط رمز المزامنة بعد (الإعدادات ← المزامنة)." };
     const snapshot = db.snapshot();

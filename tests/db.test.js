@@ -824,3 +824,11 @@ test('logo is stored as a small image data URL and can be removed', () => {
   assert.equal(db.publicSettings().logo, png);
   assert.equal(db.updateLogo({ logo: '' }).logo, '');
 });
+
+test('hiding the synchronisation is stored and reported to the sync engine', () => {
+  const dir = temp(); db.init(dir);
+  assert.equal(db.syncSettings().hidden, false);
+  assert.equal(db.setSyncHidden(true).syncHidden, true);
+  assert.equal(db.syncSettings().hidden, true);
+  assert.equal(db.setSyncHidden(false).syncHidden, false);
+});

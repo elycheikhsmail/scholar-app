@@ -387,6 +387,7 @@ function publicSettings() {
     testDate: clean(data.settings.testDate),
     testDateIssued: clean(data.settings.testDateIssued),
     // Remote read-only copy (NOTES-WEB-READONLY.md): the token never leaves the server.
+    syncHidden: !!data.settings.syncHidden,
     syncUrl: clean(data.settings.syncUrl),
     syncTokenSet: !!clean(data.settings.syncToken),
     ...syncState()
@@ -402,7 +403,13 @@ function snapshot() {
   return { exportedAt: new Date().toISOString(), ...getCoreData(), examSettings: exams.settings, exams: exams.exams };
 }
 function syncSettings() {
-  return { url: clean(data.settings.syncUrl), token: clean(data.settings.syncToken) };
+  return { url: clean(data.settings.syncUrl), token: clean(data.settings.syncToken), hidden: !!data.settings.syncHidden };
+}
+// Hiding the synchronisation also switches it off, closing-time push included.
+function setSyncHidden(hidden) {
+  data.settings.syncHidden = !!hidden;
+  save();
+  return publicSettings();
 }
 function updateSyncSettings(input) {
   const url = clean(input.syncUrl);
@@ -1128,7 +1135,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateLogo,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,setSyncHidden,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateLogo,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

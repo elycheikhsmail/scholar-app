@@ -32,18 +32,21 @@ $('settingsForm').onsubmit=async e=>{
 };
 // Les intitulés officiels ont une valeur par défaut : une base vide doit tout de
 // même imprimer un en-tête complet.
-// Masquer l'onglet de synchronisation : préférence de cet appareil, comme la date d'essai.
-const HIDE_SYNC_KEY='hideSyncTab';
-function syncTabHidden(){try{return localStorage.getItem(HIDE_SYNC_KEY)==='1'}catch{return false}}
+// Masquer la synchronisation la désactive aussi, y compris à la fermeture : le
+// réglage `syncHidden` est donc enregistré côté serveur, pas dans le navigateur.
 function applySyncTabVisibility(){
-  const hidden=syncTabHidden(),allowed=($('settingsTab-sync').getAttribute('data-roles')||'').split(/\s+/).includes(state.user?.role||'admin');
+  const hidden=!!state.settings.syncHidden,allowed=($('settingsTab-sync').getAttribute('data-roles')||'').split(/\s+/).includes(state.user?.role||'admin');
   $('settingsTab-sync').hidden=hidden||!allowed;
-  $('toggleSyncTab').textContent=hidden?'إظهار المزامنة مع الموقع':'إخفاء المزامنة مع الموقع';
+  $('toggleSyncTab').textContent=hidden?'إظهار المزامنة مع الموقع وتفعيلها':'إخفاء المزامنة مع الموقع وإيقافها';
 }
-$('toggleSyncTab').onclick=()=>{
-  try{localStorage.setItem(HIDE_SYNC_KEY,syncTabHidden()?'0':'1')}catch{return toast('تعذر حفظ هذا الخيار على هذا الجهاز.')}
-  applySyncTabVisibility();settingsTabs.show();
-  toast(syncTabHidden()?'تم إخفاء المزامنة مع الموقع.':'تم إظهار المزامنة مع الموقع.');
+$('toggleSyncTab').onclick=async()=>{
+  const hidden=!state.settings.syncHidden;
+  try{
+    const result=await api('/sync-hidden',{method:'PUT',body:JSON.stringify({hidden})});
+    state.settings=result.settings;
+  }catch(error){return toast(error.message)}
+  applySyncTabVisibility();settingsTabs.show();renderSyncStatus();
+  toast(hidden?'تم إخفاء المزامنة وإيقافها (بما فيها المزامنة عند الإغلاق).':'تم إظهار المزامنة وتفعيلها.');
 };
 function renderSettings(){
   applySyncTabVisibility();
