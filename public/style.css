@@ -375,3 +375,4 @@ body:is(.read-only,.no-write) .write-only,body:is(.read-only,.no-write) [data-wr
 .log-info{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.log-info code{font-size:13px;word-break:break-all;background:#fff;padding:3px 6px;border-radius:var(--radius-sm)}.log-info .secondary{padding:7px 12px}
 
 .logo-editor{display:flex;align-items:center;gap:18px;flex-wrap:wrap}.logo-preview{width:96px;height:96px;flex-basis:96px}
+.fee-terms{width:100%;border-collapse:collapse;margin:0 0 14px;background:#fff;border:1px solid var(--border-table)}.fee-terms th,.fee-terms td{padding:10px 12px;border:1px solid var(--border-table);text-align:right}.fee-terms th{font-weight:700}.fee-terms td{width:1%;white-space:nowrap}

@@ -369,6 +369,7 @@ async function api(req, res) {
     if (parts[1] === "departments" && method === "DELETE") { who.deleteDepartment(parts[2]); return json(res, 200, { ok: true }); }
 
     if (parts[1] === "students" && method === "POST") return json(res, 200, who.addStudent(await body(req)));
+    if (parts[1] === "students" && parts[3] === "fee-terms" && method === "PUT") return json(res, 200, who.updateStudentFeeTerms(parts[2], await body(req)));
     if (parts[1] === "students" && parts[3] === "discount" && method === "PUT") return json(res, 200, who.updateStudentDiscount(parts[2], await body(req)));
     if (parts[1] === "students" && method === "PUT") return json(res, 200, who.updateStudent(parts[2], await body(req)));
     if (parts[1] === "students" && method === "DELETE") { who.deleteStudent(parts[2]); return json(res, 200, { ok: true }); }

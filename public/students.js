@@ -315,18 +315,11 @@ window.openStudentFees = (id, showLedger = false) => {
   $('studentFeeEntryDate').value = today();
   $('studentFeeNote').value='';
   setPaymentMethod('studentFeeMethod',DEFAULT_PAYMENT_METHOD);
-  fillStudentDiscountForm(student);
   refreshStudentFeeDetails();
   showEditForm('student-fees','studentFeesForm','studentFeePaymentAmount');
   $('studentAccountDetails').open = Boolean(showLedger);
   if(showLedger)requestAnimationFrame(()=>$('studentAccountDetails').scrollIntoView({block:'start'}));
 };
-function fillStudentDiscountForm(student) {
-  $('studentDiscountType').value = student.discountType || '';
-  $('studentDiscountValue').value = student.discountValue || '';
-  $('studentDiscountReason').value = student.discountReason || '';
-  toggleDiscountFields();
-}
 
 // The cashier enters one amount. The same oldest-first order used on the server
 // previews how it will settle registration, June and the remaining months.
@@ -367,12 +360,18 @@ function feeEntryHtml(row) {
 function renderStudentFeeEntries() {
   const student = selectedFeeStudent();
   if (!student) return;
-  const monthly = monthlyFeeFor(student, feeSettings());
+  const settings = feeSettings();
+  const monthly = monthlyFeeFor(student, settings);
   const discount = discountOn(student, monthly);
-  $('studentFeeRates').innerHTML = `رسم التسجيل: <b>${money(registrationFeeFor(feeSettings()))}</b> أوقية`
-    + ` — الرسم الشهري لمستوى ${esc(student.className || '—')}: <b>${money(monthly)}</b> أوقية`
-    + (discount > 0 ? ` — بعد الخصم: <b>${money(round2(monthly - discount))}</b> أوقية` : '')
-    + `. رسم يونيو مستحق يوم التسجيل، وبقية الأشهر في اليوم الأول من شهرها. تُقرأ المبالغ من «إعدادات الرسوم» ولا تُدخَل هنا.`;
+  const overridden = monthlyFeeOverrideOf(student) !== null;
+  const exempt = Boolean(student.registrationExempt);
+  $('feeTermRegistration').innerHTML = `رسم التسجيل: <b>${money(registrationFeeFor(settings, student))}</b> أوقية`
+    + (exempt ? ` <small class="status-exempt">(معفي — الأصل ${money(registrationFeeFor(settings))})</small>` : '');
+  $('toggleRegistrationExempt').textContent = exempt ? 'معفي' : 'غير معفي';
+  $('feeTermMonthly').innerHTML = `الرسم الشهري لمستوى ${esc(student.className || '—')}: <b>${money(monthly)}</b> أوقية`
+    + (overridden ? ` <small class="status-exempt">(رسم خاص بهذا الطالب — رسم المستوى ${money(monthlyFeeFor({className:student.className}, settings))})</small>` : '')
+    + (discount > 0 ? ` <small class="status-exempt">— بعد الخصم: <b>${money(round2(monthly - discount))}</b> أوقية</small>` : '');
+  $('resetMonthlyFee').classList.toggle('hidden', !overridden);
   const ledger=ledgerOf(student);
   $('studentFeeAmountLimit').textContent=`الحد الأقصى الممكن تسجيله: ${money(ledger.scheduledOutstanding)} أوقية`;
   $('studentFeeEntries').innerHTML = previewStudentPayment(student).map(feeEntryHtml).join('')
@@ -557,29 +556,30 @@ function refreshStudentFeeDetails() {
   }).join('') || '<tr class="ledger-empty"><td colspan="3">لا توجد فواتير مسجلة لهذا الطالب حتى الآن.</td></tr>';
   renderStudentFeeEntries();
 }
-function toggleDiscountFields(){
-  const on=Boolean($('studentDiscountType').value);
-  $('discountValueWrap').classList.toggle('hidden-field',!on);
-  $('discountReasonWrap').classList.toggle('hidden-field',!on);
-  if(!on){$('studentDiscountValue').value='';$('studentDiscountReason').value=''}
-}
-$('studentDiscountType').onchange=toggleDiscountFields;
 $('closeStudentFees').onclick=goToPreviousPage;
 $('studentChargeDetailsDialog').addEventListener('click',event=>{
   if(event.target.matches('[data-close-dialog="studentChargeDetailsDialog"]'))$('studentChargeDetailsDialog').close();
 });
-$('studentDiscountForm').onsubmit = async event => {
-  event.preventDefault();
+async function saveFeeTerms(terms,message){
   const student = selectedFeeStudent();
   if (!student || !(await requirePassword())) return;
-  const button = event.submitter;
-  button.disabled = true;
   try {
-    await api(`/students/${student.id}/discount`, {method:'PUT',body:JSON.stringify({
-      discountType:$('studentDiscountType').value,
-      discountValue:western($('studentDiscountValue').value),
-      discountReason:$('studentDiscountReason').value
-    })});
-    await load(); renderFees(); renderDashboard(); toast('تم حفظ خصم الطالب.');
-  } catch(error) { toast(error.message); } finally { button.disabled = false; }
+    await api(`/students/${student.id}/fee-terms`, {method:'PUT',body:JSON.stringify(terms)});
+    await load(); renderFees(); renderDashboard(); refreshStudentFeeDetails(); toast(message);
+  } catch(error) { toast(error.message); }
+}
+$('toggleRegistrationExempt').onclick = () => {
+  const student = selectedFeeStudent();
+  if (student) saveFeeTerms({registrationExempt:!student.registrationExempt}, student.registrationExempt ? 'أُلغي إعفاء الطالب من رسم التسجيل.' : 'تم إعفاء الطالب من رسم التسجيل.');
 };
+$('editMonthlyFee').onclick = async () => {
+  const student = selectedFeeStudent();
+  if (!student) return;
+  const current = monthlyFeeFor(student, feeSettings());
+  const value = await askInput('الرسم الشهري لهذا الطالب (0 = إعفاء تام):', String(current));
+  if (value === null) return;
+  const fee = western(value).trim();
+  if (fee === '' || !/^\d+(\.\d+)?$/.test(fee)) return toast('أدخل رقمًا لا يقل عن صفر.');
+  saveFeeTerms({monthlyFeeOverride:Number(fee)}, 'تم تعديل الرسم الشهري لهذا الطالب.');
+};
+$('resetMonthlyFee').onclick = () => saveFeeTerms({monthlyFeeOverride:null}, 'عاد الطالب إلى رسم مستواه.');

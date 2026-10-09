@@ -102,8 +102,18 @@ function monthIndexOf(dateStr, startYear) {
 // The two fees the school sets. `settings` carries the school's own values and
 // the list of levels (departments), so both sides of the application resolve a
 // fee the same way: the level's fee if it has one, the default otherwise.
-function registrationFeeFor(settings) {
+function registrationFeeFor(settings, student) {
+  if (student && student.registrationExempt) return 0;
   return round2(Math.max(0, Number(settings && settings.registrationFee) || 0));
+}
+
+// The school's fee for a level stays the same for everybody; one student may be
+// given another monthly fee (0 = fully exempt). null/'' means "the level's fee".
+function monthlyFeeOverrideOf(student) {
+  const raw = student && student.monthlyFeeOverride;
+  if (raw === null || raw === undefined || raw === '') return null;
+  const fee = Number(raw);
+  return Number.isFinite(fee) && fee >= 0 ? round2(fee) : null;
 }
 
 function departmentFeeOf(settings, className) {
@@ -116,6 +126,8 @@ function departmentFeeOf(settings, className) {
 // The monthly fee is fixed for the whole year: it depends on the student's
 // level, never on the month.
 function monthlyFeeFor(student, settings) {
+  const override = monthlyFeeOverrideOf(student);
+  if (override !== null) return override;
   const levelFee = departmentFeeOf(settings, student && student.className);
   return round2(levelFee === null ? Math.max(0, Number(settings && settings.defaultMonthlyFee) || 0) : levelFee);
 }
@@ -155,7 +167,7 @@ function chargesFor(student, settings) {
   const startYear = startYearOf(settings && settings.schoolYear);
   const first = enrolmentIndex(student, startYear);
   const last = departureIndex(student, startYear);
-  const registration = registrationFeeFor(settings);
+  const registration = registrationFeeFor(settings, student);
   const charges = [{
     month: REGISTRATION,
     dueDate: dueDateFor(student, REGISTRATION, startYear),
@@ -253,6 +265,6 @@ return { MONTHS, MONTH_NUMBER, REGISTRATION, ACTIVE_STATUS, LEFT_STATUSES, STUDE
   DISCOUNT_TYPES, DISCOUNT_LABELS,
   FEE_STATUS_LABELS, FEE_STATUS_CLASSES, FEE_FILTERS, feeStatusKey, feeStatusOf,
   round2, startYearOf, monthDate, monthIndexOf, salaryDueDate, salaryEarnedOn,
-  registrationFeeFor, departmentFeeOf, monthlyFeeFor, discountOn,
+  registrationFeeFor, departmentFeeOf, monthlyFeeFor, monthlyFeeOverrideOf, discountOn,
   enrolmentIndex, departureIndex, dueDateFor, chargesFor, allocate, ledgerFor, outstandingThrough };
 });

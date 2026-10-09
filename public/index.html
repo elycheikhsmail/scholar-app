@@ -152,7 +152,10 @@
     <button type="button" class="secondary" id="closeStudentFees" aria-label="الرجوع من استمارة الرسوم">الرجوع إلى الصفحة السابقة</button>
   </div>
   <div id="studentFeesPanel" class="panel fee-form-page">
-    <p id="studentFeeRates" class="hint-box"></p>
+    <table id="studentFeeRates" class="fee-terms"><tbody>
+        <tr><th scope="row" id="feeTermRegistration"></th><td><button type="button" class="secondary" id="toggleRegistrationExempt" data-write-only></button></td></tr>
+        <tr><th scope="row" id="feeTermMonthly"></th><td><button type="button" class="secondary" id="editMonthlyFee" data-write-only>تعديل</button> <button type="button" class="secondary hidden" id="resetMonthlyFee" data-write-only>إلغاء التعديل</button></td></tr>
+      </tbody></table>
     <p id="studentPaidSummary" class="hint-box"></p>
     <form id="studentFeesForm" data-write-only class="fee-entry-form">
       <div class="fee-payment-controls">
@@ -187,14 +190,6 @@
       <div id="studentFeeEntries" class="fee-entries"></div>
       <p id="studentFeeEntryFilterEmpty" class="hint-box" hidden>لا توجد رسوم مطابقة للتصفية المختارة.</p>
       <div id="studentFeeEntrySummary" class="fee-preview" role="status" aria-live="polite"></div>
-    </form>
-    <h3 class="table-title" id="studentDiscountTitle">خصم الطالب</h3>
-    <p class="hint-box">الخصم يُطبَّق على الرسم الشهري وحده، ولا يمس رسم التسجيل.</p>
-    <form id="studentDiscountForm" data-write-only class="form-grid" aria-labelledby="studentDiscountTitle">
-      <label>نوع الخصم<select id="studentDiscountType"><option value="">بدون خصم</option><option value="percent">نسبة مئوية ٪</option><option value="amount">مبلغ ثابت شهريًا</option></select></label>
-      <label class="hidden-field" id="discountValueWrap">قيمة الخصم<input id="studentDiscountValue" type="number" min="0" step="0.01"></label>
-      <label class="hidden-field" id="discountReasonWrap">سبب الخصم<input id="studentDiscountReason" placeholder="منحة، خصم إخوة…"></label>
-      <div class="form-actions"><button class="primary" id="saveStudentDiscount">حفظ الخصم</button></div>
     </form>
     <details id="studentAccountDetails" class="student-account-details">
       <summary>كشف الفواتير</summary>

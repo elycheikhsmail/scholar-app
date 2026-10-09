@@ -3,6 +3,18 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.66.0 — 2026-10-09
+
+- **استمارة رسوم الطالب** : la phrase des tarifs est remplacée par un tableau.
+  Ligne « رسم التسجيل » avec bouton معفي / غير معفي (exempté = 0 pour cet
+  élève) ; ligne « الرسم الشهري » avec bouton تعديل pour fixer un frais
+  mensuel propre à l'élève (0 = exemption totale) et « إلغاء التعديل » pour
+  revenir au frais du niveau. Les frais restent ceux de l'école pour tous.
+- Le formulaire « خصم الطالب » est retiré : la remise est fondue dans le frais
+  (modifier le frais efface l'ancienne remise ; celles déjà saisies restent
+  appliquées). Champs `registrationExempt` et `monthlyFeeOverride`, route
+  `PUT /students/:id/fee-terms`.
+
 ## 1.65.1 — 2026-10-09
 
 - Le bouton « إخفاء المزامنة مع الموقع » désactive maintenant aussi la

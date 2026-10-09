@@ -291,6 +291,8 @@ function normalizeData() {
     if (!dues.DISCOUNT_TYPES.includes(clean(s.discountType))) s.discountType = '';
     s.discountValue = s.discountType ? Math.max(0, Number(s.discountValue) || 0) : 0;
     if (typeof s.discountReason !== 'string') s.discountReason = '';
+    s.registrationExempt = !!s.registrationExempt;
+    s.monthlyFeeOverride = dues.monthlyFeeOverrideOf(s);
     dropLegacyStudentFees(s);
   });
   // Receipt numbers come from sequences that never decrease: `nextId` reuses
@@ -774,13 +776,14 @@ function addStudent(s) {
     gender: clean(s.gender),
     status: clean(s.status) || dues.ACTIVE_STATUS,
     leaveDate: clean(s.leaveDate),
-    discountType: '', discountValue: 0, discountReason: ''
+    discountType: '', discountValue: 0, discountReason: '',
+    registrationExempt: false, monthlyFeeOverride: null
   };
   stampNew(student);
   data.students.push(student);
   const initialPaid = Math.max(0, Number(s.initialPaid) || 0);
   const paymentDate = clean(s.initialPaymentDate) || student.registrationDate;
-  const registrationPaid = Math.min(initialPaid, dues.registrationFeeFor(feeSettings()));
+  const registrationPaid = Math.min(initialPaid, dues.registrationFeeFor(feeSettings(), student));
   const monthlyPaid = Math.max(0, initialPaid - registrationPaid);
   if (registrationPaid > 0) {
     data.studentPayments.push(stampNew({
@@ -839,6 +842,27 @@ function updateStudentDiscount(id, input) {
   const student = data.students.find(s => Number(s.id) === Number(id));
   if (!student) throw new Error('الطالب غير موجود.');
   Object.assign(student, validateDiscount(input)); stampUpdate(student);
+  save(); return student;
+}
+
+// The fees are the school's, equal for everybody; a student may be exempted from
+// the registration fee or given another monthly fee (0 = total exemption). The
+// old percentage/amount discount is folded into that fee, so it is cleared.
+function updateStudentFeeTerms(id, input) {
+  const student = data.students.find(s => Number(s.id) === Number(id));
+  if (!student) throw new Error('الطالب غير موجود.');
+  if ('registrationExempt' in input) student.registrationExempt = !!input.registrationExempt;
+  if ('monthlyFeeOverride' in input) {
+    const raw = input.monthlyFeeOverride;
+    if (raw === null || raw === '') student.monthlyFeeOverride = null;
+    else {
+      const fee = Number(raw);
+      if (!Number.isFinite(fee) || fee < 0) throw new Error('الرسم الشهري يجب أن يكون رقمًا لا يقل عن صفر.');
+      student.monthlyFeeOverride = Math.round(fee * 100) / 100;
+    }
+    Object.assign(student, { discountType: '', discountValue: 0, discountReason: '' });
+  }
+  stampUpdate(student);
   save(); return student;
 }
 
@@ -1135,7 +1159,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,setSyncHidden,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateLogo,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,setSyncHidden,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateLogo,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,updateStudentFeeTerms,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

@@ -832,3 +832,24 @@ test('hiding the synchronisation is stored and reported to the sync engine', () 
   assert.equal(db.syncSettings().hidden, true);
   assert.equal(db.setSyncHidden(false).syncHidden, false);
 });
+
+test('a student can be exempted from registration and given his own monthly fee', () => {
+  const dir = temp(); db.init(dir);
+  db.updateFeeSettings({ registrationFee: 200, defaultMonthlyFee: 400 });
+  const s = db.addStudent({ ...student });
+  const ledgerOf = () => dues.ledgerFor(db.getData().students.find(x => x.id === s.id), [], db.getData().settings);
+  const first = ledgerOf().rows;
+  assert.equal(first[0].amount, 200);
+  assert.equal(first[1].amount, 400);
+  db.updateStudentFeeTerms(s.id, { registrationExempt: true, monthlyFeeOverride: 250 });
+  let rows = ledgerOf().rows;
+  assert.equal(rows[0].amount, 0, 'exempt from registration');
+  assert.equal(rows[1].amount, 250);
+  db.updateStudentFeeTerms(s.id, { monthlyFeeOverride: 0 });
+  assert.equal(ledgerOf().rows[1].amount, 0, '0 is a total exemption');
+  assert.throws(() => db.updateStudentFeeTerms(s.id, { monthlyFeeOverride: -5 }), /الرسم الشهري/);
+  db.updateStudentFeeTerms(s.id, { registrationExempt: false, monthlyFeeOverride: null });
+  rows = ledgerOf().rows;
+  assert.equal(rows[0].amount, 200);
+  assert.equal(rows[1].amount, 400);
+});
