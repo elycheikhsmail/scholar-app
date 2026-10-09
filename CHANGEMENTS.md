@@ -3,6 +3,12 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.65.0 — 2026-10-09
+
+- **وضع الاستخدام** : bouton « إخفاء/إظهار المزامنة مع الموقع » qui masque
+  l'onglet de synchronisation des réglages sur cet appareil (localStorage ;
+  la synchronisation automatique n'est pas touchée).
+
 ## 1.64.0 — 2026-10-09
 
 - **الشعار** : nouvel onglet الإعدادات ← الشعار (admin) pour changer le logo

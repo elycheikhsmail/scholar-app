@@ -32,7 +32,21 @@ $('settingsForm').onsubmit=async e=>{
 };
 // Les intitulés officiels ont une valeur par défaut : une base vide doit tout de
 // même imprimer un en-tête complet.
+// Masquer l'onglet de synchronisation : préférence de cet appareil, comme la date d'essai.
+const HIDE_SYNC_KEY='hideSyncTab';
+function syncTabHidden(){try{return localStorage.getItem(HIDE_SYNC_KEY)==='1'}catch{return false}}
+function applySyncTabVisibility(){
+  const hidden=syncTabHidden(),allowed=($('settingsTab-sync').getAttribute('data-roles')||'').split(/\s+/).includes(state.user?.role||'admin');
+  $('settingsTab-sync').hidden=hidden||!allowed;
+  $('toggleSyncTab').textContent=hidden?'إظهار المزامنة مع الموقع':'إخفاء المزامنة مع الموقع';
+}
+$('toggleSyncTab').onclick=()=>{
+  try{localStorage.setItem(HIDE_SYNC_KEY,syncTabHidden()?'0':'1')}catch{return toast('تعذر حفظ هذا الخيار على هذا الجهاز.')}
+  applySyncTabVisibility();settingsTabs.show();
+  toast(syncTabHidden()?'تم إخفاء المزامنة مع الموقع.':'تم إظهار المزامنة مع الموقع.');
+};
 function renderSettings(){
+  applySyncTabVisibility();
   settingsTabs.show();
   renderSimulatedDate();
   const fields={
