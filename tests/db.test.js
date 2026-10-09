@@ -475,7 +475,7 @@ test('snapshot carries everything the browser reads without credentials; writes 
   assert.equal(settings.syncTokenSet, true);
   assert.equal(settings.syncToken, undefined, 'the token never leaves the server');
   settings = db.updateSyncSettings({ syncUrl: 'https://school.example/api/sync', syncToken: '' });
-  assert.deepEqual(db.syncSettings(), { url: 'https://school.example/api/sync', token: 'secret-1' }, 'an empty token keeps the stored one');
+  assert.deepEqual(db.syncSettings(), { url: 'https://school.example/api/sync', token: 'secret-1', hidden: false }, 'an empty token keeps the stored one');
   settings = db.recordSync('2027-02-28T10:00:00.000Z');
   assert.equal(settings.lastSyncAt, '2027-02-28T10:00:00.000Z');
   assert.equal(settings.writesSinceSync, 0);
