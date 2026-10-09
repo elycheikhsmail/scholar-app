@@ -434,3 +434,36 @@ $('importDatabaseFile').onchange=async()=>{
     setTimeout(()=>location.reload(),2500);
   }catch(error){toast(error.message)}
 };
+
+// --- Logo : choisi dans un fichier, réduit à 256 px, enregistré en data URL ---
+async function saveLogo(logo,message){
+  if(!(await requirePassword()))return;
+  try{
+    const result=await api('/logo',{method:'PUT',body:JSON.stringify({logo})});
+    state.settings=result.settings;applySettings();toast(message);
+  }catch(error){toast(error.message)}
+}
+function shrinkImage(file){
+  return new Promise((resolve,reject)=>{
+    const url=URL.createObjectURL(file),img=new Image();
+    img.onload=()=>{
+      const side=Math.min(256,Math.max(img.width,img.height)),scale=side/Math.max(img.width,img.height);
+      const canvas=document.createElement('canvas');canvas.width=Math.round(img.width*scale);canvas.height=Math.round(img.height*scale);
+      canvas.getContext('2d').drawImage(img,0,0,canvas.width,canvas.height);
+      URL.revokeObjectURL(url);resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);reject(Error('تعذّر قراءة الصورة.'))};
+    img.src=url;
+  });
+}
+$('logoChange').onclick=()=>$('logoFile').click();
+$('logoFile').onchange=async e=>{
+  const file=e.target.files[0];e.target.value='';
+  if(!file)return;
+  try{await saveLogo(await shrinkImage(file),'تم تغيير الشعار.')}catch(error){toast(error.message)}
+};
+$('logoRemove').onclick=async()=>{
+  if(!state.settings.logo)return toast('لا يوجد شعار مخصص لمسحه.');
+  if(!(await askConfirm('هل تريد مسح الشعار والعودة إلى الشعار الافتراضي؟')))return;
+  await saveLogo('','تم مسح الشعار.');
+};

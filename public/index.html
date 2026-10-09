@@ -25,7 +25,7 @@
 <div id="app" class="hidden">
 <header class="topbar">
   <div class="topbar-brand">
-    <img class="app-icon" src="ecole.jpg" alt="أيقونة مدرسة مكارم الأخلاق الحرة">
+    <img id="appLogo" class="app-icon" src="ecole.jpg" data-default="ecole.jpg" alt="أيقونة مدرسة مكارم الأخلاق الحرة">
     <div><h1 id="schoolName">مدرسة مكارم الأخلاق الحرة</h1><span id="schoolYear"></span><span id="appModeBadge" class="mode-badge">جارٍ تحديد وضع التطبيق…</span></div>
   </div>
   <div class="top-date"><strong id="clock"></strong><span id="today"></span></div>
@@ -427,6 +427,7 @@
     <button type="button" class="settings-tab" role="tab" id="settingsTab-roles" data-settings-tab="roles" data-roles="admin developer" aria-controls="settingsPanel-roles" aria-selected="false" tabindex="-1">طبيعة العمل</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-methods" data-settings-tab="methods" data-roles="admin developer" aria-controls="settingsPanel-methods" aria-selected="false" tabindex="-1">طرق الدفع</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-school" data-settings-tab="school" data-roles="admin developer" aria-controls="settingsPanel-school" aria-selected="false" tabindex="-1">بيانات المدرسة</button>
+    <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-logo" data-settings-tab="logo" data-roles="admin developer" aria-controls="settingsPanel-logo" aria-selected="false" tabindex="-1">الشعار</button>
     <button type="button" class="settings-tab write-only" role="tab" id="settingsTab-users" data-settings-tab="users" data-roles="admin developer" aria-controls="settingsPanel-users" aria-selected="false" tabindex="-1">المستخدمون</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-account" data-settings-tab="account" aria-controls="settingsPanel-account" aria-selected="false" tabindex="-1">حسابي</button>
     <button type="button" class="settings-tab" role="tab" id="settingsTab-mode" data-settings-tab="mode" data-roles="admin developer" aria-controls="settingsPanel-mode" aria-selected="false" tabindex="-1">وضع الاستخدام</button>
@@ -462,6 +463,12 @@
     <p class="hint-box">هذه اللائحة تظهر في حقل «طبيعة العمل» باستمارة إضافة الموظف. «أستاذ» يُدفع له بالساعة و«أخرى» هي القيمة الافتراضية، لذلك لا يمكن حذفهما. تعديل الاسم يسري على الموظفين المرتبطين به، ولا يمكن حذف طبيعة عمل لها موظفون.</p>
     <form id="staffRoleForm" data-write-only class="department-form"><input id="staffRoleName" placeholder="طبيعة العمل الجديدة" maxlength="40" required><button class="primary">إضافة</button></form>
     <h3 class="table-title" id="staffRolesTableTitle">جدول طبيعة العمل</h3><div class="table-scroll"><table aria-labelledby="staffRolesTableTitle"><thead><tr><th>طبيعة العمل</th><th>عدد الموظفين</th><th>إجراءات</th></tr></thead><tbody id="staffRolesTable"></tbody></table></div></div>
+  <div role="tabpanel" tabindex="0" id="settingsPanel-logo" data-settings-panel="logo" data-roles="admin developer" aria-labelledby="settingsTab-logo" class="hidden panel write-only"><h3>شعار التطبيق</h3>
+    <p class="hint-box">يظهر الشعار في أعلى الصفحة (الزاوية اليمنى). الصيغ المقبولة: PNG أو JPG أو WEBP، ويُصغَّر تلقائيًا.</p>
+    <div class="logo-editor"><img id="logoPreview" class="app-icon logo-preview" src="ecole.jpg" alt="الشعار الحالي">
+      <div class="form-actions"><input id="logoFile" type="file" accept="image/png,image/jpeg,image/webp" class="hidden">
+        <button type="button" id="logoChange" class="primary">تغيير الشعار</button>
+        <button type="button" id="logoRemove" class="danger-button">مسح الشعار</button></div></div></div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-school" data-settings-panel="school" data-roles="admin developer" aria-labelledby="settingsTab-school" class="hidden panel"><h3>بيانات المدرسة</h3><form id="settingsForm" data-write-only class="form-grid"><label>اسم المدرسة<input id="setSchoolName" required></label><label>هاتف المدرسة<input id="setSchoolPhone" maxlength="8" inputmode="numeric"></label><label>الجمهورية<input id="setRepublic"></label><label>الوزارة<input id="setMinistry"></label><label>الإدارة الجهوية<input id="setRegional"></label><label>السنة الدراسية<input id="setSchoolYear" required></label><label>اسم المدير<input id="setManagerName"></label><label>هاتف المدير<input id="setManagerPhone" maxlength="8" inputmode="numeric"></label><label>كلمة المرور الحالية (للتأكيد)<input id="currentPassword" type="password" autocomplete="current-password" required></label><div class="form-actions"><button class="primary">حفظ الإعدادات</button></div></form></div>
   <div role="tabpanel" tabindex="0" id="settingsPanel-users" data-settings-panel="users" data-roles="admin developer" aria-labelledby="settingsTab-users" class="hidden panel write-only"><h3>حسابات المستخدمين</h3>
     <p class="hint-box">مدير النظام يضبط الإعدادات ويدير الحسابات. السكرتير يسجّل الطلاب والرسوم والموظفين والرواتب والمصروفات والامتحانات دون الوصول إلى الإعدادات. المشرف يطّلع على كل الشاشات والتقارير ويطبعها دون أي تعديل.</p>

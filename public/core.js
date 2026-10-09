@@ -283,7 +283,7 @@ setInterval(tick,1000);tick();
 document.addEventListener('input',e=>{if(e.target.matches('input[type=number],input[inputmode="numeric"]'))e.target.value=western(e.target.value)});
 
 async function load(){state.data=await api('/data');state.departments=await api('/departments');state.examData=await api('/exams');populateDepartments();populateExamDepartments();refreshStudentFeeDetails()}
-function applySettings(){fillPaymentMethodSelects();applyApplicationMode(state.settings.applicationMode);$('schoolName').textContent=state.settings.schoolName;$('schoolYear').textContent=state.settings.schoolYear;$('loginSchoolName').textContent=state.settings.schoolName;$('managerNameHome').textContent=state.settings.managerName||'غير محدد';$('managerPhoneHome').textContent=western(state.settings.managerPhone||'');$('appVersion').textContent=western(state.settings.version||window.schoolAPI?.version||'—')}
+function applySettings(){fillPaymentMethodSelects();applyApplicationMode(state.settings.applicationMode);$('schoolName').textContent=state.settings.schoolName;{const logo=state.settings.logo||$('appLogo').dataset.default;$('appLogo').src=logo;$('logoPreview').src=logo}$('schoolYear').textContent=state.settings.schoolYear;$('loginSchoolName').textContent=state.settings.schoolName;$('managerNameHome').textContent=state.settings.managerName||'غير محدد';$('managerPhoneHome').textContent=western(state.settings.managerPhone||'');$('appVersion').textContent=western(state.settings.version||window.schoolAPI?.version||'—')}
 // « طرق الدفع » : la liste des réglages remplit chaque <select data-payment-methods>
 // (frais, salaire, سلفة, dépense, fenêtres de modification). La valeur en cours
 // est gardée si elle existe encore ; « نقدًا » est proposé par défaut.

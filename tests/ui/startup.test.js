@@ -136,8 +136,8 @@ test('browser scripts support login, all sections, student fees and session rest
   await expect(page.locator('#today')).toHaveText(/^(الأحد|الاثنين|الثلاثاء|الأربعاء|الخميس|الجمعة|السبت)، \d{2} \S+ \d{4}$/);
   // The settings screen shows one form at a time, behind its own tab list.
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]')).toHaveCount(11);
-  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(10, 'the database tab is for the developer');
+  await expect(page.locator('[data-settings-tab]')).toHaveCount(12);
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(11, 'the database tab is for the developer');
   // Payment methods live in the settings; « نقدًا » is the default and stays.
   await page.locator('[data-settings-tab="methods"]').click();
   await expect(page.locator('#paymentMethodsTable tr')).toHaveCount(6);
@@ -324,7 +324,7 @@ test('browser scripts support login, all sections, student fees and session rest
   await page.reload();
   await login();
   await page.locator('.nav-item[data-section="settings"]').click();
-  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(11);
+  await expect(page.locator('[data-settings-tab]:visible')).toHaveCount(12);
   await expect(page.locator('[data-settings-tab="database"]')).toBeVisible();
   // Export: the developer's password travels with the request, the file downloads.
   await page.locator('[data-settings-tab="database"]').click();

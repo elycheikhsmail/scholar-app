@@ -813,3 +813,14 @@ test('HTTP database export and import: developer only, password re-checked, back
     server.close();
   }
 });
+
+test('logo is stored as a small image data URL and can be removed', () => {
+  const dir = temp(); db.init(dir);
+  assert.equal(db.publicSettings().logo, '');
+  const png = 'data:image/png;base64,iVBORw0KGgo=';
+  assert.equal(db.updateLogo({ logo: png }).logo, png);
+  assert.throws(() => db.updateLogo({ logo: 'data:text/html;base64,PHA+' }), /الشعار/);
+  assert.throws(() => db.updateLogo({ logo: `data:image/png;base64,${'A'.repeat(800_000)}` }), /كبيرة/);
+  assert.equal(db.publicSettings().logo, png);
+  assert.equal(db.updateLogo({ logo: '' }).logo, '');
+});

@@ -114,7 +114,7 @@ function openSession(user) {
 // the school's daily work and may push the snapshot to the web copy (harmless:
 // the site is read-only); settings, sync parameters and the reset stay with the
 // admin; accounts with the admin and the developer; the database with the developer alone.
-const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'payment-methods', 'settings', 'sync-settings', 'reset-data']);
+const ADMIN_ROUTES = new Set(['mode', 'departments', 'fee-settings', 'staff-roles', 'payment-methods', 'settings', 'logo', 'sync-settings', 'reset-data']);
 const SELF_ROUTES = new Set(['logout', 'verify-password', 'password']);
 const PERMISSION_MESSAGE = 'ليست لديك صلاحية لهذه العملية.';
 function allowed(role, route, method) {
@@ -408,6 +408,10 @@ async function api(req, res) {
     if (parts[1] === "sync-remote" && method === "POST") {
       const result = await syncRemote();
       return json(res, result.ok ? 200 : 502, result.ok ? { ...result, settings: publicSettings() } : { error: result.error });
+    }
+
+    if (parts[1] === "logo" && method === "PUT") {
+      return json(res, 200, { ok: true, settings: { ...who.updateLogo(await body(req)), applicationMode } });
     }
 
     if (parts[1] === "settings" && method === "PUT") {

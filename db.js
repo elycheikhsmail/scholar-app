@@ -378,6 +378,7 @@ function publicSettings() {
     managerName: data.settings.managerName || '',
     managerPhone: data.settings.managerPhone || '',
     schoolPhone: data.settings.schoolPhone || '',
+    logo: data.settings.logo || '',
     republic: data.settings.republic || 'الجمهورية الإسلامية الموريتانية',
     ministry: data.settings.ministry || 'وزارة التعليم',
     regional: data.settings.regional || 'الإدارة الجهوية للتعليم',
@@ -514,6 +515,20 @@ function changePassword(id, currentPassword, newPassword) {
   if (!verifyPassword(currentPassword, user.passwordHash)) throw new Error('كلمة المرور الحالية غير صحيحة.');
   user.passwordHash = hashPassword(assertPassword(newPassword)); save();
   return publicUser(user);
+}
+
+// The logo is stored as a small image data URL (the browser shrinks it first);
+// an empty value restores the default icon.
+const MAX_LOGO_LENGTH = 700_000;
+function updateLogo(input) {
+  const logo = typeof input.logo === 'string' ? input.logo.trim() : '';
+  if (logo) {
+    if (!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(logo)) throw new Error('صيغة الشعار غير مدعومة (PNG أو JPG أو WEBP).');
+    if (logo.length > MAX_LOGO_LENGTH) throw new Error('صورة الشعار كبيرة جدًا.');
+  }
+  data.settings.logo = logo;
+  save();
+  return publicSettings();
 }
 
 function updateSettings(input) {
@@ -1113,7 +1128,7 @@ function saveExamRecord(input) {
 }
 function deleteExamRecord(id){data.exams=data.exams.filter(x=>Number(x.id)!==Number(id));save();}
 
-module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
+module.exports={init,getData,getCoreData,getDepartments,addDepartment,updateDepartment,deleteDepartment,clearOperationalData,publicSettings,setTestDate,snapshot,syncSettings,updateSyncSettings,recordSync,checkLogin,listUsers,addUser,updateUser,deleteUser,changePassword,updateSettings,updateLogo,updateFeeSettings,addStaffRole,updateStaffRole,deleteStaffRole,addPaymentMethod,updatePaymentMethod,deletePaymentMethod,addStudent,updateStudent,updateStudentDiscount,deleteStudent,addStudentPayment,addStudentPayments,updateStudentPayment,deleteStudentPayment,cancelStudentPayment,cancelTeacherPayment,cancelTeacherAdvance,addTeacher,updateTeacher,deleteTeacher,addTeacherPayment,updateTeacherPayment,deleteTeacherPayment,addTeacherAdvance,updateTeacherAdvance,deleteTeacherAdvance,addExpense,updateExpense,deleteExpense, getExamData, saveExamSettings, saveExamRecord, deleteExamRecord,
 };
 
 // Reload within a transaction so separate server processes cannot overwrite stale state.

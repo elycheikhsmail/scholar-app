@@ -3,6 +3,13 @@
 Toutes les modifications livrées sont consignées ici. Le projet suit le
 versionnement sémantique (`MAJEURE.MINEURE.CORRECTIF`).
 
+## 1.64.0 — 2026-10-09
+
+- **الشعار** : nouvel onglet الإعدادات ← الشعار (admin) pour changer le logo
+  affiché en haut à droite (fichier PNG/JPG/WEBP réduit à 256 px dans le
+  navigateur), le remplacer ou le supprimer (retour à l'icône par défaut).
+  Route `PUT /logo`, champ `logo` des réglages (data URL validée, 700 ko max).
+
 ## 1.63.0 — 2026-09-13
 
 - **طرق الدفع** : nouvel onglet الإعدادات ← طرق الدفع (admin) avec la liste
